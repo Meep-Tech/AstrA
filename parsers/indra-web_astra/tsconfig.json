@@ -1,0 +1,14 @@
+{
+  "include": [
+    "./src/**/*.ts"
+  ],
+  "compilerOptions": {
+    "outDir": "./build",
+    "lib": [
+      "DOM",
+      "ES2015"
+    ],
+    "module": "NodeNext",
+    "inlineSourceMap": true
+  }
+}

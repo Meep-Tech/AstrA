@@ -1,0 +1,220 @@
+###############################
+# Core EditorConfig Options   #
+###############################
+root = true
+# All files
+[*]
+indent_style = space
+insert_final_newline = true
+indent_size = 2
+
+# C# files
+[*.cs]
+
+## C# Coding Conventions
+### Brackets
+csharp_new_line_before_open_brace = none
+csharp_prefer_braces = true
+
+### Arrow Expressions
+csharp_prefer_simple_default_expression = true
+csharp_style_expression_bodied_methods = true
+
+### Variable Declarations
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = false
+csharp_style_deconstructed_variable_declaration = true
+csharp_style_inlined_variable_declaration = true
+
+## .NET Coding Conventions
+### Organize usings
+dotnet_sort_system_directives_first = true
+
+### Require this.
+dotnet_style_qualification_for_field = false
+dotnet_style_qualification_for_property = false
+dotnet_style_qualification_for_method = false
+dotnet_style_qualification_for_event = false
+
+### Language keywords vs BCL types preferences
+dotnet_style_predefined_type_for_locals_parameters_members = true
+dotnet_style_predefined_type_for_member_access = true
+
+### Logical Parentheses
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity
+dotnet_style_parentheses_in_other_operators = never_if_unnecessary
+
+### Accessibility Modifiers
+dotnet_style_require_accessibility_modifiers = always
+
+### Naming Conventions
+#### Naming Rules
+dotnet_naming_rule.type_parameter_should_be_tpascalcase.severity = suggestion
+dotnet_naming_rule.type_parameter_should_be_tpascalcase.symbols = type_parameter
+dotnet_naming_rule.type_parameter_should_be_tpascalcase.style = tpascalcase
+
+dotnet_naming_rule.const_should_be_screaming_case.severity = suggestion
+dotnet_naming_rule.const_should_be_screaming_case.symbols = const
+dotnet_naming_rule.const_should_be_screaming_case.style = screaming_case
+
+dotnet_naming_rule.static_readonly_should_be_screaming_case.severity = suggestion
+dotnet_naming_rule.static_readonly_should_be_screaming_case.symbols = static_readonly
+dotnet_naming_rule.static_readonly_should_be_screaming_case.style = screaming_case
+
+dotnet_naming_rule.static_const_should_be_screaming_case.severity = suggestion
+dotnet_naming_rule.static_const_should_be_screaming_case.symbols = static_const
+dotnet_naming_rule.static_const_should_be_screaming_case.style = screaming_case
+
+dotnet_naming_rule.private_or_internal_static_readonly_should_be__screaming_case.severity = suggestion
+dotnet_naming_rule.private_or_internal_static_readonly_should_be__screaming_case.symbols = private_or_internal_static_readonly
+dotnet_naming_rule.private_or_internal_static_readonly_should_be__screaming_case.style = _screaming_case
+
+dotnet_naming_rule.private_or_internal_const_should_be__screaming_case.severity = suggestion
+dotnet_naming_rule.private_or_internal_const_should_be__screaming_case.symbols = private_or_internal_const
+dotnet_naming_rule.private_or_internal_const_should_be__screaming_case.style = _screaming_case
+
+dotnet_naming_rule.type_should_be_pascalcase.severity = suggestion
+dotnet_naming_rule.type_should_be_pascalcase.symbols = type
+dotnet_naming_rule.type_should_be_pascalcase.style = pascalcase
+
+dotnet_naming_rule.private_or_internal_type_should_be__pascalcase.severity = suggestion
+dotnet_naming_rule.private_or_internal_type_should_be__pascalcase.symbols = private_or_internal_type
+dotnet_naming_rule.private_or_internal_type_should_be__pascalcase.style = _pascalcase
+
+dotnet_naming_rule.interface_should_be_ipascalcase.severity = suggestion
+dotnet_naming_rule.interface_should_be_ipascalcase.symbols = interface
+dotnet_naming_rule.interface_should_be_ipascalcase.style = ipascalcase
+
+dotnet_naming_rule.private_or_internal_interface_should_be__ipascalcase.severity = suggestion
+dotnet_naming_rule.private_or_internal_interface_should_be__ipascalcase.symbols = private_or_internal_interface
+dotnet_naming_rule.private_or_internal_interface_should_be__ipascalcase.style = _ipascalcase
+
+dotnet_naming_rule.static_member_should_be_pascalcase.severity = suggestion
+dotnet_naming_rule.static_member_should_be_pascalcase.symbols = static_member
+dotnet_naming_rule.static_member_should_be_pascalcase.style = pascalcase
+
+dotnet_naming_rule.private_or_internal_static_member_should_be__pascalcase.severity = suggestion
+dotnet_naming_rule.private_or_internal_static_member_should_be__pascalcase.symbols = private_or_internal_static_member
+dotnet_naming_rule.private_or_internal_static_member_should_be__pascalcase.style = _pascalcase
+
+dotnet_naming_rule.member_should_be_camelcase.severity = suggestion
+dotnet_naming_rule.member_should_be_camelcase.symbols = member
+dotnet_naming_rule.member_should_be_camelcase.style = camelcase
+
+dotnet_naming_rule.private_or_internal_member_should_be__camelcase.severity = suggestion
+dotnet_naming_rule.private_or_internal_member_should_be__camelcase.symbols = private_or_internal_member
+dotnet_naming_rule.private_or_internal_member_should_be__camelcase.style = _camelcase
+
+dotnet_naming_rule.local_member_should_be_camelcase.severity = suggestion
+dotnet_naming_rule.local_member_should_be_camelcase.symbols = local_member
+dotnet_naming_rule.local_member_should_be_camelcase.style = camelcase
+
+#### Symbol specifications
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = public, internal, private, protected, protected_internal
+dotnet_naming_symbols.interface.required_modifiers =
+
+dotnet_naming_symbols.const.applicable_kinds =
+dotnet_naming_symbols.const.applicable_accessibilities = *
+dotnet_naming_symbols.const.required_modifiers = const
+
+dotnet_naming_symbols.member.applicable_kinds = property, field, method
+dotnet_naming_symbols.member.applicable_accessibilities = *
+dotnet_naming_symbols.member.required_modifiers =
+
+dotnet_naming_symbols.private_or_internal_member.applicable_kinds = namespace, property, field, event, class, struct, interface, enum, delegate, method
+dotnet_naming_symbols.private_or_internal_member.applicable_accessibilities = internal, private, private_protected
+dotnet_naming_symbols.private_or_internal_member.required_modifiers =
+
+dotnet_naming_symbols.local_member.applicable_kinds = parameter, local, local_function
+dotnet_naming_symbols.local_member.applicable_accessibilities = *
+dotnet_naming_symbols.local_member.required_modifiers =
+
+dotnet_naming_symbols.type_parameter.applicable_kinds = type_parameter
+dotnet_naming_symbols.type_parameter.applicable_accessibilities = *
+dotnet_naming_symbols.type_parameter.required_modifiers =
+
+dotnet_naming_symbols.type.applicable_kinds = namespace, event, class, struct, enum, delegate
+dotnet_naming_symbols.type.applicable_accessibilities = public, protected, local
+dotnet_naming_symbols.type.required_modifiers =
+
+dotnet_naming_symbols.static_member.applicable_kinds = *
+dotnet_naming_symbols.static_member.applicable_accessibilities = public, protected, local
+dotnet_naming_symbols.static_member.required_modifiers = static
+
+dotnet_naming_symbols.static_readonly.applicable_kinds = *
+dotnet_naming_symbols.static_readonly.applicable_accessibilities = public, protected, local
+dotnet_naming_symbols.static_readonly.required_modifiers = readonly, static
+
+dotnet_naming_symbols.static_const.applicable_kinds = *
+dotnet_naming_symbols.static_const.applicable_accessibilities = public, protected, local
+dotnet_naming_symbols.static_const.required_modifiers = static, const
+
+dotnet_naming_symbols.private_or_internal_static_member.applicable_kinds = property, field, parameter, local, method, local_function
+dotnet_naming_symbols.private_or_internal_static_member.applicable_accessibilities = internal, private, protected_internal, private_protected
+dotnet_naming_symbols.private_or_internal_static_member.required_modifiers = static
+
+dotnet_naming_symbols.private_or_internal_static_readonly.applicable_kinds = *
+dotnet_naming_symbols.private_or_internal_static_readonly.applicable_accessibilities = internal, private, protected_internal, private_protected
+dotnet_naming_symbols.private_or_internal_static_readonly.required_modifiers = readonly, static
+
+dotnet_naming_symbols.private_or_internal_const.applicable_kinds = *
+dotnet_naming_symbols.private_or_internal_const.applicable_accessibilities = internal, private, protected_internal, private_protected
+dotnet_naming_symbols.private_or_internal_const.required_modifiers = const
+
+dotnet_naming_symbols.private_or_internal_type.applicable_kinds = namespace, event, class, struct, enum, delegate
+dotnet_naming_symbols.private_or_internal_type.applicable_accessibilities = internal, private, protected_internal, private_protected
+dotnet_naming_symbols.private_or_internal_type.required_modifiers =
+
+dotnet_naming_symbols.private_or_internal_interface.applicable_kinds = interface
+dotnet_naming_symbols.private_or_internal_interface.applicable_accessibilities = internal, private, protected_internal, private_protected
+dotnet_naming_symbols.private_or_internal_interface.required_modifiers =
+
+#### Naming styles
+dotnet_naming_style.pascalcase.required_prefix =
+dotnet_naming_style.pascalcase.required_suffix =
+dotnet_naming_style.pascalcase.word_separator =
+dotnet_naming_style.pascalcase.capitalization = pascal_case
+
+dotnet_naming_style.ipascalcase.required_prefix = I
+dotnet_naming_style.ipascalcase.required_suffix =
+dotnet_naming_style.ipascalcase.word_separator =
+dotnet_naming_style.ipascalcase.capitalization = pascal_case
+
+dotnet_naming_style.camelcase.required_prefix =
+dotnet_naming_style.camelcase.required_suffix =
+dotnet_naming_style.camelcase.word_separator =
+dotnet_naming_style.camelcase.capitalization = camel_case
+
+dotnet_naming_style._camelcase.required_prefix = _
+dotnet_naming_style._camelcase.required_suffix =
+dotnet_naming_style._camelcase.word_separator =
+dotnet_naming_style._camelcase.capitalization = camel_case
+
+dotnet_naming_style.tpascalcase.required_prefix = T
+dotnet_naming_style.tpascalcase.required_suffix =
+dotnet_naming_style.tpascalcase.word_separator =
+dotnet_naming_style.tpascalcase.capitalization = pascal_case
+
+dotnet_naming_style.screaming_case.required_prefix =
+dotnet_naming_style.screaming_case.required_suffix =
+dotnet_naming_style.screaming_case.word_separator = _
+dotnet_naming_style.screaming_case.capitalization = all_upper
+
+dotnet_naming_style._screaming_case.required_prefix = _
+dotnet_naming_style._screaming_case.required_suffix =
+dotnet_naming_style._screaming_case.word_separator = _
+dotnet_naming_style._screaming_case.capitalization = all_upper
+
+dotnet_naming_style._pascalcase.required_prefix = _
+dotnet_naming_style._pascalcase.required_suffix =
+dotnet_naming_style._pascalcase.word_separator =
+dotnet_naming_style._pascalcase.capitalization = pascal_case
+
+dotnet_naming_style._ipascalcase.required_prefix = _I
+dotnet_naming_style._ipascalcase.required_suffix =
+dotnet_naming_style._ipascalcase.word_separator =
+dotnet_naming_style._ipascalcase.capitalization = pascal_case

@@ -1,0 +1,23 @@
+{
+  "name": "@indra-web/astra",
+  "version": "0.0.1",
+  "description": "Library for interpreting and executing AstrA code.",
+  "main": "build/lib.js",
+  "scripts": {
+    "build": "npm run build:types",
+    "build:lib": "npm run build",
+    "build:types": "tsc",
+    "test": "node build/test.js --",
+    "test:types": "tsc --noEmit",
+    "test:debug": "node build/test.js --debug",
+    "build+test": "npm run build && npm run test --",
+    "build+test:debug": "npm run build && npm run test:debug"
+  },
+  "author": "meep.tech",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "typescript": "^5.2.2",
+    "console-log-colors": "^0.4.0"
+  }
+}

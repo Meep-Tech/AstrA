@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "parsers/astra-parser"
+		},
+		{
+			"path": "parsers/indra-web_astra"
+		}
+	],
+	"settings": {}
+}
