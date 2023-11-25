@@ -1,4 +1,8 @@
-use super::{dot_lookup, escape_sequence, slash_lookup};
+use super::{
+    dot_lookup, escape_sequence,
+    indent::{self},
+    slash_lookup,
+};
 use crate::{
     lexer::{
         parser::{self, Parser as _},
@@ -7,19 +11,31 @@ use crate::{
     Cursor, End, Token,
 };
 
-pub static KEY: &'static str = "naked-text";
+pub const KEY: &str = "naked-text";
 
 impl parser::Parser for Parser {
+    fn get_name(&self) -> &'static str {
+        return &KEY;
+    }
+
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {
         let mut result = Token::new();
         loop {
-            if let Some(escape) = escape_sequence::PARSER.try_parse_at(cursor) {
+            if let Some(escape) = escape_sequence::try_parse_at(cursor) {
                 result = result.child(escape);
             } else {
                 match cursor.char() {
+                    '\n' => match indent::increase::try_parse_at(cursor) {
+                        Some(token) => {
+                            result = result.child(token);
+                        }
+                        None => {
+                            return End::Token();
+                        }
+                    },
                     '.' => {
                         if cursor.prev().is_whitespace() && !cursor.next().is_whitespace() {
-                            match dot_lookup::PARSER.parse_at(cursor)? {
+                            match dot_lookup::parse_at(cursor) {
                                 Parsed::Token(child) => {
                                     result = result.child(child);
                                 }
@@ -29,7 +45,7 @@ impl parser::Parser for Parser {
                     }
                     '/' => {
                         if cursor.prev().is_whitespace() && !cursor.next().is_whitespace() {
-                            match slash_lookup::PARSER.parse_at(cursor)? {
+                            match slash_lookup::parse_at(cursor) {
                                 Parsed::Token(child) => {
                                     result = result.child(child);
                                 }
@@ -58,10 +74,6 @@ impl parser::Parser for Parser {
         }
 
         return result.result();
-    }
-
-    fn get_name(&self) -> &'static str {
-        return KEY;
     }
 }
 

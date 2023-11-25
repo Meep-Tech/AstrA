@@ -8,9 +8,13 @@ use crate::{
 
 use super::mutable_field_assigner;
 
-pub static KEY: &'static str = "named-entry";
+pub const KEY: &str = "named-entry";
 
 impl parser::Parser for Parser {
+    fn get_name(&self) -> &'static str {
+        return &KEY;
+    }
+
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {
         let mut result = Token::new();
 
@@ -40,10 +44,6 @@ impl parser::Parser for Parser {
             }
             Parsed::Error(error) => return Error::in_child(result, error),
         }
-    }
-
-    fn get_name(&self) -> &'static str {
-        return KEY;
     }
 }
 

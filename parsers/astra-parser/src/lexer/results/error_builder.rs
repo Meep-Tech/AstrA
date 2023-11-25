@@ -1,10 +1,10 @@
 use crate::{lexer::results::builder::Builder, lexer::results::error::Error, End, Parsed};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct ErrorBuilder {
     pub name: String,
     pub text: Option<String>,
-    pub tags: Option<Vec<String>>,
+    pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Parsed>>,
     pub props: Option<HashMap<String, Parsed>>,
 }
@@ -38,11 +38,11 @@ impl ErrorBuilder {
     pub fn tag(mut self, tag: &str) -> ErrorBuilder {
         match self.tags {
             Some(mut types) => {
-                types.push(tag.to_string());
+                types.insert(tag.to_string());
                 self.tags = Some(types);
             }
             None => {
-                self.tags = Some(vec![tag.to_string()]);
+                self.tags = Some(vec![tag.to_string()].into_iter().collect());
             }
         }
         self
@@ -92,7 +92,7 @@ impl Builder<Error> for ErrorBuilder {
         return Error {
             name: self.name,
             text: self.text,
-            tags: self.tags.unwrap_or(Vec::new()),
+            tags: self.tags,
             children: self.children.unwrap_or(Vec::new()),
             props: self.props,
             start,

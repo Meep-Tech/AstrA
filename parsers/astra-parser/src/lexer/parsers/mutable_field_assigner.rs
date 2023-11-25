@@ -6,9 +6,13 @@ use crate::{
     Cursor, End,
 };
 
-pub static KEY: &'static str = "mutable-field-assigner";
+pub const KEY: &str = "mutable-field-assigner";
 
 impl parser::Parser for Parser {
+    fn get_name(&self) -> &'static str {
+        return &KEY;
+    }
+
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {
         if cursor.try_read(':') {
             if cursor.char().is_whitespace() {
@@ -23,10 +27,6 @@ impl parser::Parser for Parser {
                 .text("Unexpected character in 'mutable-field-assigner' token.")
                 .result()
         }
-    }
-
-    fn get_name(&self) -> &'static str {
-        return KEY;
     }
 }
 

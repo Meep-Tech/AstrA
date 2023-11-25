@@ -6,11 +6,11 @@ use crate::{
     Cursor, End,
 };
 
-pub static KEY: &'static str = "dot-lookup";
+pub const KEY: &str = "dot-lookup";
 
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
-        return KEY;
+        return &KEY;
     }
 
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {

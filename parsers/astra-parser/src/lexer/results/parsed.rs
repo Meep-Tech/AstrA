@@ -1,6 +1,6 @@
 use super::{error::Error, token::Token};
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Parsed {
     Token(Token),
     Error(Error),

@@ -2,18 +2,18 @@ use crate::{
     lexer::results::error_builder::ErrorBuilder, lexer::results::token::Token,
     lexer::results::token_builder::TokenBuilder, End, Parsed,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct ChildOrError {
     pub child: Option<Token>,
     pub err: Option<Error>,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Error {
     pub name: String,
     pub text: Option<String>,
-    pub tags: Vec<String>,
+    pub tags: Option<HashSet<String>>,
     pub start: usize,
     pub end: usize,
     pub children: Vec<Parsed>,
@@ -50,7 +50,7 @@ impl Error {
         let mut parent_err = ErrorBuilder {
             name: "incomplete".to_string(),
             text: None,
-            tags: Some(parent.tags),
+            tags: parent.tags,
             children: Some(
                 parent
                     .children

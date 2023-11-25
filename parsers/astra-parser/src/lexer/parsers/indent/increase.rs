@@ -1,12 +1,13 @@
+/// A boilerplate template for a parser.
 use crate::{
     lexer::{
         parser::{self, Parser as _},
-        results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
+        results::{builder::Builder, error::Error, parsed::Parsed},
     },
-    Cursor, End,
+    Cursor, End, Token,
 };
 
-pub const KEY: &str = "slash-lookup";
+pub const KEY: &str = "indent-increase";
 
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
@@ -14,15 +15,19 @@ impl parser::Parser for Parser {
     }
 
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {
-        if cursor.try_read('/') {
-            if let Some(name) = crate::lexer::parsers::name::PARSER.try_parse_at(cursor) {
-                return Token::new().child(name).result();
-            } else {
-                return None;
+        while cursor.char().is_whitespace() {
+            match cursor.read() {
+                '\n' => {
+                    if cursor.next().is_whitespace() {
+                        return End::Token();
+                    }
+                }
+                _ => {}
             }
-        } else {
-            return None;
+            cursor.next();
         }
+
+        todo!()
     }
 }
 
@@ -32,7 +37,9 @@ pub static PARSER: Parser = Parser {};
 pub fn parse(input: &str) -> Parsed {
     match PARSER.parse(input) {
         Some(parsed) => parsed,
-        None => Parsed::Error(Error::new("failed-to-parse-slash-lookup").build(0, input.len())),
+        None => Parsed::Error(
+            Error::new(&("failed-to-parse".to_string() + &KEY).to_string()).build(0, input.len()),
+        ),
     }
 }
 

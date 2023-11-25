@@ -1,6 +1,6 @@
 use crate::{lexer::{results::{builder::Builder, parsed::Parsed, token::Token}, parser::{self, Parser as _}}, lexer::results::error::Error, End, Cursor};
 
-pub static KEY: &'static str = "name";
+pub const KEY: &str = "name";
 
 impl Parser {
     fn is_allowed_symbol(c: char) -> bool {
@@ -27,7 +27,7 @@ impl Parser {
 
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
-        return KEY;
+        return &KEY;
     }
 
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {

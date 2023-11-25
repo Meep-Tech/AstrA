@@ -1,9 +1,9 @@
 use crate::{lexer::results::builder::Builder, End, Token};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct TokenBuilder {
     pub name: Option<String>,
-    pub tags: Option<Vec<String>>,
+    pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Token>>,
     pub props: Option<HashMap<String, Token>>,
 }
@@ -38,10 +38,10 @@ impl TokenBuilder {
     pub fn tag(mut self, tag: &str) -> TokenBuilder {
         match self.tags {
             Some(ref mut tags) => {
-                tags.push(tag.to_string());
+                tags.insert(tag.to_string());
             }
             None => {
-                self.tags = Some(vec![tag.to_string()]);
+                self.tags = Some(vec![tag.to_string()].into_iter().collect());
             }
         }
         self
@@ -79,8 +79,8 @@ impl TokenBuilder {
 impl Builder<Token> for TokenBuilder {
     fn build(self, start: usize, end: usize) -> crate::Token {
         return Token {
-            name: self.name.unwrap_or("".to_string()),
-            tags: self.tags.unwrap_or(Vec::new()),
+            name: self.name.unwrap(), //_or("".to_string()),
+            tags: self.tags,
             children: self.children.unwrap_or(Vec::new()),
             props: self.props,
             start,

@@ -6,11 +6,11 @@ use crate::{
     Cursor, End,
 };
 
-pub static KEY: &'static str = "escape-sequence";
+pub const KEY: &str = "escape-sequence";
 
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
-        return KEY;
+        return &KEY;
     }
 
     fn rule(&self, cursor: &mut Cursor) -> Option<End> {
