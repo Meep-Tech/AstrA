@@ -4,6 +4,48 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher},
 };
 
+// #region Loggers
+
+macro_rules! info {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::log_info($($rest)*);
+    }
+}
+pub(crate) use info;
+
+macro_rules! plain {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::log_info_plain($($rest)*);
+    }
+}
+pub(crate) use plain;
+
+macro_rules! warning {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::log_warn($($rest)*);
+    }
+}
+pub(crate) use warning;
+
+macro_rules! error {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::log_error($($rest)*);
+    }
+}
+pub(crate) use error;
+
+macro_rules! ln {
+    () => {
+        #[cfg(debug_assertions)]
+        log::log_ln();
+    };
+}
+pub(crate) use ln;
+
 pub fn log(keys: &[&str], message: &str) {
     if Some(unsafe { &_STYLES }).is_some() {
         let styled_keys = style_keys(keys);
@@ -29,7 +71,7 @@ pub fn log_plain_message(keys: &[&str], message: &str) {
     }
 }
 
-pub fn info_plain(keys: &[&str], message: &str) {
+pub fn log_info_plain(keys: &[&str], message: &str) {
     let info_separator = "-".color(Color::BrightBlue);
     log_plain_message(
         _get_keys(keys, &info_separator)
@@ -41,7 +83,7 @@ pub fn info_plain(keys: &[&str], message: &str) {
     );
 }
 
-pub fn info(keys: &[&str], message: &str) {
+pub fn log_info(keys: &[&str], message: &str) {
     let info_separator = "-".color(Color::BrightBlue);
     log(
         _get_keys(keys, &info_separator)
@@ -53,7 +95,7 @@ pub fn info(keys: &[&str], message: &str) {
     );
 }
 
-pub fn warn(keys: &[&str], message: &str) {
+pub fn log_warn(keys: &[&str], message: &str) {
     let warn_separator = "*".color(Color::BrightYellow);
     log(
         &_get_keys(keys, &warn_separator)
@@ -65,7 +107,7 @@ pub fn warn(keys: &[&str], message: &str) {
     );
 }
 
-pub fn error(keys: &[&str], message: &str) {
+pub fn log_error(keys: &[&str], message: &str) {
     let error_prefix = "!".color(Color::BrightRed);
     log(
         &_get_keys(keys, &error_prefix)
@@ -76,6 +118,15 @@ pub fn error(keys: &[&str], message: &str) {
         message,
     );
 }
+
+pub fn log_ln() {
+    println!();
+}
+
+// #endregion
+
+// #region Style Setters
+
 pub fn add_bg(text: &str, bg: Color) {
     add_style(text, &_escape_bg(bg));
 }
@@ -134,6 +185,10 @@ pub fn set_random_style(message: &str) {
     add_bg(message, _get_color_by_ordered_number(bg_hash));
 }
 
+// #endregion
+
+// #region Key Setters
+
 pub fn push_unique_key(key: &str) {
     let key = key.to_string();
     unsafe {
@@ -169,6 +224,10 @@ pub fn pop_unique_key(key: &str) {
     }
 }
 
+// #endregion
+
+// #region Stylizers
+
 pub fn color(color: Color, message: &str) -> String {
     return format!("{}{}{}", _escape_color(color), message, _escape_reset());
 }
@@ -183,10 +242,6 @@ pub fn effect(effect: Effect, message: &str) -> String {
 
 pub fn indent(text: &str, indent: usize) -> String {
     text.replace('\n', &format!("\n{}", "\t".repeat(indent)))
-}
-
-pub fn ln() {
-    println!();
 }
 
 pub fn style_keys(keys: &[&str]) -> Vec<String> {
@@ -230,6 +285,10 @@ pub fn style_text(message: &str) -> String {
     }
     styled_message
 }
+
+// #endregion
+
+// #region Styles
 
 #[derive(PartialEq, Eq)]
 pub enum Color {
@@ -301,6 +360,10 @@ impl Color {
     }
 }
 
+// #endregion
+
+// #region Styleable String Implementations
+
 pub trait Styleable {
     fn color(&self, color: Color) -> String;
     fn bg(&self, color: Color) -> String;
@@ -340,6 +403,10 @@ impl Styleable for &str {
         return super::log::effect(effect, self);
     }
 }
+
+// #endregion
+
+// #region Internal
 
 static mut _KEYS: Vec<String> = Vec::new();
 
@@ -461,3 +528,5 @@ fn _get_keys(input: &[&str], prefix: &str) -> Vec<String> {
     );
     return keys;
 }
+
+// #endregion

@@ -19,7 +19,7 @@ impl Cursor {
     pub fn new(source: &str) -> Cursor {
         log::add_color("CURSOR", log::Color::BrightGreen);
         log::add_color("TOKEN", log::Color::BrightBlue);
-        log::info(
+        log::info!(
             &["CURSOR", ":NEW"],
             &format!("Creating new cursor for input of length {}", source.len()),
         );
@@ -38,7 +38,7 @@ impl Cursor {
 
     pub fn save(&mut self) -> usize {
         if (self.state.last().is_none()) || (self.state.last().unwrap().pos == self.pos) {
-            log::info(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
+            log::info!(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
         }
 
         let state = self.state();
@@ -50,7 +50,7 @@ impl Cursor {
     pub fn restore(&mut self) -> usize {
         let state = self.state.pop().unwrap();
         if self.pos != state.pos {
-            log::info(
+            log::info!(
                 &["CURSOR", "RESTORE"],
                 &format!("{} ~> {}", self.pos, state.pos),
             );
@@ -70,7 +70,7 @@ impl Cursor {
     }
 
     pub fn read(&mut self) -> char {
-        log::info(
+        log::info!(
             &["CURSOR", "READ"],
             &format!(
                 "{}({}) => {}({}).",
@@ -85,14 +85,14 @@ impl Cursor {
         self.pos += 1;
 
         if self.eof() {
-            log::info(&["CURSOR", ":EOF"], "Reached end of file.");
+            log::info!(&["CURSOR", ":EOF"], "Reached end of file.");
         }
 
         self.char()
     }
 
     pub fn skip(&mut self) {
-        log::info(
+        log::info!(
             &["CURSOR", "SKIP"],
             &format!(
                 "{}({}) => {}({}).",
@@ -153,44 +153,44 @@ impl Cursor {
 
     // TODO: return a ws token with is_ignored = true
     pub fn skip_ws(&mut self) {
-        log::info(&["CURSOR", "SKIP-WS"], &format!("{}..", self.pos));
+        log::info!(&["CURSOR", "SKIP-WS"], &format!("{}..", self.pos));
         self.skip_while(|c| c.is_whitespace());
-        log::info(&["CURSOR", "SKIP-WS"], &format!("..{}", self.pos));
+        log::info!(&["CURSOR", "SKIP-WS"], &format!("..{}", self.pos));
     }
 
     pub fn skip_while(&mut self, f: fn(char) -> bool) {
-        log::info(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
+        log::info!(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
         while f(self.char()) {
             self.skip();
         }
-        log::info(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
+        log::info!(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
     }
 
     pub fn skip_until(&mut self, f: fn(char) -> bool) {
-        log::info(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
+        log::info!(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
         while !f(self.char()) {
             self.skip();
         }
-        log::info(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
+        log::info!(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
     }
 
     pub fn read_while(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        log::info(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
+        log::info!(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
         let mut result = Vec::new();
         while f(self.char()) {
             result.push(self.read());
         }
-        log::info(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
+        log::info!(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
         return result;
     }
 
     pub fn read_until(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        log::info(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
+        log::info!(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
         let mut result = Vec::new();
         while !f(self.char()) {
             result.push(self.read());
         }
-        log::info(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
+        log::info!(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
         return result;
     }
 

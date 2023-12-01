@@ -19,7 +19,7 @@ impl TokenBuilder {
     }
 
     pub fn name(mut self, name: &str) -> TokenBuilder {
-        log::info(&["TOKEN", "SET-NAME"], name);
+        log::info!(&["TOKEN", "SET-NAME"], name);
         self.name = Some(name.to_string());
         self
     }
@@ -32,7 +32,7 @@ impl TokenBuilder {
     }
 
     pub fn tag(mut self, tag: &str) -> TokenBuilder {
-        log::info(&["TOKEN", "ADD-TAG"], tag);
+        log::info!(&["TOKEN", "ADD-TAG"], tag);
         match self.tags {
             Some(ref mut tags) => {
                 tags.insert(tag.to_string());
@@ -45,7 +45,7 @@ impl TokenBuilder {
     }
 
     pub fn child(mut self, child: Token) -> TokenBuilder {
-        log::info(&["TOKEN", "ADD-CHILD"], &format!("{:?}", child.name));
+        log::info!(&["TOKEN", "ADD-CHILD"], &format!("{:?}", child.name));
         match self.children {
             Some(ref mut children) => {
                 children.push(child);
@@ -58,7 +58,7 @@ impl TokenBuilder {
     }
 
     pub fn prop(mut self, key: &str, value: Token) -> TokenBuilder {
-        log::info(
+        log::info!(
             &["TOKEN", "ADD-PROP"],
             &format!("{} = {:?}", key, value.name),
         );

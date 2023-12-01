@@ -28,7 +28,7 @@ where
 {
     let result: &Rc<TType>;
     log::push_unique_key("PARSERS");
-    log::info(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
+    log::info!(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
 
     unsafe {
         let parser = _BY_KEY.as_ref().unwrap().get(key).unwrap();
@@ -47,12 +47,12 @@ where
     log::push_unique_key("PARSERS");
 
     let result: &'static Rc<TType>;
-    log::info(
+    log::info!(
         &["GET", "BY-TYPE"],
         &format!("by type: {:?}", std::any::type_name::<TType>()),
     );
     let type_id = TypeId::of::<TType>();
-    log::info(
+    log::info!(
         &["GET", "BY-TYPE-ID"],
         &format!("with type id: {:?}", type_id),
     );
@@ -99,7 +99,7 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                 panic!("Parsers already initialized");
             }
             None => {
-                log::info(&[":START"], "Initializing parsers");
+                log::info!(&[":START"], "Initializing parsers");
                 log::push_key_div("-", Color::Green);
 
                 _BY_KEY = Some(HashMap::new());
@@ -112,24 +112,24 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                     log::push_key(key);
                     log::set_random_style(key);
                     log::push_key_div("-", Color::Green);
-                    log::info(&[":START"], "Initializing parser");
+                    log::info!(&[":START"], "Initializing parser");
                     log::push_key_div("-", Color::Green);
 
-                    log::info(&["KEY"], key);
-                    log::info(&["TYPE"], &format!("{:?}: {:?}", type_name, type_id));
+                    log::info!(&["KEY"], key);
+                    log::info!(&["TYPE"], &format!("{:?}: {:?}", type_name, type_id));
 
                     _BY_KEY.as_mut().unwrap().insert(key, p);
 
                     _BY_TYPE.get_or_insert(HashMap::new()).insert(type_id, key);
 
                     log::pop_key();
-                    log::info(&[":END"], "Initialized parser");
+                    log::info!(&[":END"], "Initialized parser");
                     log::pop_key();
                     log::pop_key();
                 }
 
                 log::pop_key();
-                log::info(&[":END"], "Initialized parsers");
+                log::info!(&[":END"], "Initialized parsers");
             }
         }
     }

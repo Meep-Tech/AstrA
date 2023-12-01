@@ -21,7 +21,7 @@ pub trait Testable {
         log::add_color("PASS", Color::BrightGreen);
         log::add_color("TOKEN", Color::BrightBlue);
 
-        log::ln();
+        log::ln!();
         log::push_key(&"TEST".color(Color::Yellow));
         log::push_unique_key("INIT");
         let key = Self::Instance().get_name();
@@ -32,15 +32,15 @@ pub trait Testable {
         let tests = Self::tests();
         log::pop_unique_key("INIT");
 
-        log::ln();
-        log::info(&[":START"], "Running tests");
+        log::ln!();
+        log::info!(&[":START"], "Running tests");
         log::push_key_div("-", Color::Yellow);
 
         let mut results: HashMap<String, Outcome> = HashMap::new();
         for test in tests {
             log::push_key(&test.name.color(Color::BrightYellow));
             log::push_key_div("-", Color::Yellow);
-            log::info_plain(
+            log::plain!(
                 &[":START"],
                 &format!(
                     "Running test on input: {:}",
@@ -56,10 +56,10 @@ pub trait Testable {
 
             match &outcome {
                 Outcome::Pass => {
-                    log::info(&[":END", "PASS"], &format!("Test passed"));
+                    log::info!(&[":END", "PASS"], &format!("Test passed"));
                 }
                 Outcome::Fail(result) => {
-                    log::warn(
+                    log::warning!(
                         &[":END", "FAIL"],
                         &format!(
                             "Test failed. \n\t ?> {:}: \n\t\t{:}, \n\t !> {:}: \n\t\t{:}",
@@ -82,19 +82,19 @@ pub trait Testable {
 
         log::pop_key();
         log::pop_key();
-        log::info(&[":END"], "Finished running tests.");
+        log::info!(&[":END"], "Finished running tests.");
 
-        log::ln();
+        log::ln!();
         log::push_key(&"RESULTS".color(Color::Magenta));
         log::push_key_div("-", Color::Magenta);
         let mut all_passed = true;
         for (name, outcome) in results.iter() {
             match outcome {
                 Outcome::Pass => {
-                    log::info(&[&name.color(Color::Yellow), "PASS"], &format!("{:}", name));
+                    log::info!(&[&name.color(Color::Yellow), "PASS"], &format!("{:}", name));
                 }
                 Outcome::Fail(_) => {
-                    log::warn(&[&name.color(Color::Yellow), "FAIL"], &format!("{:}", name));
+                    log::warning!(&[&name.color(Color::Yellow), "FAIL"], &format!("{:}", name));
                     all_passed = false;
                 }
             }
@@ -103,15 +103,15 @@ pub trait Testable {
         log::pop_key();
 
         if all_passed {
-            log::info(&[":ALL", "PASS"], "All tests passed");
+            log::info!(&[":ALL", "PASS"], "All tests passed");
         } else {
-            log::error(&[":SOME", "FAIL"], "Some tests failed");
+            log::error!(&[":SOME", "FAIL"], "Some tests failed");
         }
 
         log::pop_key();
         log::pop_key();
 
-        log::ln();
+        log::ln!();
         results
     }
 }
@@ -122,7 +122,7 @@ fn _compare_results(result: Parsed, expected: &Parsed) -> Outcome {
     match _compare_token_or_error(&result, &expected) {
         Comparison::AreEqual => Outcome::Pass,
         Comparison::NotEqual(msg) => {
-            log::warn(&["!", "COMPARE", "FAIL"], &msg);
+            log::warning!(&["!", "COMPARE", "FAIL"], &msg);
             Outcome::Fail(Some(result))
         }
     }

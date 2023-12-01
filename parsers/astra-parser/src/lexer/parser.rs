@@ -146,14 +146,14 @@ pub trait Parser: Sync {
         log::push_unique_key(&"PARSE".color(log::Color::Green));
         log::push_key(self.get_name());
         log::push_key_div(":", log::Color::Green);
-        log::info(&[":START"], &format!("@ {}", cursor.pos));
+        log::info!(&[":START"], &format!("@ {}", cursor.pos));
 
         let start = cursor.save();
 
         let result = match self.rule(cursor) {
             End::Match(token) => {
                 let token = token.assure_name(self.get_name()).build(start, cursor.pos);
-                log::info(
+                log::info!(
                     &[":END", "MATCH"],
                     &format!("@ {} = {:#?}", cursor.pos, token).color(log::Color::Green),
                 );
@@ -165,13 +165,13 @@ pub trait Parser: Sync {
                     .assure_name(self.get_name())
                     .build(start, cursor.pos);
                 if optional {
-                    log::info(
+                    log::info!(
                         &[":END", &"IGNORED".effect(log::Effect::Strikethrough)],
                         &format!("@ {} = {:#?}", cursor.pos, err)
                             .effect(log::Effect::Strikethrough),
                     );
                 } else {
-                    log::info(
+                    log::info!(
                         &[":END", "FAIL"],
                         &format!("@ {} = {:#?}", cursor.pos, err)
                             .color(log::Color::Red)
