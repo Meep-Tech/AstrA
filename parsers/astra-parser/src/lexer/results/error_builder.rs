@@ -6,7 +6,7 @@ pub struct ErrorBuilder {
     pub text: Option<String>,
     pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Parsed>>,
-    pub props: Option<HashMap<String, Parsed>>,
+    pub keys: Option<HashMap<String, usize>>,
 }
 
 impl ErrorBuilder {
@@ -16,7 +16,7 @@ impl ErrorBuilder {
             text: None,
             tags: None,
             children: None,
-            props: None,
+            keys: None,
         }
     }
 
@@ -66,21 +66,27 @@ impl ErrorBuilder {
         self
     }
 
-    pub fn props(mut self, props: HashMap<String, Parsed>) -> ErrorBuilder {
-        self.props = Some(props);
+    pub fn props(mut self, props: HashMap<String, usize>) -> ErrorBuilder {
+        self.keys = Some(props);
         self
     }
 
     pub fn prop(mut self, key: &str, value: Parsed) -> ErrorBuilder {
-        match self.props {
+        self = self.child(value);
+        let index = match &self.children {
+            Some(els) => els.len() - 1,
+            None => 0,
+        };
+
+        match self.keys {
             Some(mut props) => {
-                props.insert(key.to_string(), value);
-                self.props = Some(props);
+                props.insert(key.to_string(), index);
+                self.keys = Some(props);
             }
             None => {
                 let mut props = HashMap::new();
-                props.insert(key.to_string(), value);
-                self.props = Some(props);
+                props.insert(key.to_string(), index);
+                self.keys = Some(props);
             }
         }
         self
@@ -94,7 +100,7 @@ impl Builder<Error> for ErrorBuilder {
             text: self.text,
             tags: self.tags,
             children: self.children.unwrap_or(Vec::new()),
-            props: self.props,
+            keys: self.keys,
             start,
             end,
         };

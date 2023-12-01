@@ -5,7 +5,7 @@ pub struct TokenBuilder {
     pub name: Option<String>,
     pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Token>>,
-    pub props: Option<HashMap<String, Token>>,
+    pub keys: Option<HashMap<String, usize>>,
 }
 
 impl TokenBuilder {
@@ -14,7 +14,7 @@ impl TokenBuilder {
             name: None,
             tags: None,
             children: None,
-            props: None,
+            keys: None,
         }
     }
 
@@ -63,14 +63,17 @@ impl TokenBuilder {
             &format!("{} = {:?}", key, value.name),
         );
 
-        match self.props {
+        self = self.child(value);
+        let index = self.children.as_ref().unwrap().len() - 1;
+
+        match self.keys {
             Some(ref mut props) => {
-                props.insert(key.to_string(), value);
+                props.insert(key.to_string(), index);
             }
             None => {
                 let mut props = HashMap::new();
-                props.insert(key.to_string(), value);
-                self.props = Some(props);
+                props.insert(key.to_string(), index);
+                self.keys = Some(props);
             }
         }
         self
@@ -80,10 +83,10 @@ impl TokenBuilder {
 impl Builder<Token> for TokenBuilder {
     fn build(self, start: usize, end: usize) -> crate::Token {
         return Token {
-            name: self.name.unwrap(), //_or("".to_string()),
+            name: self.name.unwrap(),
             tags: self.tags,
             children: self.children.unwrap_or(Vec::new()),
-            props: self.props,
+            keys: self.keys,
             start,
             end,
         };

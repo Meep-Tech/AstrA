@@ -4,6 +4,8 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
+use super::data::{Data, _EMPTY_KEYS, _EMPTY_TAGS};
+
 pub struct ChildOrError {
     pub child: Option<Token>,
     pub err: Option<Error>,
@@ -17,7 +19,7 @@ pub struct Error {
     pub start: usize,
     pub end: usize,
     pub children: Vec<Parsed>,
-    pub props: Option<HashMap<String, Parsed>>,
+    pub keys: Option<HashMap<String, usize>>,
 }
 
 impl Error {
@@ -38,7 +40,7 @@ impl Error {
                     .map(|c| Parsed::Token(c))
                     .collect(),
             ),
-            props: None,
+            keys: None,
         };
 
         parent_err = parent_err.child(Parsed::Error(err));
@@ -58,18 +60,39 @@ impl Error {
                     .map(|c| Parsed::Token(c))
                     .collect(),
             ),
-            props: Some(
-                parent
-                    .props
-                    .unwrap_or(HashMap::new())
-                    .into_iter()
-                    .map(|(k, v)| (k, Parsed::Token(v)))
-                    .collect(),
-            ),
+            keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
         parent_err = parent_err.prop(key, Parsed::Error(err));
 
         return Some(End::Fail(parent_err));
+    }
+}
+
+impl Data<Parsed> for Error {
+    fn name(&self) -> &str {
+        return &self.name;
+    }
+
+    fn tags(&self) -> &HashSet<String> {
+        let hash_set = self.tags.as_ref();
+        hash_set.unwrap_or(&_EMPTY_TAGS)
+    }
+
+    fn start(&self) -> usize {
+        return self.start;
+    }
+
+    fn end(&self) -> usize {
+        return self.end;
+    }
+
+    fn children(&self) -> Vec<&Parsed> {
+        return self.children.iter().collect();
+    }
+
+    fn keys(&self) -> &HashMap<String, usize> {
+        let hash_map = self.keys.as_ref();
+        hash_map.unwrap_or(&_EMPTY_KEYS)
     }
 }

@@ -3,7 +3,7 @@ use std::{collections::HashMap, rc::Rc};
 use crate::{
     lexer::{
         parser::Parser,
-        results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
+        results::{builder::Builder, data::Data, error::Error, parsed::Parsed, token::Token},
     },
     utils::log::{self, Color, Colorable, Indentable},
 };
@@ -217,8 +217,8 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
         ));
     }
 
-    if let Some(expected_props) = &expected.props {
-        if let Some(result_props) = &result.props {
+    if let Some(expected_props) = &expected.keys {
+        if let Some(result_props) = &result.keys {
             if expected_props.len() != result_props.len() {
                 return Comparison::NotEqual(_mismatch(
                     "prop count",
@@ -227,8 +227,8 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
                 ));
             }
 
-            for (key, expected_prop) in expected_props.iter() {
-                let result_prop = result_props.get(key);
+            for (key, expected_prop) in expected.fields() {
+                let result_prop = result.field(&key);
                 let expected_prop_name = &expected_prop.name;
 
                 match result_prop {
@@ -259,11 +259,11 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
                 &0.to_string(),
             ));
         }
-    } else if result.props.is_some() {
+    } else if result.keys.is_some() {
         return Comparison::NotEqual(_mismatch(
             "prop count",
             &0.to_string(),
-            &result.props.as_ref().unwrap().len().to_string(),
+            &result.keys.as_ref().unwrap().len().to_string(),
         ));
     }
 
@@ -321,8 +321,8 @@ fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
         ));
     }
 
-    if let Some(expected_props) = &expected.props {
-        if let Some(result_props) = &result.props {
+    if let Some(expected_props) = &expected.keys {
+        if let Some(result_props) = &result.keys {
             if expected_props.len() != result_props.len() {
                 return Comparison::NotEqual(_mismatch(
                     "prop count",
@@ -331,8 +331,8 @@ fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
                 ));
             }
 
-            for (key, expected_prop) in expected_props.iter() {
-                let result_prop = result_props.get(key);
+            for (key, expected_prop) in expected.fields() {
+                let result_prop = result.field(&key);
                 let expected_prop_name = match &expected_prop {
                     Parsed::Token(token) => token.name.clone(),
                     Parsed::Error(err) => err.name.clone(),
@@ -410,11 +410,11 @@ fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
                 &0.to_string(),
             ));
         }
-    } else if result.props.is_some() {
+    } else if result.keys.is_some() {
         return Comparison::NotEqual(_mismatch(
             "prop count",
             &0.to_string(),
-            &result.props.as_ref().unwrap().len().to_string(),
+            &result.keys.as_ref().unwrap().len().to_string(),
         ));
     }
 
