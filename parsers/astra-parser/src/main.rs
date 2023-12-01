@@ -1,5 +1,7 @@
+#![allow(incomplete_features)]
 #![feature(lazy_cell)]
 #![feature(type_name_of_val)]
+#![feature(unsized_locals)]
 
 pub mod lexer;
 pub mod tests;

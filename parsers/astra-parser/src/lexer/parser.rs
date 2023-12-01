@@ -9,7 +9,7 @@ use super::{
 };
 
 pub trait Parser: Sync {
-    fn instance() -> Rc<Self>
+    fn instance() -> &'static Rc<Self>
     where
         Self: Sync + 'static + Sized,
     {
@@ -44,7 +44,7 @@ pub trait Parser: Sync {
     fn parse_at(&self, cursor: &mut Cursor) -> Option<Parsed> {
         log::push_unique_key("PARSE");
         log::push_key(self.get_name());
-        log::push_key_div(":", &log::Color::Green);
+        log::push_key_div(":", log::Color::Green);
         log::info(&[":START"], &format!("@ {}", cursor.pos));
 
         let start = cursor.save();

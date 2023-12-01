@@ -1,9 +1,4 @@
-use std::{
-    any::{Any, TypeId},
-    borrow::BorrowMut,
-    collections::HashMap,
-    rc::Rc,
-};
+use std::{any::TypeId, collections::HashMap, rc::Rc};
 
 use crate::utils::log;
 
@@ -27,68 +22,31 @@ pub mod slash_lookup;
 pub type ParserType = dyn Parser + Sync + 'static;
 pub type Instance<TParser = ParserType> = TParser;
 
-pub(crate) static PARSERS: [&ParserType; 8] = [
-    &named_entry::PARSER,
-    &name::PARSER,
-    &mutable_field_assigner::PARSER,
-    &indent::PARSER,
-    &dot_lookup::PARSER,
-    &slash_lookup::PARSER,
-    &escape_sequence::PARSER,
-    &naked_text::PARSER,
-];
-
-pub fn get_by_key<TType>(key: &str) -> Rc<TType>
+pub fn get_by_key<TType>(key: &str) -> &'static Rc<TType>
 where
-    TType: Parser + Sync + 'static,
+    TType: Parser + 'static,
 {
-    let result: Option<Rc<TType>>;
+    let result: &Rc<TType>;
     log::push_unique_key("PARSERS");
     log::info(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
 
     unsafe {
-        let instance = &_PARSERS_BY_KEY.as_ref().unwrap().get(key);
-        match instance {
-            Some(mut instance) => {
-                log::info(
-                    &["GET", "BY-KEY", "FOUND"],
-                    &format!("{:?}: {:?}", key, instance),
-                );
-
-                let rc = instance.borrow_mut();
-
-                let downcast = rc.clone().downcast::<TType>();
-                result = match downcast {
-                    Ok(downcast) => Some(downcast.to_owned()),
-                    Err(error) => {
-                        panic!(
-                            "Failed to downcast parser by key: {:?}, from type: {:?}, to type: {:?}. Error: {:?}",
-                            key,
-                            std::any::type_name_of_val(rc.borrow_mut()),
-                            std::any::type_name::<TType>(),
-                            error.to_owned()
-                        );
-                    }
-                }
-            }
-            None => {
-                panic!("Failed to get parser by key: {:?}", key);
-            }
-        }
+        let parser = _BY_KEY.as_ref().unwrap().get(key).unwrap();
+        result = std::mem::transmute::<&Rc<dyn Parser>, &Rc<TType>>(parser);
     }
 
     log::pop_unique_key("PARSERS");
 
-    return result.unwrap();
+    return result;
 }
 
-pub fn get_by_type<TType>() -> Rc<TType>
+pub fn get_by_type<TType>() -> &'static Rc<TType>
 where
     TType: Parser + Sync + 'static,
 {
     log::push_unique_key("PARSERS");
 
-    let result: Option<Rc<TType>>;
+    let result: &'static Rc<TType>;
     log::info(
         &["GET", "BY-TYPE"],
         &format!("by type: {:?}", std::any::type_name::<TType>()),
@@ -100,57 +58,61 @@ where
     );
 
     unsafe {
-        let key = _PARSERS_BY_TYPE.as_ref().unwrap().get(&type_id).unwrap();
-        result = Some(get_by_key::<TType>(key));
+        let key = _BY_TYPE.as_ref().unwrap().get(&type_id).unwrap();
+        result = get_by_key::<TType>(key);
     }
 
     log::pop_unique_key("PARSERS");
 
-    return result.unwrap();
+    return result;
 }
 
 pub(crate) fn init_all() {
-    init(&PARSERS);
+    let all: Vec<Rc<dyn Parser>> = vec![
+        Rc::new(named_entry::Parser {}),
+        Rc::new(name::Parser {}),
+        Rc::new(mutable_field_assigner::Parser {}),
+        Rc::new(indent::Parser {}),
+        Rc::new(dot_lookup::Parser {}),
+        Rc::new(slash_lookup::Parser {}),
+        Rc::new(escape_sequence::Parser {}),
+        Rc::new(naked_text::Parser {}),
+    ];
+
+    init(all);
 }
 
-pub(crate) fn init(parsers: &'static [&'_ ParserType]) {
+pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
     log::push_unique_key("INIT");
     log::push_unique_key("PARSERS");
 
     unsafe {
-        match &mut _PARSERS_BY_KEY {
+        match &mut _BY_KEY {
             Some(_) => {
                 panic!("Parsers already initialized");
             }
             None => {
                 log::info(&[":START"], "Initializing parsers");
-                log::push_key_div("-", &log::Color::Green);
+                log::push_key_div("-", log::Color::Green);
 
-                _PARSERS_BY_KEY = Some(HashMap::new());
-                for parser in parsers {
-                    let key: &'static str = parser.get_name();
-                    let type_id: TypeId = parser.get_type_id();
+                _BY_KEY = Some(HashMap::new());
+                for p in parsers {
+                    //let parser = Box::new(p);
+                    let key: &'static str = p.get_name();
+                    let type_id: TypeId = p.get_type_id();
+                    let type_name: &'static str = p.get_type_name();
 
                     log::push_key(key);
-                    log::push_key_div("-", &log::Color::Green);
+                    log::push_key_div("-", log::Color::Green);
                     log::info(&[":START"], "Initializing parser");
-                    log::push_key_div("-", &log::Color::Green);
+                    log::push_key_div("-", log::Color::Green);
 
                     log::info(&["KEY"], key);
+                    log::info(&["TYPE"], &format!("{:?}: {:?}", type_name, type_id));
 
-                    _PARSERS_BY_KEY
-                        .as_mut()
-                        .unwrap()
-                        .insert(key, Rc::new(parser));
+                    _BY_KEY.as_mut().unwrap().insert(key, p);
 
-                    log::info(
-                        &["TYPE"],
-                        &format!("{:?}: {:?}", std::any::type_name_of_val(parser), type_id),
-                    );
-
-                    _PARSERS_BY_TYPE
-                        .get_or_insert(HashMap::new())
-                        .insert(type_id, key);
+                    _BY_TYPE.get_or_insert(HashMap::new()).insert(type_id, key);
 
                     log::pop_key();
                     log::info(&[":END"], "Initialized parser");
@@ -168,5 +130,5 @@ pub(crate) fn init(parsers: &'static [&'_ ParserType]) {
     log::pop_unique_key("INIT");
 }
 
-static mut _PARSERS_BY_KEY: Option<HashMap<&'static str, Rc<Box<dyn Parser>>>> = None;
-static mut _PARSERS_BY_TYPE: Option<HashMap<TypeId, &'static str>> = None;
+static mut _BY_KEY: Option<HashMap<&'static str, Rc<dyn Parser>>> = None;
+static mut _BY_TYPE: Option<HashMap<TypeId, &'static str>> = None;

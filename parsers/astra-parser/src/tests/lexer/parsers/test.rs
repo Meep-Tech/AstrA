@@ -5,7 +5,7 @@ use crate::{
         parser::Parser,
         results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
     },
-    utils::log::{self, Color, Colorable},
+    utils::log::{self, Color, Colorable, Indentable},
 };
 
 pub trait Testable {
@@ -17,15 +17,16 @@ pub trait Testable {
     where
         Self: 'static + Sized + Parser,
     {
-        log::push_key(&"TEST".color(&Color::Yellow));
+        log::push_key(&"TEST".color(Color::Yellow));
+        log::set_color("Fail", Color::Red);
         log::push_key(Self::instance().get_name());
-        log::push_key_div("-", &Color::Yellow);
+        log::push_key_div("-", Color::Yellow);
         log::info(&[":START"], "Running tests");
 
         let mut results = Vec::new();
         for test in Self::tests() {
             log::push_key(&test.name);
-            log::push_key_div("-", &Color::Yellow);
+            log::push_key_div("-", Color::Yellow);
             log::info(&[":START"], "Running test");
 
             let result = test.parser.parse(&test.input);
@@ -39,9 +40,13 @@ pub trait Testable {
                     log::warn(
                         &[":END", "FAIL"],
                         &format!(
-                            "Test failed. Expected: {:#?}, \n\t !> Actual: {:#?}",
-                            format!("{:#?}", test.expected).color(&Color::Green),
-                            format!("{:#?}", result).color(&Color::Red),
+                            "Test failed. \n\t ?> {:}: \n\t\t{:}, \n\t !> {:}: \n\t\t{:}",
+                            log::color(Color::BrightGreen, "Expected"),
+                            format!("{:#?}", test.expected)
+                                .color(Color::Green)
+                                .indent(2),
+                            log::color(Color::BrightRed, "Actual"),
+                            format!("{:#?}", result).color(Color::Red).indent(2),
                         ),
                     );
                 }
@@ -73,7 +78,7 @@ fn _compare_results(result: Option<Parsed>, expected: &Option<Parsed>) -> Outcom
                 match _compare_token_or_error(&resulting_some, &expected_some) {
                     Comparison::AreEqual => Outcome::Pass,
                     Comparison::NotEqual(msg) => {
-                        log::warn(&["!", "COMPARE", "FAIL"], &msg);
+                        log::warn(&["!", "COMPARE", "FAIL"], &msg.color(Color::Red));
                         Outcome::Fail(Some(resulting_some))
                     }
                 }
@@ -384,9 +389,9 @@ enum Comparison {
 
 pub struct Test<TParser>
 where
-    TParser: Parser,
+    TParser: Parser + 'static,
 {
-    pub parser: Rc<TParser>,
+    pub parser: &'static Rc<TParser>,
     pub name: String,
     pub input: String,
     pub expected: Option<Parsed>,

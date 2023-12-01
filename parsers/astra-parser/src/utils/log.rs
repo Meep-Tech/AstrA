@@ -48,7 +48,8 @@ pub fn log(keys: &[&str], message: &str) {
     }
 }
 
-pub fn set_bg(text: String, bg: &Color) {
+pub fn set_bg(text: &str, bg: Color) {
+    let text = text.to_string();
     unsafe {
         if _STYLES.borrow().contains_key(&text) {
             _STYLES
@@ -63,7 +64,8 @@ pub fn set_bg(text: String, bg: &Color) {
     }
 }
 
-pub fn set_color(text: String, color: &Color) {
+pub fn set_color(text: &str, color: Color) {
+    let text = text.to_string();
     unsafe {
         if _STYLES.borrow().contains_key(&text) {
             _STYLES
@@ -78,7 +80,8 @@ pub fn set_color(text: String, color: &Color) {
     }
 }
 
-pub fn set_effect(text: String, effect: &Effect) {
+pub fn set_effect(text: &str, effect: Effect) {
+    let text = text.to_string();
     unsafe {
         if _STYLES.borrow().contains_key(&text) {
             _STYLES
@@ -103,7 +106,7 @@ pub fn push_unique_key(key: &str) {
 }
 
 pub fn info(keys: &[&str], message: &str) {
-    let info_separator = "-".color(&Color::BrightBlue);
+    let info_separator = "-".color(Color::BrightBlue);
     log(
         get_keys(keys, &info_separator)
             .iter()
@@ -115,7 +118,7 @@ pub fn info(keys: &[&str], message: &str) {
 }
 
 pub fn warn(keys: &[&str], message: &str) {
-    let warn_separator = "*".color(&Color::BrightYellow);
+    let warn_separator = "*".color(Color::BrightYellow);
     log(
         &get_keys(keys, &warn_separator)
             .iter()
@@ -127,7 +130,7 @@ pub fn warn(keys: &[&str], message: &str) {
 }
 
 pub fn error(keys: &[&str], message: &str) {
-    let error_prefix = "!".color(&Color::BrightRed);
+    let error_prefix = "!".color(Color::BrightRed);
     log(
         &get_keys(keys, &error_prefix)
             .iter()
@@ -144,7 +147,7 @@ pub fn push_key(key: &str) {
     }
 }
 
-pub fn push_key_div(separator: &str, color: &Color) {
+pub fn push_key_div(separator: &str, color: Color) {
     unsafe {
         _KEYS.push(separator.color(color));
     }
@@ -164,13 +167,12 @@ pub fn pop_unique_key(key: &str) {
     }
 }
 
-pub fn color(color: &Color, message: &str) -> String {
-    return format!(
-        "{}{}{}",
-        escape_color(color),
-        message,
-        escape_color(&Color::Reset)
-    );
+pub fn color(color: Color, message: &str) -> String {
+    return format!("{}{}{}", escape_color(color), message, escape_reset());
+}
+
+pub fn indent(text: &str, indent: usize) -> String {
+    text.replace('\n', &format!("\n{}", "\t".repeat(indent)))
 }
 
 pub enum Color {
@@ -210,11 +212,11 @@ pub enum Effect {
 }
 
 impl Color {
-    pub fn code(&self) -> u8 {
+    pub fn code(self) -> u8 {
         return get_escape_code_for_color(self);
     }
 
-    pub fn escape(&self) -> String {
+    pub fn escape(self) -> String {
         return escape_color(self);
     }
 
@@ -243,38 +245,48 @@ impl Color {
 }
 
 pub trait Colorable {
-    fn color(&self, color: &Color) -> String;
+    fn color(&self, color: Color) -> String;
+}
+
+pub trait Indentable {
+    fn indent(&self, indent: usize) -> String;
 }
 
 impl Colorable for String {
-    fn color(&self, color: &Color) -> String {
+    fn color(&self, color: Color) -> String {
         return super::log::color(color, self);
     }
 }
 
 impl Colorable for &str {
-    fn color(&self, color: &Color) -> String {
+    fn color(&self, color: Color) -> String {
         return super::log::color(color, self);
     }
 }
 
-fn escape_color(color: &Color) -> String {
+impl Indentable for String {
+    fn indent(&self, indent: usize) -> String {
+        return super::log::indent(self, indent);
+    }
+}
+
+fn escape_color(color: Color) -> String {
     return format!("\x1b[{}m", get_escape_code_for_color(color));
 }
 
-fn escape_bg(color: &Color) -> String {
+fn escape_bg(color: Color) -> String {
     return format!("\x1b[{}m", get_escape_code_for_bg(color));
 }
 
-fn escape_effect(effect: &Effect) -> String {
+fn escape_effect(effect: Effect) -> String {
     return format!("\x1b[{}m", get_escape_code_for_effect(effect));
 }
 
 fn escape_reset() -> String {
-    return format!("\x1b[{}m", get_escape_code_for_color(&Color::Reset));
+    return format!("\x1b[{}m", get_escape_code_for_color(Color::Reset));
 }
 
-fn get_escape_code_for_effect(effect: &Effect) -> u8 {
+fn get_escape_code_for_effect(effect: Effect) -> u8 {
     match effect {
         Effect::Bold => 1,
         Effect::Dim => 2,
@@ -292,7 +304,7 @@ fn get_escape_code_for_effect(effect: &Effect) -> u8 {
     }
 }
 
-fn get_escape_code_for_color(color: &Color) -> u8 {
+fn get_escape_code_for_color(color: Color) -> u8 {
     match color {
         Color::Black => 30,
         Color::Red => 31,
@@ -314,7 +326,7 @@ fn get_escape_code_for_color(color: &Color) -> u8 {
     }
 }
 
-fn get_escape_code_for_bg(color: &Color) -> u8 {
+fn get_escape_code_for_bg(color: Color) -> u8 {
     match color {
         Color::Black => 40,
         Color::Red => 41,
