@@ -83,10 +83,12 @@ pub(crate) fn init_all() {
 }
 
 pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
-    log::set_color("INIT", Color::Cyan);
-    log::set_color("PARSERS", Color::Green);
-    log::set_color(":START", Color::BrightMagenta);
-    log::set_color(":END", Color::BrightMagenta);
+    log::add_color("INIT", Color::Cyan);
+    log::add_color("PARSERS", Color::Green);
+    log::add_color(":START", Color::BrightMagenta);
+    log::add_color(":END", Color::BrightMagenta);
+    log::add_color(":NEW", Color::BrightMagenta);
+    log::add_color(":EOF", Color::BrightMagenta);
 
     log::push_unique_key("INIT");
     log::push_unique_key("PARSERS");

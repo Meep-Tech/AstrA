@@ -49,45 +49,36 @@ pub fn log(keys: &[&str], message: &str) {
     }
 }
 
-pub fn set_bg(text: &str, bg: Color) {
-    let text = text.to_string();
-    let mut styles = unsafe { _STYLES.borrow_mut() };
-    if styles.contains_key(&text) {
-        let current = styles.get(&text).unwrap().to_string();
-        styles.insert(text.clone(), format!("{}{}", escape_bg(bg), current));
-    } else {
-        styles.insert(
-            text.clone(),
-            format!("{}{}{}", escape_bg(bg), text, escape_reset()),
-        );
-    }
+pub fn add_bg(text: &str, bg: Color) {
+    add_style(text, &escape_bg(bg));
 }
 
-pub fn set_color(text: &str, color: Color) {
-    let text = text.to_string();
-    let mut styles = unsafe { _STYLES.borrow_mut() };
-    if styles.contains_key(&text) {
-        let current = styles.get(&text).unwrap().to_string();
-        styles.insert(text.clone(), format!("{}{}", escape_color(color), current));
-    } else {
-        styles.insert(
-            text.clone(),
-            format!("{}{}{}", escape_color(color), text, escape_reset()),
-        );
-    }
+pub fn add_color(text: &str, color: Color) {
+    add_style(text, &escape_color(color));
 }
 
-pub fn set_effect(text: &str, effect: Effect) {
+pub fn add_effect(text: &str, effect: Effect) {
+    add_style(text, &escape_effect(effect));
+}
+
+pub fn add_style(text: &str, style: &str) {
     let text = text.to_string();
     unsafe {
         if _STYLES.borrow().contains_key(&text) {
             _STYLES
                 .borrow_mut()
-                .insert(text.clone(), format!("{}{}", escape_effect(effect), text));
-        } else {
+                .insert(text.clone(), format!("{}{}{}", style, text, escape_reset()));
             _STYLES.borrow_mut().insert(
-                text.clone(),
-                format!("{}{}{}", escape_effect(effect), text, escape_reset()),
+                format!("\"{:}\"", text),
+                format!("\"{}{}{}\"", style, text, escape_reset()),
+            );
+        } else {
+            _STYLES
+                .borrow_mut()
+                .insert(text.clone(), format!("{}{}{}", style, text, escape_reset()));
+            _STYLES.borrow_mut().insert(
+                format!("\"{:}\"", text),
+                format!("\"{}{}{}\"", style, text, escape_reset()),
             );
         }
     }
@@ -192,8 +183,8 @@ pub fn set_random_style(message: &str) {
         (finish as usize % 8).try_into().unwrap()
     };
 
-    set_color(message, _get_color_by_ordered_number(color_hash));
-    set_bg(message, _get_color_by_ordered_number(bg_hash));
+    add_color(message, _get_color_by_ordered_number(color_hash));
+    add_bg(message, _get_color_by_ordered_number(bg_hash));
 }
 
 pub fn indent(text: &str, indent: usize) -> String {

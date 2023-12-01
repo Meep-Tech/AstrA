@@ -25,7 +25,6 @@ impl TokenBuilder {
     }
 
     pub(crate) fn assure_name(self, name: &str) -> TokenBuilder {
-        log::info(&["TOKEN", "SET-NAME"], name);
         match self.name {
             Some(_) => self,
             None => self.name(name),

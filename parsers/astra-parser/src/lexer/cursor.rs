@@ -17,10 +17,10 @@ pub struct State {
 
 impl Cursor {
     pub fn new(source: &str) -> Cursor {
-        log::set_color("CURSOR", log::Color::BrightGreen);
-        log::set_color("TOKEN", log::Color::BrightBlue);
+        log::add_color("CURSOR", log::Color::BrightGreen);
+        log::add_color("TOKEN", log::Color::BrightBlue);
         log::info(
-            &["CURSOR", "NEW"],
+            &["CURSOR", ":NEW"],
             &format!("Creating new cursor for input of length {}", source.len()),
         );
         let src: Vec<char> = (source.to_string() + "\0").chars().collect();
@@ -83,6 +83,10 @@ impl Cursor {
 
         self._update_indents();
         self.pos += 1;
+
+        if self.eof() {
+            log::info(&["CURSOR", ":EOF"], "Reached end of file.");
+        }
 
         self.char()
     }

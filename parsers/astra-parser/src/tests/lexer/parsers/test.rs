@@ -17,9 +17,9 @@ pub trait Testable {
     where
         Self: 'static + Sized + Parser,
     {
-        log::set_color("FAIL", Color::BrightRed);
-        log::set_color("PASS", Color::BrightGreen);
-        log::set_color("TOKEN", Color::BrightBlue);
+        log::add_color("FAIL", Color::BrightRed);
+        log::add_color("PASS", Color::BrightGreen);
+        log::add_color("TOKEN", Color::BrightBlue);
 
         log::ln();
         log::push_key(&"TEST".color(Color::Yellow));
