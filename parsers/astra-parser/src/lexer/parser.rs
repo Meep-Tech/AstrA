@@ -1,6 +1,6 @@
 use std::{any::TypeId, rc::Rc};
 
-use crate::utils::log;
+use crate::utils::log::{self, Colorable};
 
 use super::{
     cursor::Cursor,
@@ -42,7 +42,7 @@ pub trait Parser: Sync {
     }
 
     fn parse_at(&self, cursor: &mut Cursor) -> Option<Parsed> {
-        log::push_unique_key("PARSE");
+        log::push_unique_key(&"PARSE".color(log::Color::Green));
         log::push_key(self.get_name());
         log::push_key_div(":", log::Color::Green);
         log::info(&[":START"], &format!("@ {}", cursor.pos));
@@ -78,7 +78,7 @@ pub trait Parser: Sync {
 
         log::pop_key();
         log::pop_key();
-        log::push_unique_key("PARSE");
+        log::pop_unique_key("PARSE");
 
         return result;
     }

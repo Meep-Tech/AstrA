@@ -1,6 +1,6 @@
 use std::{any::TypeId, collections::HashMap, rc::Rc};
 
-use crate::utils::log;
+use crate::utils::log::{self, Color};
 
 use super::parser::Parser;
 
@@ -83,6 +83,11 @@ pub(crate) fn init_all() {
 }
 
 pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
+    log::set_color("INIT", Color::Cyan);
+    log::set_color("PARSERS", Color::Green);
+    log::set_color(":START", Color::BrightMagenta);
+    log::set_color(":END", Color::BrightMagenta);
+
     log::push_unique_key("INIT");
     log::push_unique_key("PARSERS");
 
@@ -93,7 +98,7 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
             }
             None => {
                 log::info(&[":START"], "Initializing parsers");
-                log::push_key_div("-", log::Color::Green);
+                log::push_key_div("-", Color::Green);
 
                 _BY_KEY = Some(HashMap::new());
                 for p in parsers {
@@ -102,10 +107,12 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                     let type_id: TypeId = p.get_type_id();
                     let type_name: &'static str = p.get_type_name();
 
+                    log::set_random_style(key);
+
                     log::push_key(key);
-                    log::push_key_div("-", log::Color::Green);
+                    log::push_key_div("-", Color::Green);
                     log::info(&[":START"], "Initializing parser");
-                    log::push_key_div("-", log::Color::Green);
+                    log::push_key_div("-", Color::Green);
 
                     log::info(&["KEY"], key);
                     log::info(&["TYPE"], &format!("{:?}: {:?}", type_name, type_id));

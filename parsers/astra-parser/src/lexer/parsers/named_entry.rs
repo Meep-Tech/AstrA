@@ -27,7 +27,7 @@ impl parser::Parser for Parser {
                 let assigner = mutable_field_assigner::parse_at(cursor);
                 match assigner {
                     Parsed::Token(assigner) => {
-                        result = result.prop("assigner", assigner);
+                        result = result.prop("operator", assigner);
                         cursor.skip_ws();
 
                         let value = naked_text::parse_at(cursor);

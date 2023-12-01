@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     lexer::{
@@ -13,21 +13,43 @@ pub trait Testable {
     where
         Self: 'static + Sized + Parser;
 
-    fn run_tests() -> Vec<Outcome>
+    fn run_tests() -> HashMap<String, Outcome>
     where
         Self: 'static + Sized + Parser,
     {
-        log::push_key(&"TEST".color(Color::Yellow));
-        log::set_color("Fail", Color::Red);
-        log::push_key(Self::instance().get_name());
-        log::push_key_div("-", Color::Yellow);
-        log::info(&[":START"], "Running tests");
+        log::set_color("FAIL", Color::BrightRed);
+        log::set_color("PASS", Color::BrightGreen);
+        log::set_color("TOKEN", Color::BrightBlue);
 
-        let mut results = Vec::new();
-        for test in Self::tests() {
-            log::push_key(&test.name);
+        log::ln();
+        log::push_key(&"TEST".color(Color::Yellow));
+        log::push_unique_key("INIT");
+        let key = Self::instance().get_name();
+        log::pop_unique_key("INIT");
+        log::push_key(key);
+
+        log::push_unique_key("INIT");
+        let tests = Self::tests();
+        log::pop_unique_key("INIT");
+
+        log::ln();
+        log::info(&[":START"], "Running tests");
+        log::push_key_div("-", Color::Yellow);
+
+        let mut results: HashMap<String, Outcome> = HashMap::new();
+        for test in tests {
+            log::push_key(&test.name.color(Color::BrightYellow));
             log::push_key_div("-", Color::Yellow);
-            log::info(&[":START"], "Running test");
+            log::info(
+                &[":START"],
+                &format!(
+                    "Running test on input: {:}",
+                    format!(
+                        "\n\t┏{:}\n\t┖",
+                        format!("\n{:}", test.input).replace("\n", "\n\t┣ ")
+                    )
+                ),
+            );
 
             let result = test.parser.parse(&test.input);
             let outcome: Outcome = _compare_results(result, &test.expected);
@@ -55,16 +77,41 @@ pub trait Testable {
             log::pop_key();
             log::pop_key();
 
-            results.push(outcome);
-            println!();
+            results.insert(test.name, outcome);
         }
 
-        log::info(&[":END"], "Finished running tests");
         log::pop_key();
+        log::pop_key();
+        log::info(&[":END"], "Finished running tests.");
+
+        log::ln();
+        log::push_key(&"RESULTS".color(Color::Magenta));
+        log::push_key_div("-", Color::Magenta);
+        let mut all_passed = true;
+        for (name, outcome) in results.iter() {
+            match outcome {
+                Outcome::Pass => {
+                    log::info(&[&name.color(Color::Yellow), "PASS"], &format!("{:}", name));
+                }
+                Outcome::Fail(_) => {
+                    log::warn(&[&name.color(Color::Yellow), "FAIL"], &format!("{:}", name));
+                    all_passed = false;
+                }
+            }
+        }
+
+        log::pop_key();
+
+        if all_passed {
+            log::info(&[":ALL", "PASS"], "All tests passed");
+        } else {
+            log::error(&[":SOME", "FAIL"], "Some tests failed");
+        }
+
         log::pop_key();
         log::pop_key();
 
-        println!();
+        log::ln();
         results
     }
 }
@@ -78,7 +125,7 @@ fn _compare_results(result: Option<Parsed>, expected: &Option<Parsed>) -> Outcom
                 match _compare_token_or_error(&resulting_some, &expected_some) {
                     Comparison::AreEqual => Outcome::Pass,
                     Comparison::NotEqual(msg) => {
-                        log::warn(&["!", "COMPARE", "FAIL"], &msg.color(Color::Red));
+                        log::warn(&["!", "COMPARE", "FAIL"], &msg);
                         Outcome::Fail(Some(resulting_some))
                     }
                 }
@@ -96,15 +143,17 @@ fn _compare_token_or_error(result: &Parsed, expected: &Parsed) -> Comparison {
     match &expected {
         Parsed::Token(ref expected) => match &result {
             Parsed::Token(ref token) => _compare_token_result(token, expected),
-            Parsed::Error(ref err) => Comparison::NotEqual(format!(
-                "Expected token: {}, Actual error: {}",
-                expected.name, err.name
+            Parsed::Error(ref err) => Comparison::NotEqual(_mismatch(
+                "token",
+                &format!("{:#?}", expected),
+                &format!("{:#?}", err),
             )),
         },
         Parsed::Error(expected) => match &result {
-            Parsed::Token(result) => Comparison::NotEqual(format!(
-                "Expected error: {}, Actual token: {}",
-                expected.name, &result.name
+            Parsed::Token(result) => Comparison::NotEqual(_mismatch(
+                "error",
+                &format!("{:#?}", expected),
+                &format!("{:#?}", result),
             )),
             Parsed::Error(err) => _compare_error_result(err, expected),
         },
@@ -112,11 +161,8 @@ fn _compare_token_or_error(result: &Parsed, expected: &Parsed) -> Comparison {
 }
 
 fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
-    if result.name == expected.name {
-        return Comparison::NotEqual(format!(
-            "Expected token name: {}, Actual token name: {}",
-            expected.name, result.name
-        ));
+    if result.name != expected.name {
+        return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
     }
 
     if let Some(tags) = &expected.tags {
@@ -126,25 +172,27 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
     }
 
     if result.start != expected.start {
-        return Comparison::NotEqual(format!(
-            "Expected start: {}, Actual start: {}",
-            expected.start, result.start
+        return Comparison::NotEqual(_mismatch(
+            "start",
+            &expected.start.to_string(),
+            &result.start.to_string(),
         ));
     }
 
     if result.end != expected.end {
-        return Comparison::NotEqual(format!(
-            "Expected end: {}, Actual end: {}",
-            expected.end, result.end
+        return Comparison::NotEqual(_mismatch(
+            "end",
+            &expected.end.to_string(),
+            &result.end.to_string(),
         ));
     }
 
     if expected.children.len() > 0 {
         if expected.children.len() != result.children.len() {
-            return Comparison::NotEqual(format!(
-                "Expected child count: {}, Actual child count: {}",
-                expected.children.len(),
-                result.children.len()
+            return Comparison::NotEqual(_mismatch(
+                "child count",
+                &expected.children.len().to_string(),
+                &result.children.len().to_string(),
             ));
         }
 
@@ -153,28 +201,29 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
             match _compare_token_result(result_child, expected_child) {
                 Comparison::AreEqual => {}
                 Comparison::NotEqual(msg) => {
-                    return Comparison::NotEqual(format!(
-                        "Expected child: {}, Actual child: {}",
-                        msg, result_child.name
+                    return Comparison::NotEqual(_mismatch(
+                        &format!("child at index: {:}. {:}", i, msg.indent(1)),
+                        &format!("{:#?}", expected_child),
+                        &format!("{:#?}", result_child),
                     ));
                 }
             }
         }
     } else if result.children.len() > 0 {
-        return Comparison::NotEqual(format!(
-            "Expected child count: {}, Actual child count: {}",
-            expected.children.len(),
-            result.children.len()
+        return Comparison::NotEqual(_mismatch(
+            "child count",
+            &expected.children.len().to_string(),
+            &result.children.len().to_string(),
         ));
     }
 
     if let Some(expected_props) = &expected.props {
         if let Some(result_props) = &result.props {
             if expected_props.len() != result_props.len() {
-                return Comparison::NotEqual(format!(
-                    "Expected prop count: {}, Actual prop count: {}",
-                    expected_props.len(),
-                    result_props.len()
+                return Comparison::NotEqual(_mismatch(
+                    "prop count",
+                    &expected_props.len().to_string(),
+                    &result_props.len().to_string(),
                 ));
             }
 
@@ -185,17 +234,18 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
                 match result_prop {
                     None => {
                         return Comparison::NotEqual(format!(
-                            "Expected prop: {} is missing",
-                            expected_prop_name
+                            "Expected prop: {}, with type {} is missing.",
+                            key, expected_prop_name,
                         ));
                     }
                     Some(existing_result) => {
                         match _compare_token_result(&existing_result, expected_prop) {
                             Comparison::AreEqual => {}
                             Comparison::NotEqual(msg) => {
-                                return Comparison::NotEqual(format!(
-                                    "Expected prop: {}, Actual prop: {}",
-                                    msg, existing_result.name
+                                return Comparison::NotEqual(_mismatch(
+                                    &format!("prop: {:}. {:}", expected_prop_name, msg.indent(1)),
+                                    &format!("{:#?}", expected_prop),
+                                    &format!("{:#?}", existing_result),
                                 ));
                             }
                         }
@@ -203,17 +253,17 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
                 }
             }
         } else {
-            return Comparison::NotEqual(format!(
-                "Expected prop count: {}, Actual prop count: {}",
-                expected_props.len(),
-                0
+            return Comparison::NotEqual(_mismatch(
+                "prop count",
+                &expected_props.len().to_string(),
+                &0.to_string(),
             ));
         }
     } else if result.props.is_some() {
-        return Comparison::NotEqual(format!(
-            "Expected prop count: {}, Actual prop count: {}",
-            0,
-            result.props.as_ref().unwrap().len()
+        return Comparison::NotEqual(_mismatch(
+            "prop count",
+            &0.to_string(),
+            &result.props.as_ref().unwrap().len().to_string(),
         ));
     }
 
@@ -222,71 +272,62 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
 
 fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
     if result.name != expected.name {
-        return Comparison::NotEqual(format!(
-            "Expected error name: {}, Actual error name: {}",
-            expected.name, result.name
-        ));
+        return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
     }
 
     if result.start != expected.start {
-        return Comparison::NotEqual(format!(
-            "Expected start: {}, Actual start: {}",
-            expected.start, result.start
+        return Comparison::NotEqual(_mismatch(
+            "start",
+            &expected.start.to_string(),
+            &result.start.to_string(),
         ));
     }
 
     if result.end != expected.end {
-        return Comparison::NotEqual(format!(
-            "Expected end: {}, Actual end: {}",
-            expected.end, result.end
+        return Comparison::NotEqual(_mismatch(
+            "end",
+            &expected.end.to_string(),
+            &result.end.to_string(),
         ));
     }
 
     if expected.children.len() > 0 {
         if expected.children.len() != result.children.len() {
-            return Comparison::NotEqual(format!(
-                "Expected child count: {}, Actual child count: {}",
-                expected.children.len(),
-                result.children.len()
+            return Comparison::NotEqual(_mismatch(
+                "child count",
+                &expected.children.len().to_string(),
+                &result.children.len().to_string(),
             ));
         }
 
         for (i, expected_child) in expected.children.iter().enumerate() {
             let result_child = &result.children[i];
-            let result_child_name = match &result_child {
-                Parsed::Token(token) => token.name.clone(),
-                Parsed::Error(err) => err.name.clone(),
-            };
-            let expected_child_name = match &expected_child {
-                Parsed::Token(token) => token.name.clone(),
-                Parsed::Error(err) => err.name.clone(),
-            };
-
             match _compare_token_or_error(&result_child, expected_child) {
-                Comparison::AreEqual => {}
                 Comparison::NotEqual(msg) => {
-                    return Comparison::NotEqual(format!(
-                        "Expected child: {}, Actual child: {}. \n\t {}",
-                        expected_child_name, result_child_name, msg
+                    return Comparison::NotEqual(_mismatch(
+                        &format!("child at index: {:}. {:}", i, msg.indent(1)),
+                        &format!("{:#?}", expected_child),
+                        &format!("{:#?}", result_child),
                     ));
                 }
+                Comparison::AreEqual => {}
             }
         }
     } else if result.children.len() > 0 {
-        return Comparison::NotEqual(format!(
-            "Expected child count: {}, Actual child count: {}",
-            expected.children.len(),
-            result.children.len()
+        return Comparison::NotEqual(_mismatch(
+            "child count",
+            &expected.children.len().to_string(),
+            &result.children.len().to_string(),
         ));
     }
 
     if let Some(expected_props) = &expected.props {
         if let Some(result_props) = &result.props {
             if expected_props.len() != result_props.len() {
-                return Comparison::NotEqual(format!(
-                    "Expected prop count: {}, Actual prop count: {}",
-                    expected_props.len(),
-                    result_props.len()
+                return Comparison::NotEqual(_mismatch(
+                    "prop count",
+                    &expected_props.len().to_string(),
+                    &result_props.len().to_string(),
                 ));
             }
 
@@ -300,8 +341,8 @@ fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
                 match result_prop {
                     None => {
                         return Comparison::NotEqual(format!(
-                            "Expected prop: {} is missing",
-                            expected_prop_name
+                            "Expected prop: {}, with type {} is missing",
+                            key, expected_prop_name
                         ));
                     }
                     Some(existing_result) => match &expected_prop {
@@ -310,34 +351,50 @@ fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
                                 match _compare_token_result(&existing_token, token) {
                                     Comparison::AreEqual => {}
                                     Comparison::NotEqual(msg) => {
-                                        return Comparison::NotEqual(format!(
-                                            "Expected prop: {}, Actual prop: {}",
-                                            msg, existing_token.name
+                                        return Comparison::NotEqual(_mismatch(
+                                            &format!(
+                                                "Expected prop: {}, Actual prop: {}",
+                                                expected_prop_name, msg
+                                            ),
+                                            &format!("{:#?}", token),
+                                            &format!("{:#?}", existing_token),
                                         ));
                                     }
                                 }
                             }
                             Parsed::Error(err) => {
-                                return Comparison::NotEqual(format!(
-                                    "Expected prop: {}, Actual prop: {}",
-                                    expected_prop_name, err.name
+                                return Comparison::NotEqual(_mismatch(
+                                    &format!(
+                                        "Expected prop: {}, Actual prop: {}",
+                                        expected_prop_name, err.name
+                                    ),
+                                    &format!("{:#?}", token),
+                                    &format!("{:#?}", err),
                                 ));
                             }
                         },
                         Parsed::Error(err) => match existing_result {
                             Parsed::Token(token) => {
-                                return Comparison::NotEqual(format!(
-                                    "Expected prop: {}, Actual prop: {}",
-                                    expected_prop_name, token.name
+                                return Comparison::NotEqual(_mismatch(
+                                    &format!(
+                                        "Expected prop: {}, Actual prop: {}",
+                                        expected_prop_name, token.name
+                                    ),
+                                    &format!("{:#?}", err),
+                                    &format!("{:#?}", token),
                                 ));
                             }
                             Parsed::Error(existing_err) => {
                                 match _compare_error_result(&existing_err, err) {
                                     Comparison::AreEqual => {}
                                     Comparison::NotEqual(msg) => {
-                                        return Comparison::NotEqual(format!(
-                                            "Expected prop: {}, Actual prop: {}",
-                                            msg, existing_err.name
+                                        return Comparison::NotEqual(_mismatch(
+                                            &format!(
+                                                "Expected prop: {}, Actual prop: {}",
+                                                expected_prop_name, msg
+                                            ),
+                                            &format!("{:#?}", err),
+                                            &format!("{:#?}", existing_err),
                                         ));
                                     }
                                 }
@@ -347,21 +404,32 @@ fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
                 }
             }
         } else {
-            return Comparison::NotEqual(format!(
-                "Expected prop count: {}, Actual prop count: {}",
-                expected_props.len(),
-                0
+            return Comparison::NotEqual(_mismatch(
+                "prop count",
+                &expected_props.len().to_string(),
+                &0.to_string(),
             ));
         }
     } else if result.props.is_some() {
-        return Comparison::NotEqual(format!(
-            "Expected prop count: {}, Actual prop count: {}",
-            0,
-            result.props.as_ref().unwrap().len()
+        return Comparison::NotEqual(_mismatch(
+            "prop count",
+            &0.to_string(),
+            &result.props.as_ref().unwrap().len().to_string(),
         ));
     }
 
     return Comparison::AreEqual;
+}
+
+fn _mismatch(prop: &str, expected: &str, actual: &str) -> String {
+    return format!(
+        "Mismatch in {:}. \n\t ?> {:}: \n\t\t{:}, \n\t !> {:}: \n\t\t{:}",
+        prop,
+        log::color(Color::BrightGreen, "Expected"),
+        expected.color(Color::Green).indent(2),
+        log::color(Color::BrightRed, "Actual"),
+        actual.color(Color::Red).indent(2),
+    );
 }
 
 #[allow(non_snake_case)]

@@ -17,6 +17,8 @@ pub struct State {
 
 impl Cursor {
     pub fn new(source: &str) -> Cursor {
+        log::set_color("CURSOR", log::Color::BrightGreen);
+        log::set_color("TOKEN", log::Color::BrightBlue);
         log::info(
             &["CURSOR", "NEW"],
             &format!("Creating new cursor for input of length {}", source.len()),

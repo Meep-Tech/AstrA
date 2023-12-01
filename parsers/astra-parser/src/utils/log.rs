@@ -1,6 +1,7 @@
 use std::{
     cell::{LazyCell, RefCell},
     collections::HashMap,
+    hash::{DefaultHasher, Hash, Hasher},
 };
 
 static mut _KEYS: Vec<String> = Vec::new();
@@ -50,33 +51,29 @@ pub fn log(keys: &[&str], message: &str) {
 
 pub fn set_bg(text: &str, bg: Color) {
     let text = text.to_string();
-    unsafe {
-        if _STYLES.borrow().contains_key(&text) {
-            _STYLES
-                .borrow_mut()
-                .insert(text.clone(), format!("{}{}", escape_bg(bg), text));
-        } else {
-            _STYLES.borrow_mut().insert(
-                text.clone(),
-                format!("{}{}{}", escape_bg(bg), text, escape_reset()),
-            );
-        }
+    let mut styles = unsafe { _STYLES.borrow_mut() };
+    if styles.contains_key(&text) {
+        let current = styles.get(&text).unwrap().to_string();
+        styles.insert(text.clone(), format!("{}{}", escape_bg(bg), current));
+    } else {
+        styles.insert(
+            text.clone(),
+            format!("{}{}{}", escape_bg(bg), text, escape_reset()),
+        );
     }
 }
 
 pub fn set_color(text: &str, color: Color) {
     let text = text.to_string();
-    unsafe {
-        if _STYLES.borrow().contains_key(&text) {
-            _STYLES
-                .borrow_mut()
-                .insert(text.clone(), format!("{}{}", escape_color(color), text));
-        } else {
-            _STYLES.borrow_mut().insert(
-                text.clone(),
-                format!("{}{}{}", escape_color(color), text, escape_reset()),
-            );
-        }
+    let mut styles = unsafe { _STYLES.borrow_mut() };
+    if styles.contains_key(&text) {
+        let current = styles.get(&text).unwrap().to_string();
+        styles.insert(text.clone(), format!("{}{}", escape_color(color), current));
+    } else {
+        styles.insert(
+            text.clone(),
+            format!("{}{}{}", escape_color(color), text, escape_reset()),
+        );
     }
 }
 
@@ -167,14 +164,64 @@ pub fn pop_unique_key(key: &str) {
     }
 }
 
+static mut _HASHER: std::collections::hash_map::DefaultHasher =
+    std::collections::hash_map::DefaultHasher::new();
+
 pub fn color(color: Color, message: &str) -> String {
     return format!("{}{}{}", escape_color(color), message, escape_reset());
+}
+
+pub fn bg(message: &str, color: Color) -> String {
+    return format!("{}{}{}", escape_bg(color), message, escape_reset());
+}
+
+pub fn set_random_style(message: &str) {
+    let hasher = unsafe { &mut _HASHER };
+    message.to_string().hash::<DefaultHasher>(hasher);
+    let color_hash: usize = {
+        let finish = hasher.finish();
+        (finish as usize % 8).try_into().unwrap()
+    };
+    message
+        .chars()
+        .rev()
+        .collect::<String>()
+        .hash::<DefaultHasher>(hasher);
+    let bg_hash: usize = {
+        let finish = hasher.finish();
+        (finish as usize % 8).try_into().unwrap()
+    };
+
+    set_color(message, _get_color_by_ordered_number(color_hash));
+    set_bg(message, _get_color_by_ordered_number(bg_hash));
 }
 
 pub fn indent(text: &str, indent: usize) -> String {
     text.replace('\n', &format!("\n{}", "\t".repeat(indent)))
 }
 
+fn _get_color_by_ordered_number(index: usize) -> Color {
+    match index {
+        0 => Color::Red,
+        1 => Color::Green,
+        2 => Color::Yellow,
+        3 => Color::Blue,
+        4 => Color::Magenta,
+        5 => Color::Cyan,
+        6 => Color::White,
+        7 => Color::Black,
+        8 => Color::BrightRed,
+        9 => Color::BrightGreen,
+        10 => Color::BrightYellow,
+        11 => Color::BrightBlue,
+        12 => Color::BrightMagenta,
+        13 => Color::BrightCyan,
+        14 => Color::BrightWhite,
+        _ => panic!("Unknown color index: {}", index),
+    }
+}
+
+#[derive(PartialEq, Eq)]
 pub enum Color {
     Black,
     Red,
@@ -266,8 +313,12 @@ impl Colorable for &str {
 
 impl Indentable for String {
     fn indent(&self, indent: usize) -> String {
-        return super::log::indent(self, indent);
+        super::log::indent(self, indent)
     }
+}
+
+pub fn ln() {
+    println!();
 }
 
 fn escape_color(color: Color) -> String {

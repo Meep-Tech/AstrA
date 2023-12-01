@@ -1,5 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(lazy_cell)]
+#![feature(const_hash)]
 #![feature(type_name_of_val)]
 #![feature(unsized_locals)]
 
