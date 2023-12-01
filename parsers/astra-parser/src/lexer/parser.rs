@@ -1,4 +1,6 @@
-use std::rc::Rc;
+use std::{any::TypeId, rc::Rc};
+
+use crate::utils::log;
 
 use super::{
     cursor::Cursor,
@@ -9,12 +11,25 @@ use super::{
 pub trait Parser: Sync {
     fn instance() -> Rc<Self>
     where
-        Self: Sized + 'static,
+        Self: Sync + 'static + Sized,
     {
-        parsers::instance::<Self>()
+        parsers::get_by_type::<Self>()
     }
 
     fn get_name(&self) -> &'static str;
+    fn get_type_id(&self) -> TypeId
+    where
+        Self: 'static,
+    {
+        return std::any::TypeId::of::<Self>();
+    }
+    fn get_type_name(&self) -> &'static str
+    where
+        Self: 'static,
+    {
+        return std::any::type_name::<Self>();
+    }
+
     fn is_ignored(&self) -> bool {
         return false;
     }
@@ -27,19 +42,27 @@ pub trait Parser: Sync {
     }
 
     fn parse_at(&self, cursor: &mut Cursor) -> Option<Parsed> {
+        log::push_unique_key("PARSE");
+        log::push_key(self.get_name());
+        log::push_key_div(":", &log::Color::Green);
+        log::info(&[":START"], &format!("@ {}", cursor.pos));
+
         let start = cursor.save();
-        println!("TRY: {} @ {}", self.get_name(), &cursor.pos);
-        match self.rule(cursor) {
+
+        let result = match self.rule(cursor) {
             Some(result) => match result {
                 End::Match(token) => {
-                    println!("MATCH: {} @ {}", self.get_name(), cursor.pos);
-                    Some(Parsed::Token(
-                        token.assure_name(self.get_name()).build(start, cursor.pos),
-                    ))
+                    let token = token.assure_name(self.get_name()).build(start, cursor.pos);
+                    log::info(
+                        &[":END", "MATCH"],
+                        &format!("@ {} = {:#?}", cursor.pos, token),
+                    );
+                    Some(Parsed::Token(token))
                 }
                 End::Fail(error) => {
-                    println!("FAIL: {} @ {}", self.get_name(), cursor.pos);
                     let err = error.tag(self.get_name()).build(start, cursor.pos);
+                    log::info(&[":END", "FAIL"], &format!("@ {} = {:#?}", cursor.pos, err));
+
                     let result = Some(Parsed::Error(err));
                     cursor.restore();
 
@@ -47,33 +70,23 @@ pub trait Parser: Sync {
                 }
             },
             None => {
-                println!("NONE: {} @ {}", self.get_name(), cursor.pos);
+                log::info(&[":END", "NONE"], &format!("@ {}", cursor.pos));
                 cursor.restore();
                 None
             }
-        }
+        };
+
+        log::pop_key();
+        log::pop_key();
+        log::push_unique_key("PARSE");
+
+        return result;
     }
 
     fn try_parse_at(&self, cursor: &mut Cursor) -> Option<Token> {
-        let start = cursor.save();
-        println!("TRY: {} @ {}", self.get_name(), cursor.pos);
-        match self.rule(cursor) {
-            Some(result) => match result {
-                End::Match(token) => {
-                    println!("MATCH: {} @ {}", self.get_name(), cursor.pos);
-                    Some(token.assure_name(self.get_name()).build(start, cursor.pos))
-                }
-                End::Fail(_) => {
-                    println!("FAIL: {} @ {}", self.get_name(), cursor.pos);
-                    cursor.restore();
-                    None
-                }
-            },
-            None => {
-                println!("NONE: {} @ {}", self.get_name(), cursor.pos);
-                cursor.restore();
-                None
-            }
-        }
+        return match self.parse_at(cursor) {
+            Some(Parsed::Token(token)) => Some(token),
+            _ => None,
+        };
     }
 }

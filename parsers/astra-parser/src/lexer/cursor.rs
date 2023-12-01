@@ -1,4 +1,7 @@
-use crate::lexer::indents::{Indents, LineIndent};
+use crate::{
+    lexer::indents::{Indents, LineIndent},
+    utils::log,
+};
 
 pub struct Cursor {
     pub src: Vec<char>,
@@ -14,9 +17,9 @@ pub struct State {
 
 impl Cursor {
     pub fn new(source: &str) -> Cursor {
-        println!(
-            "== Creating new cursor for input of length: {}",
-            source.len()
+        log::info(
+            &["CURSOR", "NEW"],
+            &format!("Creating new cursor for input of length {}", source.len()),
         );
         let src: Vec<char> = (source.to_string() + "\0").chars().collect();
         Cursor {
@@ -33,7 +36,7 @@ impl Cursor {
 
     pub fn save(&mut self) -> usize {
         if (self.state.last().is_none()) || (self.state.last().unwrap().pos == self.pos) {
-            println!("SAVE: @{:?}.", self.pos);
+            log::info(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
         }
 
         let state = self.state();
@@ -45,7 +48,11 @@ impl Cursor {
     pub fn restore(&mut self) -> usize {
         let state = self.state.pop().unwrap();
         if self.pos != state.pos {
-            println!("RESTORE: {:?} ~> {:?}", self.pos, state.pos);
+            log::info(
+                &["CURSOR", "RESTORE"],
+                &format!("{} ~> {}", self.pos, state.pos),
+            );
+
             self.pos = state.pos;
             self.indents = state.indents;
         }
@@ -61,12 +68,15 @@ impl Cursor {
     }
 
     pub fn read(&mut self) -> char {
-        println!(
-            "READ: {}({}) => {}({}).",
-            Cursor::char_to_string(self.char()),
-            self.pos,
-            Cursor::char_to_string(self.next()),
-            self.pos + 1
+        log::info(
+            &["CURSOR", "READ"],
+            &format!(
+                "{}({}) => {}({}).",
+                Cursor::char_to_string(self.char()),
+                self.pos,
+                Cursor::char_to_string(self.next()),
+                self.pos + 1
+            ),
         );
 
         self._update_indents();
@@ -76,12 +86,15 @@ impl Cursor {
     }
 
     pub fn skip(&mut self) {
-        println!(
-            "SKIP: {}({}) => {}({}).",
-            Cursor::char_to_string(self.char()),
-            self.pos,
-            Cursor::char_to_string(self.next()),
-            self.pos + 1
+        log::info(
+            &["CURSOR", "SKIP"],
+            &format!(
+                "{}({}) => {}({}).",
+                Cursor::char_to_string(self.char()),
+                self.pos,
+                Cursor::char_to_string(self.next()),
+                self.pos + 1
+            ),
         );
 
         self._update_indents();
@@ -115,7 +128,7 @@ impl Cursor {
         }
     }
 
-    pub fn read_(&mut self, n: usize) -> Vec<char> {
+    pub fn read_chars(&mut self, n: usize) -> Vec<char> {
         let mut result = Vec::new();
         for _ in 0..n {
             result.push(self.read());
@@ -128,47 +141,50 @@ impl Cursor {
             self.read();
             return true;
         }
+
         return false;
     }
 
     // TODO: return a ws token with is_ignored = true
     pub fn skip_ws(&mut self) {
-        println!("SKIPPING-WS: {}..", self.pos);
+        log::info(&["CURSOR", "SKIP-WS"], &format!("{}..", self.pos));
         self.skip_while(|c| c.is_whitespace());
-        println!("SKIPPED-WS: ..{}", self.pos)
+        log::info(&["CURSOR", "SKIP-WS"], &format!("..{}", self.pos));
     }
 
     pub fn skip_while(&mut self, f: fn(char) -> bool) {
-        println!("SKIPPING-WHILE: {}..", self.pos);
+        log::info(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
         while f(self.char()) {
             self.skip();
         }
-        println!("SKIPPED-WHILE: ..{}", self.pos);
+        log::info(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
     }
 
     pub fn skip_until(&mut self, f: fn(char) -> bool) {
-        println!("SKIPPING-UNTIL: {}..", self.pos);
+        log::info(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
         while !f(self.char()) {
             self.skip();
         }
-        println!("SKIPPED-UNTIL: ..{}", self.pos);
+        log::info(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
     }
 
     pub fn read_while(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        println!("READING-WHILE: {}..", self.pos);
+        log::info(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
         let mut result = Vec::new();
         while f(self.char()) {
             result.push(self.read());
         }
-        println!("READ-WHILE: ..{}", self.pos);
+        log::info(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
         return result;
     }
 
     pub fn read_until(&mut self, f: fn(char) -> bool) -> Vec<char> {
+        log::info(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
         let mut result = Vec::new();
         while !f(self.char()) {
             result.push(self.read());
         }
+        log::info(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
         return result;
     }
 

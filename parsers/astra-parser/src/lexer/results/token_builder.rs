@@ -1,4 +1,4 @@
-use crate::{lexer::results::builder::Builder, End, Token};
+use crate::{lexer::results::builder::Builder, utils::log, End, Token};
 use std::collections::{HashMap, HashSet};
 
 pub struct TokenBuilder {
@@ -19,23 +19,21 @@ impl TokenBuilder {
     }
 
     pub fn name(mut self, name: &str) -> TokenBuilder {
+        log::info(&["TOKEN", "SET-NAME"], name);
         self.name = Some(name.to_string());
         self
     }
 
     pub(crate) fn assure_name(self, name: &str) -> TokenBuilder {
+        log::info(&["TOKEN", "SET-NAME"], name);
         match self.name {
             Some(_) => self,
             None => self.name(name),
         }
     }
 
-    pub fn tags(mut self, types: Vec<&str>) -> TokenBuilder {
-        self.tags = Some(types.iter().map(|t| t.to_string()).collect());
-        self
-    }
-
     pub fn tag(mut self, tag: &str) -> TokenBuilder {
+        log::info(&["TOKEN", "ADD-TAG"], tag);
         match self.tags {
             Some(ref mut tags) => {
                 tags.insert(tag.to_string());
@@ -48,7 +46,7 @@ impl TokenBuilder {
     }
 
     pub fn child(mut self, child: Token) -> TokenBuilder {
-        println!("ADD-CHILD: {:?}", child.name);
+        log::info(&["TOKEN", "ADD-CHILD"], &format!("{:?}", child.name));
         match self.children {
             Some(ref mut children) => {
                 children.push(child);
@@ -61,7 +59,11 @@ impl TokenBuilder {
     }
 
     pub fn prop(mut self, key: &str, value: Token) -> TokenBuilder {
-        println!("ADD-PROP: {} = {:?}", key, value.name);
+        log::info(
+            &["TOKEN", "ADD-PROP"],
+            &format!("{} = {:?}", key, value.name),
+        );
+
         match self.props {
             Some(ref mut props) => {
                 props.insert(key.to_string(), value);

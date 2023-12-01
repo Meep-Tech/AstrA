@@ -1,8 +1,11 @@
 use std::rc::Rc;
 
-use crate::lexer::{
-    parser::Parser,
-    results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
+use crate::{
+    lexer::{
+        parser::Parser,
+        results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
+    },
+    utils::log::{self, Color, Colorable},
 };
 
 pub trait Testable {
@@ -14,31 +17,47 @@ pub trait Testable {
     where
         Self: 'static + Sized + Parser,
     {
-        println!(
-            "== Running Parser tests for: {}",
-            Self::instance().get_name()
-        );
+        log::push_key(&"TEST".color(&Color::Yellow));
+        log::push_key(Self::instance().get_name());
+        log::push_key_div("-", &Color::Yellow);
+        log::info(&[":START"], "Running tests");
+
         let mut results = Vec::new();
         for test in Self::tests() {
-            println!("TEST: {}", test.name);
+            log::push_key(&test.name);
+            log::push_key_div("-", &Color::Yellow);
+            log::info(&[":START"], "Running test");
+
             let result = test.parser.parse(&test.input);
             let outcome: Outcome = _compare_results(result, &test.expected);
 
             match &outcome {
                 Outcome::Pass => {
-                    println!("PASS: {}", test.name);
+                    log::info(&[":END", "PASS"], &format!("Test passed"));
                 }
                 Outcome::Fail(result) => {
-                    println!(
-                        "FAIL: {}. \n\t ?> Expected: {:?}, \n\t !> Actual: {:?}",
-                        test.name, test.expected, result
+                    log::warn(
+                        &[":END", "FAIL"],
+                        &format!(
+                            "Test failed. Expected: {:#?}, \n\t !> Actual: {:#?}",
+                            format!("{:#?}", test.expected).color(&Color::Green),
+                            format!("{:#?}", result).color(&Color::Red),
+                        ),
                     );
                 }
             }
 
+            log::pop_key();
+            log::pop_key();
+
             results.push(outcome);
             println!();
         }
+
+        log::info(&[":END"], "Finished running tests");
+        log::pop_key();
+        log::pop_key();
+        log::pop_key();
 
         println!();
         results
@@ -54,7 +73,7 @@ fn _compare_results(result: Option<Parsed>, expected: &Option<Parsed>) -> Outcom
                 match _compare_token_or_error(&resulting_some, &expected_some) {
                     Comparison::AreEqual => Outcome::Pass,
                     Comparison::NotEqual(msg) => {
-                        println!("{}", msg);
+                        log::warn(&["!", "COMPARE", "FAIL"], &msg);
                         Outcome::Fail(Some(resulting_some))
                     }
                 }

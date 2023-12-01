@@ -1,5 +1,9 @@
+#![feature(lazy_cell)]
+#![feature(type_name_of_val)]
+
 pub mod lexer;
-mod tests;
+pub mod tests;
+pub mod utils;
 
 use lexer::cursor::Cursor;
 use lexer::results::end::End;
@@ -10,7 +14,7 @@ use lexer::parsers::{self, named_entry};
 use tests::lexer::parsers::test::Testable;
 
 fn init() {
-    parsers::initalize_all();
+    parsers::init_all();
 }
 
 fn main() {
