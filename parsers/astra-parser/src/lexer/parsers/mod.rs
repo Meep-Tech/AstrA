@@ -109,9 +109,8 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                     let type_id: TypeId = p.get_type_id();
                     let type_name: &'static str = p.get_type_name();
 
-                    log::set_random_style(key);
-
                     log::push_key(key);
+                    log::set_random_style(key);
                     log::push_key_div("-", Color::Green);
                     log::info(&[":START"], "Initializing parser");
                     log::push_key_div("-", Color::Green);

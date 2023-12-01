@@ -4,10 +4,6 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher},
 };
 
-static mut _KEYS: Vec<String> = Vec::new();
-static mut _STYLES: LazyCell<RefCell<HashMap<String, String>>> =
-    LazyCell::new(|| RefCell::new(HashMap::new()));
-
 pub fn log(keys: &[&str], message: &str) {
     if Some(unsafe { &_STYLES }).is_some() {
         unsafe {
@@ -49,54 +45,10 @@ pub fn log(keys: &[&str], message: &str) {
     }
 }
 
-pub fn add_bg(text: &str, bg: Color) {
-    add_style(text, &escape_bg(bg));
-}
-
-pub fn add_color(text: &str, color: Color) {
-    add_style(text, &escape_color(color));
-}
-
-pub fn add_effect(text: &str, effect: Effect) {
-    add_style(text, &escape_effect(effect));
-}
-
-pub fn add_style(text: &str, style: &str) {
-    let text = text.to_string();
-    unsafe {
-        if _STYLES.borrow().contains_key(&text) {
-            _STYLES
-                .borrow_mut()
-                .insert(text.clone(), format!("{}{}{}", style, text, escape_reset()));
-            _STYLES.borrow_mut().insert(
-                format!("\"{:}\"", text),
-                format!("\"{}{}{}\"", style, text, escape_reset()),
-            );
-        } else {
-            _STYLES
-                .borrow_mut()
-                .insert(text.clone(), format!("{}{}{}", style, text, escape_reset()));
-            _STYLES.borrow_mut().insert(
-                format!("\"{:}\"", text),
-                format!("\"{}{}{}\"", style, text, escape_reset()),
-            );
-        }
-    }
-}
-
-pub fn push_unique_key(key: &str) {
-    let key = key.to_string();
-    unsafe {
-        if !_KEYS.contains(&key) {
-            _KEYS.push(key);
-        }
-    }
-}
-
 pub fn info(keys: &[&str], message: &str) {
     let info_separator = "-".color(Color::BrightBlue);
     log(
-        get_keys(keys, &info_separator)
+        _get_keys(keys, &info_separator)
             .iter()
             .map(|key| key.as_str())
             .collect::<Vec<&str>>()
@@ -108,7 +60,7 @@ pub fn info(keys: &[&str], message: &str) {
 pub fn warn(keys: &[&str], message: &str) {
     let warn_separator = "*".color(Color::BrightYellow);
     log(
-        &get_keys(keys, &warn_separator)
+        &_get_keys(keys, &warn_separator)
             .iter()
             .map(|key| key.as_str())
             .collect::<Vec<&str>>()
@@ -120,13 +72,79 @@ pub fn warn(keys: &[&str], message: &str) {
 pub fn error(keys: &[&str], message: &str) {
     let error_prefix = "!".color(Color::BrightRed);
     log(
-        &get_keys(keys, &error_prefix)
+        &_get_keys(keys, &error_prefix)
             .iter()
             .map(|key| key.as_str())
             .collect::<Vec<&str>>()
             .as_slice(),
         message,
     );
+}
+pub fn add_bg(text: &str, bg: Color) {
+    add_style(text, &_escape_bg(bg));
+}
+
+pub fn add_color(text: &str, color: Color) {
+    add_style(text, &_escape_color(color));
+}
+
+pub fn add_effect(text: &str, effect: Effect) {
+    add_style(text, &_escape_effect(effect));
+}
+
+pub fn add_style(text: &str, style: &str) {
+    let text = text.to_string();
+    unsafe {
+        if _STYLES.borrow().contains_key(&text) {
+            _STYLES.borrow_mut().insert(
+                text.clone(),
+                format!("{}{}{}", style, text, _escape_reset()),
+            );
+            _STYLES.borrow_mut().insert(
+                format!("\"{:}\"", text),
+                format!("\"{}{}{}\"", style, text, _escape_reset()),
+            );
+        } else {
+            _STYLES.borrow_mut().insert(
+                text.clone(),
+                format!("{}{}{}", style, text, _escape_reset()),
+            );
+            _STYLES.borrow_mut().insert(
+                format!("\"{:}\"", text),
+                format!("\"{}{}{}\"", style, text, _escape_reset()),
+            );
+        }
+    }
+}
+
+pub fn set_random_style(message: &str) {
+    let hasher = unsafe { &mut _HASHER };
+    message.to_string().hash::<DefaultHasher>(hasher);
+    let color_hash: usize = {
+        let finish = hasher.finish();
+        (finish as usize % 8).try_into().unwrap()
+    };
+    message
+        .chars()
+        .rev()
+        .collect::<String>()
+        .hash::<DefaultHasher>(hasher);
+    let bg_hash: usize = {
+        let finish = hasher.finish();
+        (finish as usize % 8).try_into().unwrap()
+    };
+
+    add_color(message, _get_color_by_ordered_number(color_hash));
+    add_bg(message, _get_color_by_ordered_number(bg_hash));
+}
+
+pub fn push_unique_key(key: &str) {
+    let key = key.to_string();
+    unsafe {
+        if !_KEYS.contains(&key) {
+            _KEYS.push(key);
+        }
+    }
 }
 
 pub fn push_key(key: &str) {
@@ -155,61 +173,24 @@ pub fn pop_unique_key(key: &str) {
     }
 }
 
-static mut _HASHER: std::collections::hash_map::DefaultHasher =
-    std::collections::hash_map::DefaultHasher::new();
-
 pub fn color(color: Color, message: &str) -> String {
-    return format!("{}{}{}", escape_color(color), message, escape_reset());
+    return format!("{}{}{}", _escape_color(color), message, _escape_reset());
 }
 
 pub fn bg(message: &str, color: Color) -> String {
-    return format!("{}{}{}", escape_bg(color), message, escape_reset());
+    return format!("{}{}{}", _escape_bg(color), message, _escape_reset());
 }
 
-pub fn set_random_style(message: &str) {
-    let hasher = unsafe { &mut _HASHER };
-    message.to_string().hash::<DefaultHasher>(hasher);
-    let color_hash: usize = {
-        let finish = hasher.finish();
-        (finish as usize % 8).try_into().unwrap()
-    };
-    message
-        .chars()
-        .rev()
-        .collect::<String>()
-        .hash::<DefaultHasher>(hasher);
-    let bg_hash: usize = {
-        let finish = hasher.finish();
-        (finish as usize % 8).try_into().unwrap()
-    };
-
-    add_color(message, _get_color_by_ordered_number(color_hash));
-    add_bg(message, _get_color_by_ordered_number(bg_hash));
+pub fn effect(effect: Effect, message: &str) -> String {
+    return format!("{}{}{}", _escape_effect(effect), message, _escape_reset());
 }
 
 pub fn indent(text: &str, indent: usize) -> String {
     text.replace('\n', &format!("\n{}", "\t".repeat(indent)))
 }
 
-fn _get_color_by_ordered_number(index: usize) -> Color {
-    match index {
-        0 => Color::Red,
-        1 => Color::Green,
-        2 => Color::Yellow,
-        3 => Color::Blue,
-        4 => Color::Magenta,
-        5 => Color::Cyan,
-        6 => Color::White,
-        7 => Color::Black,
-        8 => Color::BrightRed,
-        9 => Color::BrightGreen,
-        10 => Color::BrightYellow,
-        11 => Color::BrightBlue,
-        12 => Color::BrightMagenta,
-        13 => Color::BrightCyan,
-        14 => Color::BrightWhite,
-        _ => panic!("Unknown color index: {}", index),
-    }
+pub fn ln() {
+    println!();
 }
 
 #[derive(PartialEq, Eq)]
@@ -251,11 +232,11 @@ pub enum Effect {
 
 impl Color {
     pub fn code(self) -> u8 {
-        return get_escape_code_for_color(self);
+        return _get_escape_code_for_color(self);
     }
 
     pub fn escape(self) -> String {
-        return escape_color(self);
+        return _escape_color(self);
     }
 
     pub fn from_str(color: &str) -> Color {
@@ -308,27 +289,52 @@ impl Indentable for String {
     }
 }
 
-pub fn ln() {
-    println!();
+static mut _KEYS: Vec<String> = Vec::new();
+
+static mut _STYLES: LazyCell<RefCell<HashMap<String, String>>> =
+    LazyCell::new(|| RefCell::new(HashMap::new()));
+
+static mut _HASHER: std::collections::hash_map::DefaultHasher =
+    std::collections::hash_map::DefaultHasher::new();
+
+fn _get_color_by_ordered_number(index: usize) -> Color {
+    match index {
+        0 => Color::Red,
+        1 => Color::Green,
+        2 => Color::Yellow,
+        3 => Color::Blue,
+        4 => Color::Magenta,
+        5 => Color::Cyan,
+        6 => Color::White,
+        7 => Color::Black,
+        8 => Color::BrightRed,
+        9 => Color::BrightGreen,
+        10 => Color::BrightYellow,
+        11 => Color::BrightBlue,
+        12 => Color::BrightMagenta,
+        13 => Color::BrightCyan,
+        14 => Color::BrightWhite,
+        _ => panic!("Unknown color index: {}", index),
+    }
 }
 
-fn escape_color(color: Color) -> String {
-    return format!("\x1b[{}m", get_escape_code_for_color(color));
+fn _escape_color(color: Color) -> String {
+    return format!("\x1b[{}m", _get_escape_code_for_color(color));
 }
 
-fn escape_bg(color: Color) -> String {
-    return format!("\x1b[{}m", get_escape_code_for_bg(color));
+fn _escape_bg(color: Color) -> String {
+    return format!("\x1b[{}m", _get_escape_code_for_bg(color));
 }
 
-fn escape_effect(effect: Effect) -> String {
-    return format!("\x1b[{}m", get_escape_code_for_effect(effect));
+fn _escape_effect(effect: Effect) -> String {
+    return format!("\x1b[{}m", _get_escape_code_for_effect(effect));
 }
 
-fn escape_reset() -> String {
-    return format!("\x1b[{}m", get_escape_code_for_color(Color::Reset));
+fn _escape_reset() -> String {
+    return format!("\x1b[{}m", _get_escape_code_for_color(Color::Reset));
 }
 
-fn get_escape_code_for_effect(effect: Effect) -> u8 {
+fn _get_escape_code_for_effect(effect: Effect) -> u8 {
     match effect {
         Effect::Bold => 1,
         Effect::Dim => 2,
@@ -346,7 +352,7 @@ fn get_escape_code_for_effect(effect: Effect) -> u8 {
     }
 }
 
-fn get_escape_code_for_color(color: Color) -> u8 {
+fn _get_escape_code_for_color(color: Color) -> u8 {
     match color {
         Color::Black => 30,
         Color::Red => 31,
@@ -368,7 +374,7 @@ fn get_escape_code_for_color(color: Color) -> u8 {
     }
 }
 
-fn get_escape_code_for_bg(color: Color) -> u8 {
+fn _get_escape_code_for_bg(color: Color) -> u8 {
     match color {
         Color::Black => 40,
         Color::Red => 41,
@@ -390,7 +396,7 @@ fn get_escape_code_for_bg(color: Color) -> u8 {
     }
 }
 
-fn get_keys(input: &[&str], prefix: &str) -> Vec<String> {
+fn _get_keys(input: &[&str], prefix: &str) -> Vec<String> {
     let mut keys = vec![prefix.to_string()];
     // add global keys
     keys.extend(unsafe { _KEYS.to_vec() });
@@ -403,19 +409,3 @@ fn get_keys(input: &[&str], prefix: &str) -> Vec<String> {
     );
     return keys;
 }
-/*
-   let mut all_keys = vec![prefix.to_string()];
-   all_keys.extend(unsafe {
-       _KEYS
-           .iter()
-           .map(|key| key.to_string())
-           .collect::<Vec<String>>()
-   });
-   all_keys.extend(
-       input
-           .iter()
-           .map(|key| key.to_string())
-           .collect::<Vec<String>>(),
-   );
-   return all_keys.iter().map(|key| key.to_string()).collect();
-*/
