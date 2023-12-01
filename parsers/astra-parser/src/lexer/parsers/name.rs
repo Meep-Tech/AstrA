@@ -1,4 +1,4 @@
-use crate::{lexer::{results::{builder::Builder, parsed::Parsed, token::Token}, parser::{self, Parser as _}}, lexer::results::error::Error, End, Cursor};
+use crate::{lexer::{results::builder::Builder, parser::{self}}, lexer::results::error::Error, End, Cursor};
 
 pub const KEY: &str = "name";
 
@@ -25,12 +25,13 @@ impl Parser {
     }
 }
 
+pub struct Parser {}
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
         return &KEY;
     }
 
-    fn rule(&self, cursor: &mut Cursor) -> Option<End> {
+    fn rule(&self, cursor: &mut Cursor) -> End {
         let mut is_pure_numeric: bool;
         let mut curr: char = cursor.char();
 
@@ -41,7 +42,7 @@ impl parser::Parser for Parser {
         } else {
             return Error::new("invalid-name-first-char")
                 .text("Invalid first character in 'name' token.")
-                .result();
+                .end();
         }
 
         let mut last_lone_char: Option<char> = None;
@@ -63,7 +64,7 @@ impl parser::Parser for Parser {
                     if last == curr {
                         return Error::new("invalid-name-repeat-lone-symbol")
                             .text( "Non-repeatable symbol in 'name' token repeated twice.")
-                            .result();
+                            .end();
                     }
                 }
 
@@ -77,7 +78,7 @@ impl parser::Parser for Parser {
                     return 
                         Error::new("invalid-name-numeric")
                         .text("Token type 'name' cannot be purely numeric and must contain some alphanumeric characters and/or non-math symbols.")
-                        .result();
+                        .end();
                     
                 }
             }
@@ -85,26 +86,4 @@ impl parser::Parser for Parser {
             last_lone_char = None;
         }
     }
-}
-
-// boilerplate
-pub struct Parser {}
-pub static PARSER: Parser = Parser {};
-pub fn parse(input: &str) -> Parsed {
-    match PARSER.parse(input) {
-        Some(parsed) => parsed,
-        None => Parsed::Error(Error::new("failed-to-parse-name").build(0, input.len())),
-    }
-}
-
-pub fn parse_at(cursor: &mut Cursor) -> Parsed {
-    PARSER.parse_at(cursor).unwrap()
-}
-
-pub fn parse_opt(cursor: &mut Cursor) -> Option<Parsed> {
-    PARSER.parse_at(cursor)
-}
-
-pub fn try_parse_at(cursor: &mut Cursor) -> Option<Token> {
-    PARSER.try_parse_at(cursor)
 }

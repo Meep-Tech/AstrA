@@ -5,27 +5,28 @@ use super::{
 };
 use crate::{
     lexer::{
-        parser::{self, Parser as _},
-        results::{builder::Builder, error::Error, parsed::Parsed},
+        parser::{self},
+        results::{builder::Builder, parsed::Parsed},
     },
     Cursor, End, Token,
 };
 
 pub const KEY: &str = "naked-text";
 
+pub struct Parser {}
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
         return &KEY;
     }
 
-    fn rule(&self, cursor: &mut Cursor) -> Option<End> {
+    fn rule(&self, cursor: &mut Cursor) -> End {
         let mut result = Token::new();
         loop {
-            if let Some(escape) = escape_sequence::try_parse_at(cursor) {
+            if let Some(escape) = escape_sequence::Parser::Try_Parse_At(cursor) {
                 result = result.child(escape);
             } else {
                 match cursor.char() {
-                    '\n' => match indent::increase::try_parse_at(cursor) {
+                    '\n' => match indent::increase::Parser::Try_Parse_At(cursor) {
                         Some(token) => {
                             result = result.child(token);
                         }
@@ -35,21 +36,21 @@ impl parser::Parser for Parser {
                     },
                     '.' => {
                         if cursor.prev().is_whitespace() && !cursor.next().is_whitespace() {
-                            match dot_lookup::parse_at(cursor) {
+                            match dot_lookup::Parser::Parse_At(cursor) {
                                 Parsed::Token(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Error(error) => return Error::in_child(result, error),
+                                Parsed::Error(error) => return End::Error_In_Child(result, error),
                             }
                         }
                     }
                     '/' => {
                         if cursor.prev().is_whitespace() && !cursor.next().is_whitespace() {
-                            match slash_lookup::parse_at(cursor) {
+                            match slash_lookup::Parser::Parse_At(cursor) {
                                 Parsed::Token(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Error(error) => return Error::in_child(result, error),
+                                Parsed::Error(error) => return End::Error_In_Child(result, error),
                             }
                         }
                     }
@@ -73,28 +74,6 @@ impl parser::Parser for Parser {
             }
         }
 
-        return result.result();
+        return result.end();
     }
-}
-
-// boilerplate
-pub struct Parser {}
-pub static PARSER: Parser = Parser {};
-pub fn parse(input: &str) -> Parsed {
-    match PARSER.parse(input) {
-        Some(parsed) => parsed,
-        None => Parsed::Error(Error::new("failed-to-parse-naked-text").build(0, input.len())),
-    }
-}
-
-pub fn parse_at(cursor: &mut Cursor) -> Parsed {
-    PARSER.parse_at(cursor).unwrap()
-}
-
-pub fn parse_opt(cursor: &mut Cursor) -> Option<Parsed> {
-    PARSER.parse_at(cursor)
-}
-
-pub fn try_parse_at(cursor: &mut Cursor) -> Option<Token> {
-    PARSER.try_parse_at(cursor)
 }

@@ -17,6 +17,7 @@ pub enum Indents {
     Decrease(Token),
     Current(Token),
     Error(Error),
+    Ignored(Error),
 }
 
 impl parser::Parser for Parser {
@@ -24,47 +25,53 @@ impl parser::Parser for Parser {
         return &KEY;
     }
 
-    fn rule(&self, _cursor: &mut Cursor) -> Option<End> {
+    fn rule(&self, _cursor: &mut Cursor) -> End {
         todo!();
     }
 }
 
 // boilerplate
 pub struct Parser {}
-pub static PARSER: Parser = Parser {};
-pub fn parse(input: &str) -> Indents {
-    match match_result(PARSER.parse(input)) {
-        Some(indents) => indents,
-        None => Indents::Error(
-            Error::new(&("failed-to-parse".to_string() + &KEY).to_string()).build(0, input.len()),
-        ),
+
+#[allow(non_snake_case)]
+pub fn Parse(input: &str) -> Indents {
+    Match(Parser::Parse(input))
+}
+
+#[allow(non_snake_case)]
+pub fn Parse_At(cursor: &mut Cursor) -> Indents {
+    Match(Parser::Parse_At(cursor))
+}
+
+#[allow(non_snake_case)]
+pub fn Try_Parse_At(cursor: &mut Cursor) -> Option<Indents> {
+    match Match(Parser::Parse_At(cursor)) {
+        Indents::Current(token) => Some(Indents::Current(token)),
+        Indents::Increase(token) => Some(Indents::Increase(token)),
+        Indents::Decrease(token) => Some(Indents::Decrease(token)),
+        _ => None,
     }
 }
 
-pub fn parse_at(cursor: &mut Cursor) -> Indents {
-    match match_result(PARSER.parse_at(cursor)) {
-        Some(indents) => indents,
-        None => Indents::Error(
-            Error::new(&("failed-to-parse".to_string() + &KEY).to_string()).build(0, 0),
-        ),
+#[allow(non_snake_case)]
+pub fn Try_Parse(input: &str) -> Option<Indents> {
+    match Match(Parser::Parse(input)) {
+        Indents::Current(token) => Some(Indents::Current(token)),
+        Indents::Increase(token) => Some(Indents::Increase(token)),
+        Indents::Decrease(token) => Some(Indents::Decrease(token)),
+        _ => None,
     }
 }
 
-pub fn parse_opt(cursor: &mut Cursor) -> Option<Indents> {
-    match_result(PARSER.parse_at(cursor))
-}
-
-pub fn match_result(result: Option<Parsed>) -> Option<Indents> {
+#[allow(non_snake_case)]
+pub fn Match(result: Parsed) -> Indents {
     match result {
-        Some(parsed) => match parsed {
-            Parsed::Token(token) => match token.name.as_str() {
-                current::KEY => Indents::Current(token).into(),
-                increase::KEY => Indents::Increase(token).into(),
-                decrease::KEY => Indents::Decrease(token).into(),
-                _ => Indents::Error(Error::new("unknown-indent-type").build(0, 0)).into(),
-            },
-            Parsed::Error(error) => Some(Indents::Error(error)),
+        Parsed::Token(token) => match token.name.as_str() {
+            current::KEY => Indents::Current(token).into(),
+            increase::KEY => Indents::Increase(token).into(),
+            decrease::KEY => Indents::Decrease(token).into(),
+            _ => Indents::Error(Error::new("unknown-indent-type").build(0, 0)).into(),
         },
-        None => None,
+        Parsed::Error(error) => Indents::Error(error),
     }
 }

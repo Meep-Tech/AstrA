@@ -22,8 +22,8 @@ impl Token {
         return TokenBuilder::new();
     }
 
-    pub fn result() -> Option<End> {
-        return Some(End::Match(Token::new()));
+    pub fn result() -> End {
+        return End::Match(Token::new());
     }
 }
 

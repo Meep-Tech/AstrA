@@ -1,7 +1,6 @@
 use crate::{
     lexer::results::token::Token,
     lexer::{parser, parsers::name},
-    lexer::{parser::Parser as _, results::error::Error},
     lexer::{parsers::naked_text, results::builder::Builder},
     Cursor, End, Parsed,
 };
@@ -10,61 +9,42 @@ use super::mutable_field_assigner;
 
 pub const KEY: &str = "named-entry";
 
+pub struct Parser {}
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
         return &KEY;
     }
 
-    fn rule(&self, cursor: &mut Cursor) -> Option<End> {
+    fn rule(&self, cursor: &mut Cursor) -> End {
         let mut result = Token::new();
 
-        let key = name::parse_at(cursor);
+        let key = name::Parser::Parse_At(cursor);
         match key {
             Parsed::Token(key) => {
                 result = result.prop("key", key);
                 cursor.skip_ws();
 
-                let assigner = mutable_field_assigner::parse_at(cursor);
+                let assigner = mutable_field_assigner::Parser::Parse_At(cursor);
                 match assigner {
                     Parsed::Token(assigner) => {
                         result = result.prop("operator", assigner);
                         cursor.skip_ws();
 
-                        let value = naked_text::parse_at(cursor);
+                        let value = naked_text::Parser::Parse_At(cursor);
 
                         match value {
                             Parsed::Token(value) => {
-                                return result.prop("value", value).result();
+                                return result.prop("value", value).end();
                             }
-                            Parsed::Error(error) => return Error::in_child(result, error),
+                            Parsed::Error(error) => {
+                                return End::Error_In_Prop(result, "value", error)
+                            }
                         }
                     }
-                    Parsed::Error(error) => return Error::in_child(result, error),
+                    Parsed::Error(error) => return End::Error_In_Prop(result, "operator", error),
                 }
             }
-            Parsed::Error(error) => return Error::in_child(result, error),
+            Parsed::Error(error) => return End::Error_In_Prop(result, "key", error),
         }
     }
-}
-
-// boilerplate
-pub struct Parser {}
-pub static PARSER: Parser = Parser {};
-pub fn parse(input: &str) -> Parsed {
-    match PARSER.parse(input) {
-        Some(parsed) => parsed,
-        None => Parsed::Error(Error::new("failed-to-parse-named-entry").build(0, input.len())),
-    }
-}
-
-pub fn parse_at(cursor: &mut Cursor) -> Parsed {
-    PARSER.parse_at(cursor).unwrap()
-}
-
-pub fn parse_opt(cursor: &mut Cursor) -> Option<Parsed> {
-    PARSER.parse_at(cursor)
-}
-
-pub fn try_parse_at(cursor: &mut Cursor) -> Option<Token> {
-    PARSER.try_parse_at(cursor)
 }

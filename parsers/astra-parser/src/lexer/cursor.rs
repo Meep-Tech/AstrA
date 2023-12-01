@@ -198,6 +198,10 @@ impl Cursor {
         return self.at(self.pos);
     }
 
+    pub fn curr(&self) -> String {
+        return self.at(self.pos).to_string();
+    }
+
     pub fn next(&self) -> char {
         return self.ahead(1);
     }

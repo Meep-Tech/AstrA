@@ -6,43 +6,39 @@ use std::{
 
 pub fn log(keys: &[&str], message: &str) {
     if Some(unsafe { &_STYLES }).is_some() {
-        unsafe {
-            let message_parts = message.split_whitespace().collect::<Vec<&str>>();
-            let mut message_splitters: Vec<(usize, &str)> =
-                message.match_indices(|c: char| c.is_whitespace()).collect();
-            let mut styled_keys: Vec<String> = Vec::new();
-            for key in keys {
-                if _STYLES.borrow().contains_key(*key) {
-                    styled_keys.push(_STYLES.borrow().get(*key).unwrap().clone());
-                } else {
-                    styled_keys.push(key.to_string());
-                }
-            }
-            let mut styled_message = String::new();
-            for part in message_parts {
-                if _STYLES.borrow().contains_key(part) {
-                    styled_message.push_str(_STYLES.borrow().get(part).unwrap());
-                } else {
-                    styled_message.push_str(part);
-                }
+        let styled_keys = style_keys(keys);
+        let styled_message = style_text(message);
 
-                if !message_splitters.is_empty() {
-                    let mut next_splitter = message_splitters.remove(0);
-                    styled_message.push_str(next_splitter.1);
-                    while (!message_splitters.is_empty())
-                        && ((message_splitters.first().unwrap().0 - next_splitter.0) == 1)
-                    {
-                        next_splitter = message_splitters.remove(0);
-                        styled_message.push_str(next_splitter.1);
-                    }
-                };
-            }
-
-            println!("[{}]: {}", styled_keys.join("]["), styled_message);
-        }
+        println!("[{}]: {}", styled_keys.join("]["), styled_message);
     } else {
         println!("[{}]: {}", keys.join("]["), message);
     }
+}
+
+pub fn log_plain(keys: &[&str], message: &str) {
+    println!("[{}]: {}", keys.join("]["), message);
+}
+
+pub fn log_plain_message(keys: &[&str], message: &str) {
+    if Some(unsafe { &_STYLES }).is_some() {
+        let styled_keys = style_keys(keys);
+
+        println!("[{}]: {}", styled_keys.join("]["), message);
+    } else {
+        println!("[{}]: {}", keys.join("]["), message);
+    }
+}
+
+pub fn info_plain(keys: &[&str], message: &str) {
+    let info_separator = "-".color(Color::BrightBlue);
+    log_plain_message(
+        _get_keys(keys, &info_separator)
+            .iter()
+            .map(|key| key.as_str())
+            .collect::<Vec<&str>>()
+            .as_slice(),
+        message,
+    );
 }
 
 pub fn info(keys: &[&str], message: &str) {
@@ -193,6 +189,48 @@ pub fn ln() {
     println!();
 }
 
+pub fn style_keys(keys: &[&str]) -> Vec<String> {
+    let mut styled_keys: Vec<String> = Vec::new();
+    for key in keys {
+        unsafe {
+            if _STYLES.borrow().contains_key(*key) {
+                styled_keys.push(_STYLES.borrow().get(*key).unwrap().clone());
+            } else {
+                styled_keys.push(key.to_string());
+            }
+        }
+    }
+    styled_keys
+}
+
+pub fn style_text(message: &str) -> String {
+    let message_parts = message.split_whitespace().collect::<Vec<&str>>();
+    let mut message_splitters: Vec<(usize, &str)> =
+        message.match_indices(|c: char| c.is_whitespace()).collect();
+    let mut styled_message = String::new();
+    for part in message_parts {
+        unsafe {
+            if _STYLES.borrow().contains_key(part) {
+                styled_message.push_str(_STYLES.borrow().get(part).unwrap());
+            } else {
+                styled_message.push_str(part);
+            }
+
+            if !message_splitters.is_empty() {
+                let mut next_splitter = message_splitters.remove(0);
+                styled_message.push_str(next_splitter.1);
+                while (!message_splitters.is_empty())
+                    && ((message_splitters.first().unwrap().0 - next_splitter.0) == 1)
+                {
+                    next_splitter = message_splitters.remove(0);
+                    styled_message.push_str(next_splitter.1);
+                }
+            };
+        }
+    }
+    styled_message
+}
+
 #[derive(PartialEq, Eq)]
 pub enum Color {
     Black,
@@ -263,29 +301,43 @@ impl Color {
     }
 }
 
-pub trait Colorable {
+pub trait Styleable {
     fn color(&self, color: Color) -> String;
-}
-
-pub trait Indentable {
+    fn bg(&self, color: Color) -> String;
     fn indent(&self, indent: usize) -> String;
-}
-
-impl Colorable for String {
-    fn color(&self, color: Color) -> String {
-        return super::log::color(color, self);
+    fn effect(&self, effect: Effect) -> String;
+    fn style(&self, color: Color, bg: Color, effect: Effect) -> String {
+        return self.color(color).bg(bg).effect(effect);
     }
 }
 
-impl Colorable for &str {
+impl Styleable for String {
     fn color(&self, color: Color) -> String {
         return super::log::color(color, self);
     }
-}
-
-impl Indentable for String {
+    fn bg(&self, color: Color) -> String {
+        return super::log::bg(self, color);
+    }
     fn indent(&self, indent: usize) -> String {
         super::log::indent(self, indent)
+    }
+    fn effect(&self, effect: Effect) -> String {
+        return super::log::effect(effect, self);
+    }
+}
+
+impl Styleable for &str {
+    fn color(&self, color: Color) -> String {
+        return super::log::color(color, self);
+    }
+    fn bg(&self, color: Color) -> String {
+        return super::log::bg(self, color);
+    }
+    fn indent(&self, indent: usize) -> String {
+        super::log::indent(self, indent)
+    }
+    fn effect(&self, effect: Effect) -> String {
+        return super::log::effect(effect, self);
     }
 }
 

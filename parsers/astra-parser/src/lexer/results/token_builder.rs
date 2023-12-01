@@ -92,7 +92,7 @@ impl Builder<Token> for TokenBuilder {
         };
     }
 
-    fn result(self) -> Option<End> {
-        return Some(crate::End::Match(self));
+    fn end(self) -> End {
+        return End::Match(self);
     }
 }

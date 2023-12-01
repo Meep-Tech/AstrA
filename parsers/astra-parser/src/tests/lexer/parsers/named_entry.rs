@@ -11,26 +11,26 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Single Line Spaced Right",
                 "name: value",
-                Some(Parsed::Token(
+                Parsed::Token(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key", IsFrom::<name::Parser>())
                         .prop("operator", IsFrom::<mutable_field_assigner::Parser>())
                         .prop("value", IsFrom::<naked_text::Parser>())
                         .build(0, 11),
-                )),
+                ),
             ),
             Test::<Self>::new(
                 "Single Line Spaced Around",
                 "name : value",
-                Some(Parsed::Token(
+                Parsed::Token(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key", IsFrom::<name::Parser>())
                         .prop("operator", IsFrom::<mutable_field_assigner::Parser>())
                         .prop("value", IsFrom::<naked_text::Parser>())
                         .build(0, 12),
-                )),
+                ),
             ),
         ];
     }

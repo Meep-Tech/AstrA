@@ -27,9 +27,36 @@ impl Error {
         return ErrorBuilder::new(key);
     }
 
-    pub fn in_child(parent: TokenBuilder, err: Error) -> Option<End> {
+    pub fn none() -> End {
+        End::Fail(
+            ErrorBuilder::new("no-match::")
+                .text("No match found.")
+                .tag("none"),
+        )
+    }
+
+    pub fn unexpected(key: &str, value: &str) -> End {
+        End::Fail(
+            Error::new(&["unexpected-", key, "-in-{:}"].concat())
+                .text(&format!("Unexpected: `{:}`.", value))
+                .tag("unexpected"),
+        )
+    }
+
+    pub fn missing(key: &str, expected: &str, found: &str) -> End {
+        End::Fail(
+            Error::new(&["missing-expected-", key, "-in-{:}"].concat())
+                .text(&format!(
+                    "Expected: `{:}`, but found: `{:}`.",
+                    expected, found
+                ))
+                .tag("missing"),
+        )
+    }
+
+    pub fn in_child(parent: TokenBuilder, err: Error) -> End {
         let mut parent_err = ErrorBuilder {
-            name: "incomplete".to_string(),
+            name: "incomplete::".to_string(),
             text: None,
             tags: parent.tags,
             children: Some(
@@ -40,22 +67,24 @@ impl Error {
                     .map(|c| Parsed::Token(c))
                     .collect(),
             ),
-            keys: None,
+            keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
+        parent_err = parent_err.tag("incomplete");
         parent_err = parent_err.child(Parsed::Error(err));
 
-        return Some(End::Fail(parent_err));
+        return End::Fail(parent_err);
     }
 
-    pub fn in_prop(parent: Token, key: &str, err: Error) -> Option<End> {
+    pub fn in_prop(parent: TokenBuilder, key: &str, err: Error) -> End {
         let mut parent_err = ErrorBuilder {
-            name: "incomplete".to_string(),
+            name: "incomplete::".to_string(),
             text: None,
             tags: parent.tags,
             children: Some(
                 parent
                     .children
+                    .unwrap_or(Vec::new())
                     .into_iter()
                     .map(|c| Parsed::Token(c))
                     .collect(),
@@ -63,9 +92,10 @@ impl Error {
             keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
+        parent_err = parent_err.tag("incomplete");
         parent_err = parent_err.prop(key, Parsed::Error(err));
 
-        return Some(End::Fail(parent_err));
+        return End::Fail(parent_err);
     }
 }
 

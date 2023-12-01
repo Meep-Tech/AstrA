@@ -30,6 +30,15 @@ impl ErrorBuilder {
         self
     }
 
+    pub fn assure_name(self, name: &str) -> ErrorBuilder {
+        if self.name.contains("{:}") {
+            let current_name = self.name.clone();
+            return self.name(&current_name.replace("{:}", name));
+        } else {
+            return self;
+        }
+    }
+
     pub fn tags(mut self, types: Vec<&str>) -> ErrorBuilder {
         self.tags = Some(types.iter().map(|t| t.to_string()).collect());
         self
@@ -106,7 +115,7 @@ impl Builder<Error> for ErrorBuilder {
         };
     }
 
-    fn result(self) -> Option<End> {
-        return Some(End::Fail(self));
+    fn end(self) -> End {
+        return End::Fail(self);
     }
 }

@@ -5,3 +5,10 @@ pub enum Parsed {
     Token(Token),
     Error(Error),
 }
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum Optional {
+    Token(Token),
+    Error(Error),
+    Ignored(Error),
+}

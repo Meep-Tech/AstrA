@@ -5,7 +5,7 @@ use crate::{
         parser::Parser,
         results::{builder::Builder, data::Data, error::Error, parsed::Parsed, token::Token},
     },
-    utils::log::{self, Color, Colorable, Indentable},
+    utils::log::{self, Color, Styleable},
 };
 
 pub trait Testable {
@@ -24,7 +24,7 @@ pub trait Testable {
         log::ln();
         log::push_key(&"TEST".color(Color::Yellow));
         log::push_unique_key("INIT");
-        let key = Self::instance().get_name();
+        let key = Self::Instance().get_name();
         log::pop_unique_key("INIT");
         log::push_key(key);
 
@@ -40,7 +40,7 @@ pub trait Testable {
         for test in tests {
             log::push_key(&test.name.color(Color::BrightYellow));
             log::push_key_div("-", Color::Yellow);
-            log::info(
+            log::info_plain(
                 &[":START"],
                 &format!(
                     "Running test on input: {:}",
@@ -118,24 +118,13 @@ pub trait Testable {
 
 const _TEST_IS_FROM_PARSER_TAG: &str = "__test__is_from_parser__";
 
-fn _compare_results(result: Option<Parsed>, expected: &Option<Parsed>) -> Outcome {
-    match &expected {
-        Some(expected_some) => match result {
-            Some(resulting_some) => {
-                match _compare_token_or_error(&resulting_some, &expected_some) {
-                    Comparison::AreEqual => Outcome::Pass,
-                    Comparison::NotEqual(msg) => {
-                        log::warn(&["!", "COMPARE", "FAIL"], &msg);
-                        Outcome::Fail(Some(resulting_some))
-                    }
-                }
-            }
-            None => Outcome::Fail(None),
-        },
-        None => match result {
-            Some(resulting_some) => Outcome::Fail(Some(resulting_some)),
-            None => Outcome::Pass,
-        },
+fn _compare_results(result: Parsed, expected: &Parsed) -> Outcome {
+    match _compare_token_or_error(&result, &expected) {
+        Comparison::AreEqual => Outcome::Pass,
+        Comparison::NotEqual(msg) => {
+            log::warn(&["!", "COMPARE", "FAIL"], &msg);
+            Outcome::Fail(Some(result))
+        }
     }
 }
 
@@ -438,7 +427,7 @@ where
     T: Parser + 'static,
 {
     Token::new()
-        .name(T::instance().get_name())
+        .name(T::Instance().get_name())
         .tag(_TEST_IS_FROM_PARSER_TAG)
         .build(0, 0)
 }
@@ -462,16 +451,16 @@ where
     pub parser: &'static Rc<TParser>,
     pub name: String,
     pub input: String,
-    pub expected: Option<Parsed>,
+    pub expected: Parsed,
 }
 
 impl<TParser> Test<TParser>
 where
     TParser: Parser + 'static,
 {
-    pub fn new(name: &str, input: &str, expected: Option<Parsed>) -> Self {
+    pub fn new(name: &str, input: &str, expected: Parsed) -> Self {
         Self {
-            parser: TParser::instance(),
+            parser: TParser::Instance(),
             name: name.to_string(),
             input: input.to_string(),
             expected,
