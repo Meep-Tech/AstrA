@@ -9,8 +9,8 @@ use crate::{
 };
 
 pub enum Outcome {
-    Pass(Parsed, Parsed),
-    Fail(Parsed, Parsed, String),
+    Pass(String, Parsed, Parsed),
+    Fail(String, Parsed, Parsed, String),
 }
 
 enum Comparison {
@@ -89,21 +89,18 @@ pub trait Testable {
                 &[":START"],
                 &format!(
                     "Running test on input: {}",
-                    format!(
-                        "\n\t┏{}\n\t┖",
-                        format!("\n{}", test.input).replace("\n", "\n\t┣ ")
-                    )
+                    _format_input(&test.input, "\t")
                 ),
             );
 
             let result = test.parser.parse(&test.input);
-            let outcome: Outcome = _verify_outcome(result, test.expected);
+            let outcome: Outcome = _verify_outcome(&test.input, result, test.expected);
 
             match &outcome {
-                Outcome::Pass(_, _) => {
+                Outcome::Pass(_, _, _) => {
                     log::info!(&[":END", "PASS"], &format!("Test passed"));
                 }
-                Outcome::Fail(expected, result, reason) => {
+                Outcome::Fail(_, expected, result, reason) => {
                     _log_failure(&test.name, expected, result, reason);
                 }
             }
@@ -127,6 +124,14 @@ pub trait Testable {
     }
 }
 
+fn _format_input(input: &str, prefix: &str) -> String {
+    format!(
+        "\n{}┏{}\n\t┖",
+        prefix,
+        format!("\n{}", input).replace("\n", "\n\t┣ ")
+    )
+}
+
 fn _log_report(results: &HashMap<String, Outcome>) {
     log::push_key(&"RESULTS".color(Color::Magenta));
 
@@ -134,10 +139,10 @@ fn _log_report(results: &HashMap<String, Outcome>) {
     let mut passes = 0;
     for (_, outcome) in results.iter() {
         match outcome {
-            Outcome::Pass(_, _) => {
+            Outcome::Pass(_, _, _) => {
                 passes += 1;
             }
-            Outcome::Fail(_, _, _) => {}
+            Outcome::Fail(_, _, _, _) => {}
         }
     }
 
@@ -152,11 +157,20 @@ fn _log_report(results: &HashMap<String, Outcome>) {
     let mut failures: Vec<(&str, &Outcome)> = Vec::new();
     for (name, outcome) in results.iter() {
         match outcome {
-            Outcome::Pass(_, _) => {
-                log::info!(&[&name.color(Color::Yellow), "PASS"], &format!("{}", name));
+            Outcome::Pass(input, _, _) => {
+                log::plain!(
+                    &[&name.color(Color::Yellow), "PASS"],
+                    &format!(
+                        "{}",
+                        &_format_input(input, &"✔\t".color(Color::BrightGreen))
+                    )
+                );
             }
-            Outcome::Fail(_, _, _) => {
-                log::error!(&[&name.color(Color::Yellow), "FAIL"], &format!("{}", name));
+            Outcome::Fail(input, _, _, _) => {
+                log::plain!(
+                    &[&name.color(Color::Yellow), "FAIL"],
+                    &format!("{}", &_format_input(input, &"✘\t".color(Color::BrightRed)))
+                );
                 failures.push((name, outcome));
             }
         }
@@ -185,8 +199,8 @@ fn _log_failures(failures: Vec<(&str, &Outcome)>) {
 
     for (name, outcome) in failures {
         match outcome {
-            Outcome::Pass(_, _) => {}
-            Outcome::Fail(expected, result, reason) => {
+            Outcome::Pass(_, _, _) => {}
+            Outcome::Fail(_, expected, result, reason) => {
                 _log_failure(name, expected, result, reason);
             }
         }
@@ -224,12 +238,12 @@ where
 
 const _TEST_IS_FROM_PARSER_TAG: &str = "__test__is_from_parser__";
 
-fn _verify_outcome(result: Parsed, expected: Parsed) -> Outcome {
+fn _verify_outcome(input: &str, result: Parsed, expected: Parsed) -> Outcome {
     match _compare_token_or_error(&result, &expected) {
-        Comparison::AreEqual => Outcome::Pass(result, expected),
+        Comparison::AreEqual => Outcome::Pass(input.to_string(), result, expected),
         Comparison::NotEqual(msg) => {
             log::warning!(&["!", "COMPARE", "FAIL"], &msg);
-            Outcome::Fail(expected, result, msg)
+            Outcome::Fail(input.to_string(), expected, result, msg)
         }
     }
 }
