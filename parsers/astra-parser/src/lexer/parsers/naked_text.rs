@@ -22,10 +22,13 @@ impl parser::Parser for Parser {
     fn rule(&self, cursor: &mut Cursor) -> End {
         let mut result = Token::new();
         loop {
+            if cursor.is_eof() {
+                break;
+            }
             if let Some(escape) = escape_sequence::Parser::Try_Parse_At(cursor) {
                 result = result.child(escape);
             } else {
-                match cursor.char() {
+                match cursor.curr() {
                     '\n' => match indent::increase::Parser::Try_Parse_At(cursor) {
                         Some(token) => {
                             result = result.child(token);
@@ -35,7 +38,7 @@ impl parser::Parser for Parser {
                         }
                     },
                     '.' => {
-                        if cursor.prev().is_whitespace() && !cursor.next().is_whitespace() {
+                        if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
                             match dot_lookup::Parser::Parse_At(cursor) {
                                 Parsed::Token(child) => {
                                     result = result.child(child);
@@ -45,7 +48,7 @@ impl parser::Parser for Parser {
                         }
                     }
                     '/' => {
-                        if cursor.prev().is_whitespace() && !cursor.next().is_whitespace() {
+                        if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
                             match slash_lookup::Parser::Parse_At(cursor) {
                                 Parsed::Token(child) => {
                                     result = result.child(child);
@@ -67,10 +70,6 @@ impl parser::Parser for Parser {
                         cursor.read();
                     }
                 }
-            }
-
-            if cursor.eof() {
-                break;
             }
         }
 

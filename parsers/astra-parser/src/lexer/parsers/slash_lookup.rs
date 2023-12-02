@@ -23,7 +23,7 @@ impl parser::Parser for Parser {
                 Parsed::Error(error) => return End::Error_In_Prop(Token::new(), "key", error),
             }
         } else {
-            return End::Missing("prefix", "/", &cursor.curr());
+            return End::Missing("prefix", "/", &cursor.curr_str());
         }
     }
 }

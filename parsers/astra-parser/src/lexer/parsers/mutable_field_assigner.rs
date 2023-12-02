@@ -10,13 +10,13 @@ impl parser::Parser for Parser {
 
     fn rule(&self, cursor: &mut Cursor) -> End {
         if cursor.try_read(':') {
-            if cursor.char().is_whitespace() {
+            if cursor.curr().is_whitespace() {
                 return End::Token();
             } else {
-                End::Missing("trailing-whitespace", "\\s", &cursor.curr())
+                End::Missing("trailing-whitespace", "\\s", &cursor.curr_str())
             }
         } else {
-            End::Missing("prefix", ":", &cursor.curr())
+            End::Missing("prefix", ":", &cursor.curr_str())
         }
     }
 }

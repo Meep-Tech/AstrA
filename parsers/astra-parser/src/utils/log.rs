@@ -148,7 +148,7 @@ pub fn add_style(text: &str, style: &str) {
                 format!("{}{}{}", style, text, _escape_reset()),
             );
             _STYLES.borrow_mut().insert(
-                format!("\"{:}\"", text),
+                format!("\"{}\"", text),
                 format!("\"{}{}{}\"", style, text, _escape_reset()),
             );
         } else {
@@ -157,7 +157,7 @@ pub fn add_style(text: &str, style: &str) {
                 format!("{}{}{}", style, text, _escape_reset()),
             );
             _STYLES.borrow_mut().insert(
-                format!("\"{:}\"", text),
+                format!("\"{}\"", text),
                 format!("\"{}{}{}\"", style, text, _escape_reset()),
             );
         }

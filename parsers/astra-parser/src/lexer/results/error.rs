@@ -29,7 +29,7 @@ impl Error {
 
     pub fn none() -> End {
         End::Fail(
-            ErrorBuilder::new("no-match::")
+            ErrorBuilder::new("no-match-for-{}")
                 .text("No match found.")
                 .tag("none"),
         )
@@ -37,17 +37,17 @@ impl Error {
 
     pub fn unexpected(key: &str, value: &str) -> End {
         End::Fail(
-            Error::new(&["unexpected-", key, "-in-{:}"].concat())
-                .text(&format!("Unexpected: `{:}`.", value))
+            Error::new(&["unexpected-", key, "-in-{}"].concat())
+                .text(&format!("Unexpected: `{}`.", value))
                 .tag("unexpected"),
         )
     }
 
     pub fn missing(key: &str, expected: &str, found: &str) -> End {
         End::Fail(
-            Error::new(&["missing-expected-", key, "-in-{:}"].concat())
+            Error::new(&["missing-expected-", key, "-in-{}"].concat())
                 .text(&format!(
-                    "Expected: `{:}`, but found: `{:}`.",
+                    "Expected: `{}`, but found: `{}`.",
                     expected, found
                 ))
                 .tag("missing"),
@@ -78,7 +78,7 @@ impl Error {
 
     pub fn in_prop(parent: TokenBuilder, key: &str, err: Error) -> End {
         let mut parent_err = ErrorBuilder {
-            name: "incomplete::".to_string(),
+            name: "incomplete-{}".to_string(),
             text: None,
             tags: parent.tags,
             children: Some(

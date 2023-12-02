@@ -1,6 +1,6 @@
 use crate::lexer::{
-    parsers::{mutable_field_assigner, naked_text, name, named_entry},
-    results::{builder::Builder, parsed::Parsed, token::Token},
+    parsers::{indent, mutable_field_assigner, naked_text, name, named_entry},
+    results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
 };
 
 use super::test::{IsFrom, Test, Testable};
@@ -9,28 +9,164 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
     fn tests() -> Vec<Test<Self>> {
         return vec![
             Test::<Self>::new(
-                "Single Line Spaced Right",
+                "One Line & Spaced Right",
                 "name: value",
                 Parsed::Token(
                     Token::new()
                         .name(named_entry::KEY)
-                        .prop("key", IsFrom::<name::Parser>())
-                        .prop("operator", IsFrom::<mutable_field_assigner::Parser>())
-                        .prop("value", IsFrom::<naked_text::Parser>())
-                        .build(0, 11),
+                        .prop("key", Token::new()
+                            .name(name::KEY)
+                            .build(0, 3))
+                        .prop("operator", Token::new()
+                            .name(mutable_field_assigner::KEY)
+                            .build(4, 4))
+                        .prop("value", Token::new()
+                            .name(naked_text::KEY)
+                            .build(6, 9))
+                        .build(0, 9),
                 ),
             ),
             Test::<Self>::new(
-                "Single Line Spaced Around",
+                "One Line & Spaced Around",
                 "name : value",
                 Parsed::Token(
                     Token::new()
                         .name(named_entry::KEY)
-                        .prop("key", IsFrom::<name::Parser>())
-                        .prop("operator", IsFrom::<mutable_field_assigner::Parser>())
-                        .prop("value", IsFrom::<naked_text::Parser>())
-                        .build(0, 12),
+                        .prop("key", 
+                            Token::new()
+                                .name(name::KEY)
+                                .build(0, 3))
+                        .prop("operator",
+                            Token::new()
+                                .name(mutable_field_assigner::KEY)
+                                .build(5, 5))
+                        .prop("value",
+                            Token::new()
+                                .name(naked_text::KEY)
+                                .build(7, 10))
+                        .build(0, 10),
                 ),
+            ),
+            Test::<Self>::new(
+                "One Line & Not-Spaced & Error",
+                "name:value",
+                Parsed::Error(
+                    Error::new("incomplete-named-entry")
+                        .prop("key", Parsed::Token(IsFrom::<name::Parser>()))
+                        .prop(
+                            "operator",
+                            Parsed::Error(
+                                Error::new(
+                                    "missing-expected-trailing-whitespace-in-mutable-field-assigner"
+                                ).build(4, 4),
+                            ),
+                        )
+                        .build(0, 4),
+                ),
+            ),
+            Test::<Self>::new(
+                "Two Lines & Spaced Indent Increase",
+                "name:\n  value",
+                Parsed::Token(
+                    Token::new()
+                        .name(named_entry::KEY)
+                        .prop("key", 
+                            Token::new()
+                                .name(name::KEY)
+                                .build(0, 3))
+                        .prop("operator",
+                            Token::new()
+                                .name(mutable_field_assigner::KEY)
+                                .build(4, 4))
+                        .child(
+                            Token::new()
+                                .name(indent::increase::KEY)
+                                .build(5, 7))
+                        .prop("value", 
+                            Token::new()
+                                .name(naked_text::KEY)
+                                .build(8, 11))
+                        .build(0, 11),
+                )
+            ),
+            Test::<Self>::new(
+                "Three Lines & Spaced Indent Increase",
+                "name\n  :\n  value",
+                Parsed::Token(
+                    Token::new()
+                        .name(named_entry::KEY)
+                        .prop("key", 
+                            Token::new()
+                                .name(name::KEY)
+                                .build(0, 3))
+                        .child(
+                            Token::new()
+                                .name(indent::increase::KEY)
+                                .build(4, 6))
+                        .prop("operator",
+                            Token::new()
+                                .name(mutable_field_assigner::KEY)
+                                .build(7, 7))
+                        .child(
+                            Token::new()
+                                .name(indent::current::KEY)
+                                .build(8, 10))
+                        .prop("value",
+                            Token::new()
+                                .name(naked_text::KEY)
+                                .build(11, 14))
+                        .build(0, 14),
+                )
+            ),
+            Test::<Self>::new(
+                "Three Lines & Multple Spaced Indent Increases",
+                "name\n  :\n    value",
+                Parsed::Token(
+                    Token::new()
+                        .name(named_entry::KEY)
+                        .prop("key", 
+                            Token::new()
+                                .name(name::KEY)
+                                .build(0, 3))
+                        .child(
+                            Token::new()
+                                .name(indent::increase::KEY)
+                                .build(4, 6))
+                        .prop("operator",
+                            Token::new()
+                                .name(mutable_field_assigner::KEY)
+                                .build(7, 7))
+                        .child(
+                            Token::new()
+                                .name(indent::increase::KEY)
+                                .build(8, 12))
+                        .prop("value",
+                            Token::new()
+                                .name(naked_text::KEY)
+                                .build(13, 16))
+                        .build(0, 16),
+                )
+            ),
+            Test::<Self>::new(
+                "Three Lines & Spaced Indent Increase & Spaced Indent Decrease & Error",
+                "name\n  :\nvalue",
+                Parsed::Token(
+                    Token::new()
+                        .name(named_entry::KEY)
+                        .prop("key", 
+                          Token::new()
+                                .name(name::KEY)
+                                .build(0, 3))
+                        .child(
+                          Token::new()
+                                .name(indent::increase::KEY)
+                                .build(4, 6))
+                        .prop("operator",
+                          Token::new()
+                                .name(mutable_field_assigner::KEY)
+                                .build(7, 7))
+                        .build(0, 8),
+                )
             ),
         ];
     }

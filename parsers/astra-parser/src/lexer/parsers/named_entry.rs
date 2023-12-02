@@ -5,7 +5,10 @@ use crate::{
     Cursor, End, Parsed,
 };
 
-use super::mutable_field_assigner;
+use super::{
+    indent::{self, Indents},
+    mutable_field_assigner,
+};
 
 pub const KEY: &str = "named-entry";
 
@@ -19,16 +22,53 @@ impl parser::Parser for Parser {
         let mut result = Token::new();
 
         let key = name::Parser::Parse_At(cursor);
+        let mut indent_increased = false;
         match key {
             Parsed::Token(key) => {
                 result = result.prop("key", key);
-                cursor.skip_ws();
+                match indent::Parse_Opt_Or_Skip_At(cursor) {
+                    Indents::Increase(token) => {
+                        result = result.child(token);
+                        indent_increased = true;
+                    }
+                    Indents::Decrease(_) => {
+                        return result.end();
+                    }
+                    Indents::Current(_) => {
+                        return result.end();
+                    }
+                    _ => {}
+                }
 
-                let assigner = mutable_field_assigner::Parser::Parse_At(cursor);
-                match assigner {
-                    Parsed::Token(assigner) => {
-                        result = result.prop("operator", assigner);
-                        cursor.skip_ws();
+                let operator = mutable_field_assigner::Parser::Parse_At(cursor);
+                match operator {
+                    Parsed::Token(operator) => {
+                        result = result.prop("operator", operator);
+                        match indent::Parse_Opt_Or_Skip_At(cursor) {
+                            Indents::Increase(token) => {
+                                result = result.child(token);
+                            }
+                            Indents::Current(token) => {
+                                if !indent_increased {
+                                    return result.end();
+                                } else {
+                                    result = result.child(token);
+                                }
+                            }
+                            Indents::Decrease(_) => {
+                                return result.end();
+                            }
+                            Indents::Ignored(_) => {
+                                if indent_increased {
+                                    return End::Missing("indent", "current or increase", "none");
+                                }
+                            }
+                            Indents::Error(error) => {
+                                if indent_increased {
+                                    return End::Error_In_Child(result, error);
+                                }
+                            }
+                        }
 
                         let value = naked_text::Parser::Parse_At(cursor);
 

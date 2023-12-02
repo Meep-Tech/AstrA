@@ -13,7 +13,7 @@ impl parser::Parser for Parser {
             cursor.read();
             return End::Token();
         } else {
-            return End::Missing("prefix", "\\", &cursor.curr());
+            return End::Missing("prefix", "\\", &cursor.curr_str());
         }
     }
 }

@@ -21,7 +21,7 @@ impl parser::Parser for Parser {
                 Parsed::Error(error) => return End::Error_In_Child(Token::new(), error),
             }
         } else {
-            return End::Missing("prefix", ".", &cursor.curr());
+            return End::Missing("prefix", ".", &cursor.curr_str());
         }
     }
 }

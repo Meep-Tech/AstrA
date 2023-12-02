@@ -59,11 +59,7 @@ pub trait Parser: Sync {
     where
         Self: Sync + 'static + Sized,
     {
-        let result = Self::Parse(input);
-        match result {
-            Parsed::Token(token) => Optional::Token(token),
-            Parsed::Error(err) => Optional::Ignored(err),
-        }
+        return Self::Instance().parse_opt(input);
     }
 
     #[allow(non_snake_case)]
@@ -71,11 +67,7 @@ pub trait Parser: Sync {
     where
         Self: Sync + 'static + Sized,
     {
-        let result = Self::Parse_At(cursor);
-        match result {
-            Parsed::Token(token) => Optional::Token(token),
-            Parsed::Error(err) => Optional::Ignored(err),
-        }
+        return Self::Instance().parse_opt_at(cursor);
     }
 
     fn get_name(&self) -> &'static str;
@@ -104,11 +96,27 @@ pub trait Parser: Sync {
     }
 
     fn parse_at(&self, cursor: &mut Cursor) -> Parsed {
-        self.parse_with_options_at(cursor, false)
+        self.parse_with_options_at(cursor, false, false)
     }
 
     fn parse_opt(&self, input: &str) -> Optional {
-        let result = self.parse_with_options(input, true);
+        let result = self.parse_with_options(input, true, true);
+        match result {
+            Parsed::Token(token) => Optional::Token(token),
+            Parsed::Error(err) => Optional::Ignored(err),
+        }
+    }
+
+    fn parse_opt_or_skip(&self, input: &str) -> Optional {
+        let result = self.parse_with_options(input, false, true);
+        match result {
+            Parsed::Token(token) => Optional::Token(token),
+            Parsed::Error(err) => Optional::Ignored(err),
+        }
+    }
+
+    fn parse_opt_or_skip_at(&self, cursor: &mut Cursor) -> Optional {
+        let result = self.parse_with_options_at(cursor, false, true);
         match result {
             Parsed::Token(token) => Optional::Token(token),
             Parsed::Error(err) => Optional::Ignored(err),
@@ -116,7 +124,7 @@ pub trait Parser: Sync {
     }
 
     fn parse_opt_at(&self, cursor: &mut Cursor) -> Optional {
-        let result = self.parse_with_options_at(cursor, true);
+        let result = self.parse_with_options_at(cursor, true, true);
         match result {
             Parsed::Token(token) => Optional::Token(token),
             Parsed::Error(err) => Optional::Ignored(err),
@@ -137,25 +145,28 @@ pub trait Parser: Sync {
         }
     }
 
-    fn parse_with_options(&self, input: &str, optional: bool) -> Parsed {
+    fn parse_with_options(&self, input: &str, optional: bool, ignored: bool) -> Parsed {
         let mut cursor = Cursor::new(input);
-        self.parse_with_options_at(&mut cursor, optional)
+        self.parse_with_options_at(&mut cursor, optional, ignored)
     }
 
-    fn parse_with_options_at(&self, cursor: &mut Cursor, optional: bool) -> Parsed {
-        log::push_unique_key(&"PARSE".color(log::Color::Green));
+    fn parse_with_options_at(&self, cursor: &mut Cursor, optional: bool, ignored: bool) -> Parsed {
+        log::add_color("PARSE", log::Color::Green);
+        log::push_unique_key("PARSE");
         log::push_key(self.get_name());
         log::push_key_div(":", log::Color::Green);
         log::info!(&[":START"], &format!("@ {}", cursor.pos));
 
-        let start = cursor.save();
+        let start = if optional { cursor.save() } else { cursor.pos };
 
         let result = match self.rule(cursor) {
             End::Match(token) => {
-                let token = token.assure_name(self.get_name()).build(start, cursor.pos);
+                let token = token
+                    .assure_name(self.get_name())
+                    .build(start, cursor.prev_pos());
                 log::info!(
                     &[":END", "MATCH"],
-                    &format!("@ {} = {:#?}", cursor.pos, token).color(log::Color::Green),
+                    &format!("@ {} = {:#?}", cursor.prev_pos(), token).color(log::Color::Green),
                 );
                 Parsed::Token(token)
             }
@@ -163,23 +174,33 @@ pub trait Parser: Sync {
                 let err = error
                     .tag(self.get_name())
                     .assure_name(self.get_name())
-                    .build(start, cursor.pos);
+                    .build(start, cursor.prev_pos());
+
                 if optional {
+                    cursor.restore();
+                }
+
+                if ignored {
                     log::info!(
-                        &[":END", &"IGNORED".effect(log::Effect::Strikethrough)],
-                        &format!("@ {} = {:#?}", cursor.pos, err)
-                            .effect(log::Effect::Strikethrough),
+                        &[
+                            ":END",
+                            &"IGNORED"
+                                .effect(log::Effect::Strikethrough)
+                                .color(log::Color::BrightBlack)
+                        ],
+                        &format!("@ {} = {:#?}", cursor.prev_pos(), err)
+                            .effect(log::Effect::Strikethrough)
+                            .color(log::Color::BrightBlack),
                     );
                 } else {
                     log::info!(
                         &[":END", "FAIL"],
-                        &format!("@ {} = {:#?}", cursor.pos, err)
+                        &format!("@ {} = {:#?}", cursor.prev_pos(), err)
                             .color(log::Color::Red)
                             .effect(log::Effect::Underline),
                     );
                 }
 
-                cursor.restore();
                 Parsed::Error(err)
             }
         };

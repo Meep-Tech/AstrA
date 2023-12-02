@@ -1,7 +1,4 @@
-use crate::{
-    lexer::indents::{Indents, LineIndent},
-    utils::log,
-};
+use crate::{lexer::indents::Indents, utils::log};
 
 pub struct Cursor {
     pub src: Vec<char>,
@@ -19,10 +16,15 @@ impl Cursor {
     pub fn new(source: &str) -> Cursor {
         log::add_color("CURSOR", log::Color::BrightGreen);
         log::add_color("TOKEN", log::Color::BrightBlue);
+        log::add_color("INDENT", log::Color::BrightWhite);
+        log::add_bg("INDENT", log::Color::BrightBlack);
+        log::push_unique_key("PARSE");
+
         log::info!(
             &["CURSOR", ":NEW"],
             &format!("Creating new cursor for input of length {}", source.len()),
         );
+        log::info!(&["CURSOR", "INDENT", ":START"], " curr: 0");
         let src: Vec<char> = (source.to_string() + "\0").chars().collect();
         Cursor {
             pos: 0,
@@ -30,7 +32,7 @@ impl Cursor {
             indents: Indents {
                 stack: Vec::new(),
                 is_reading: true,
-                curr: LineIndent { levels: Vec::new() },
+                curr: 0,
             },
             state: Vec::new(),
         }
@@ -74,7 +76,7 @@ impl Cursor {
             &["CURSOR", "READ"],
             &format!(
                 "{}({}) => {}({}).",
-                Cursor::char_to_string(self.char()),
+                Cursor::char_to_string(self.curr()),
                 self.pos,
                 Cursor::char_to_string(self.next()),
                 self.pos + 1
@@ -84,11 +86,11 @@ impl Cursor {
         self._update_indents();
         self.pos += 1;
 
-        if self.eof() {
+        if self.is_eof() {
             log::info!(&["CURSOR", ":EOF"], "Reached end of file.");
         }
 
-        self.char()
+        self.curr()
     }
 
     pub fn skip(&mut self) {
@@ -96,7 +98,7 @@ impl Cursor {
             &["CURSOR", "SKIP"],
             &format!(
                 "{}({}) => {}({}).",
-                Cursor::char_to_string(self.char()),
+                Cursor::char_to_string(self.curr()),
                 self.pos,
                 Cursor::char_to_string(self.next()),
                 self.pos + 1
@@ -105,31 +107,67 @@ impl Cursor {
 
         self._update_indents();
         self.pos += 1;
+
+        if self.is_eof() {
+            log::info!(&["CURSOR", ":EOF"], "Reached end of file.");
+        }
     }
 
     fn _update_indents(&mut self) {
-        match self.char() {
+        match self.curr() {
             '\n' => {
-                let curr = &self.indents.curr;
-                self.indents.stack.push(curr.to_owned());
-                self.indents.curr = LineIndent { levels: Vec::new() };
+                if self.indents.prev() != self.indents.curr {
+                    log::info!(
+                        &["CURSOR", "INDENT", "PUSH"],
+                        &format!(" prev: {} => {}", self.indents.prev(), self.indents.curr)
+                    );
+                    self.indents.stack.push(self.indents.curr.to_owned());
+                }
+
+                log::info!(&["CURSOR", "INDENT", ":START"], " curr: 0");
+                self.indents.curr = 0;
                 self.indents.is_reading = true;
             }
             '\t' | ' ' => {
                 if self.indents.is_reading {
-                    if self.indents.matches_prev() {
-                        if self.indents.prev_levels() == self.indents.curr_levels() {
-                            if self.indents.prev().levels.last().unwrap().size
-                                == self.indents.curr.levels.last().unwrap().size
-                            {
-                                self.indents.is_reading = false;
+                    self.indents.curr += 1;
+                    log::info!(
+                        &["CURSOR", "INDENT", "APPEND"],
+                        &format!(
+                            " curr: {} => {} VS prev: {} ({})",
+                            self.indents.curr - 1,
+                            self.indents.curr,
+                            self.indents.prev(),
+                            if self.indents.curr > self.indents.prev() {
+                                "increase"
+                            } else if self.indents.curr < self.indents.prev() {
+                                "decrease"
+                            } else {
+                                "same"
                             }
-                        }
-                    }
+                        )
+                    );
                 }
             }
             _ => {
-                self.indents.is_reading = false;
+                if self.indents.is_reading {
+                    self.indents.is_reading = false;
+                    log::info!(
+                        &["CURSOR", "INDENT", ":END"],
+                        &format!(
+                            " curr: {} vs prev: {} ({})",
+                            self.indents.curr,
+                            self.indents.prev(),
+                            if self.indents.curr > self.indents.prev() {
+                                "increase"
+                            } else if self.indents.curr < self.indents.prev() {
+                                "decrease"
+                            } else {
+                                "same"
+                            }
+                        )
+                    );
+                }
             }
         }
     }
@@ -143,7 +181,7 @@ impl Cursor {
     }
 
     pub fn try_read(&mut self, c: char) -> bool {
-        if self.is(c) {
+        if self.curr_is(c) {
             self.read();
             return true;
         }
@@ -160,7 +198,7 @@ impl Cursor {
 
     pub fn skip_while(&mut self, f: fn(char) -> bool) {
         log::info!(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
-        while f(self.char()) {
+        while f(self.curr()) {
             self.skip();
         }
         log::info!(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
@@ -168,7 +206,7 @@ impl Cursor {
 
     pub fn skip_until(&mut self, f: fn(char) -> bool) {
         log::info!(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
-        while !f(self.char()) {
+        while !f(self.curr()) {
             self.skip();
         }
         log::info!(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
@@ -177,7 +215,7 @@ impl Cursor {
     pub fn read_while(&mut self, f: fn(char) -> bool) -> Vec<char> {
         log::info!(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
         let mut result = Vec::new();
-        while f(self.char()) {
+        while f(self.curr()) {
             result.push(self.read());
         }
         log::info!(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
@@ -187,39 +225,51 @@ impl Cursor {
     pub fn read_until(&mut self, f: fn(char) -> bool) -> Vec<char> {
         log::info!(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
         let mut result = Vec::new();
-        while !f(self.char()) {
+        while !f(self.curr()) {
             result.push(self.read());
         }
         log::info!(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
         return result;
     }
 
-    pub fn char(&self) -> char {
-        return self.at(self.pos);
+    /// Returns true if the current character is the first character in the input.
+    /// This is the character that was read first. \0 if the current character is the first character.
+    pub fn is_first(&self) -> bool {
+        return self.pos == 0;
     }
 
-    pub fn curr(&self) -> String {
-        return self.at(self.pos).to_string();
-    }
-
-    pub fn next(&self) -> char {
-        return self.ahead(1);
-    }
-
+    /// Returns the previous character before the current character.
+    /// This is the character that was read last. \0 if the current character is the first character.
     pub fn prev(&self) -> char {
         return self.back(1);
     }
 
-    pub fn start(&self) -> usize {
-        return self.state.last().unwrap().pos;
+    /// Returns the current character being examined.
+    /// This is the character that will be read next.
+    pub fn curr(&self) -> char {
+        return self.at(self.pos);
     }
 
-    pub fn is(&self, c: char) -> bool {
-        return self.char() == c;
+    /// Returns the next character after the current character.
+    /// This is the next character that will be read after the current character.
+    pub fn next(&self) -> char {
+        return self.ahead(1);
+    }
+
+    pub fn curr_str(&self) -> String {
+        return self.at(self.pos).to_string();
+    }
+
+    pub fn prev_pos(&self) -> usize {
+        return self.pos - 1;
     }
 
     pub fn next_is(&self, c: char) -> bool {
         return self.next() == c;
+    }
+
+    pub fn curr_is(&self, c: char) -> bool {
+        return self.curr() == c;
     }
 
     pub fn prev_is(&self, c: char) -> bool {
@@ -238,12 +288,12 @@ impl Cursor {
         return self.src[pos];
     }
 
-    pub fn eof(&self) -> bool {
+    pub fn is_eof(&self) -> bool {
         return self.eof_at(self.pos);
     }
 
     pub fn eof_at(&self, pos: usize) -> bool {
-        return pos == self.src.len() - 1;
+        return pos == self.src.len() - 2;
     }
 
     pub fn char_to_string(c: char) -> String {
@@ -254,5 +304,9 @@ impl Cursor {
             '\0' => "EOF".to_string(),
             c => c.to_string(),
         }
+    }
+
+    pub fn slice(&self, start: usize, end: usize) -> String {
+        return self.src[start..end].iter().collect();
     }
 }

@@ -77,6 +77,9 @@ pub(crate) fn init_all() {
         Rc::new(slash_lookup::Parser {}),
         Rc::new(escape_sequence::Parser {}),
         Rc::new(naked_text::Parser {}),
+        Rc::new(indent::increase::Parser {}),
+        Rc::new(indent::decrease::Parser {}),
+        Rc::new(indent::current::Parser {}),
     ];
 
     init(all);

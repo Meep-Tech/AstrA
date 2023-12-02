@@ -5,7 +5,11 @@ pub mod increase;
 use crate::{
     lexer::{
         parser::{self, Parser as _},
-        results::{builder::Builder, error::Error, parsed::Parsed},
+        results::{
+            builder::Builder,
+            error::Error,
+            parsed::{Optional, Parsed},
+        },
     },
     Cursor, End, Token,
 };
@@ -25,8 +29,18 @@ impl parser::Parser for Parser {
         return &KEY;
     }
 
-    fn rule(&self, _cursor: &mut Cursor) -> End {
-        todo!();
+    fn rule(&self, cursor: &mut Cursor) -> End {
+        cursor.skip_ws();
+        if !cursor.indents.is_reading {
+            return End::None();
+        }
+        if cursor.indents.curr > cursor.indents.prev() {
+            Token::new().name(increase::KEY).end()
+        } else if cursor.indents.curr < cursor.indents.prev() {
+            Token::new().name(decrease::KEY).end()
+        } else {
+            Token::new().name(current::KEY).end()
+        }
     }
 }
 
@@ -41,6 +55,42 @@ pub fn Parse(input: &str) -> Indents {
 #[allow(non_snake_case)]
 pub fn Parse_At(cursor: &mut Cursor) -> Indents {
     Match(Parser::Parse_At(cursor))
+}
+
+#[allow(non_snake_case)]
+pub fn Parse_Opt(input: &str) -> Indents {
+    match Parser::Parse_Opt(input) {
+        Optional::Token(token) => Match(Parsed::Token(token)),
+        Optional::Error(error) => Match(Parsed::Error(error)),
+        Optional::Ignored(error) => Match(Parsed::Error(error)),
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn Parse_Opt_At(cursor: &mut Cursor) -> Indents {
+    match Parser::Parse_Opt_At(cursor) {
+        Optional::Token(token) => Match(Parsed::Token(token)),
+        Optional::Error(error) => Match(Parsed::Error(error)),
+        Optional::Ignored(error) => Match(Parsed::Error(error)),
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn Parse_Opt_Or_Skip(input: &str) -> Indents {
+    match Parser::Instance().parse_opt_or_skip(input) {
+        Optional::Token(token) => Match(Parsed::Token(token)),
+        Optional::Error(error) => Match(Parsed::Error(error)),
+        Optional::Ignored(error) => Match(Parsed::Error(error)),
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn Parse_Opt_Or_Skip_At(cursor: &mut Cursor) -> Indents {
+    match Parser::Instance().parse_opt_or_skip_at(cursor) {
+        Optional::Token(token) => Match(Parsed::Token(token)),
+        Optional::Error(error) => Match(Parsed::Error(error)),
+        Optional::Ignored(error) => Match(Parsed::Error(error)),
+    }
 }
 
 #[allow(non_snake_case)]

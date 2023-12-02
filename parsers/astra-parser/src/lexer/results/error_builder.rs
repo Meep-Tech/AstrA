@@ -31,9 +31,9 @@ impl ErrorBuilder {
     }
 
     pub fn assure_name(self, name: &str) -> ErrorBuilder {
-        if self.name.contains("{:}") {
+        if self.name.contains("{}") {
             let current_name = self.name.clone();
-            return self.name(&current_name.replace("{:}", name));
+            return self.name(&current_name.replace("{}", name));
         } else {
             return self;
         }
