@@ -15,7 +15,7 @@ pub const KEY: &str = "named-entry";
 pub struct Parser {}
 impl parser::Parser for Parser {
     fn get_name(&self) -> &'static str {
-        return &KEY;
+        &KEY
     }
 
     fn rule(&self, cursor: &mut Cursor) -> End {

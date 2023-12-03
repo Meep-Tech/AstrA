@@ -1,4 +1,7 @@
-use crate::{lexer::parser, Cursor, End};
+use crate::{
+    lexer::{context::Language, parser},
+    Cursor, End,
+};
 
 pub const KEY: &str = "mutable-field-assigner";
 
@@ -9,14 +12,25 @@ impl parser::Parser for Parser {
     }
 
     fn rule(&self, cursor: &mut Cursor) -> End {
-        if cursor.try_read(':') {
-            if cursor.curr().is_whitespace() {
-                return End::Token();
-            } else {
-                End::Missing("trailing-whitespace", "\\s", &cursor.curr_str())
+        match cursor.lang() {
+            Language::StruX => {
+                if cursor.try_read(':') {
+                    if cursor.curr().is_whitespace() {
+                        return End::Token();
+                    } else {
+                        End::Missing("trailing-whitespace", "\\s", &cursor.curr_str())
+                    }
+                } else {
+                    End::Missing("prefix", ":", &cursor.curr_str())
+                }
             }
-        } else {
-            End::Missing("prefix", ":", &cursor.curr_str())
+            _ => {
+                if cursor.try_read('~') {
+                    End::Token()
+                } else {
+                    End::Missing("prefix", "=", &cursor.curr_str())
+                }
+            }
         }
     }
 }

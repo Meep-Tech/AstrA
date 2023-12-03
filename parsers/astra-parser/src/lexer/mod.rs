@@ -1,3 +1,4 @@
+pub mod context;
 pub mod cursor;
 pub mod indents;
 pub mod parser;

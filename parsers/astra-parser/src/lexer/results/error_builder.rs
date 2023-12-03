@@ -1,4 +1,6 @@
-use crate::{lexer::results::builder::Builder, lexer::results::error::Error, End, Parsed};
+use crate::{
+    lexer::results::builder::Builder, lexer::results::error::Error, utils::log, End, Parsed,
+};
 use std::collections::{HashMap, HashSet};
 
 pub struct ErrorBuilder {
@@ -11,6 +13,7 @@ pub struct ErrorBuilder {
 
 impl ErrorBuilder {
     pub fn new(name: &str) -> ErrorBuilder {
+        log::info!(&["ERROR", ":NEW"], name);
         ErrorBuilder {
             name: name.to_string(),
             text: None,
@@ -21,11 +24,21 @@ impl ErrorBuilder {
     }
 
     pub fn text(mut self, text: &str) -> ErrorBuilder {
+        log::info!(
+            &["ERROR", "-", "TEXT"],
+            &format!("{} : {}", self.name, text)
+        );
+
         self.text = Some(text.to_string());
         self
     }
 
     pub fn name(mut self, name: &str) -> ErrorBuilder {
+        log::info!(
+            &["ERROR", "-", "NAME"],
+            &format!("{} : {}", self.name, name)
+        );
+
         self.name = name.to_string();
         self
     }
@@ -39,12 +52,8 @@ impl ErrorBuilder {
         }
     }
 
-    pub fn tags(mut self, types: Vec<&str>) -> ErrorBuilder {
-        self.tags = Some(types.iter().map(|t| t.to_string()).collect());
-        self
-    }
-
     pub fn tag(mut self, tag: &str) -> ErrorBuilder {
+        log::info!(&["ERROR", "-", "TAG"], &format!("{} : {}", self.name, tag));
         match self.tags {
             Some(mut types) => {
                 types.insert(tag.to_string());
@@ -57,30 +66,51 @@ impl ErrorBuilder {
         self
     }
 
-    pub fn children(mut self, els: Vec<Parsed>) -> ErrorBuilder {
-        self.children = Some(els);
-        self
-    }
+    pub fn child(mut self, child: Parsed) -> ErrorBuilder {
+        log::info!(
+            &["ERROR", "-", "CHILD"],
+            &format!(
+                "{} : {:?}",
+                self.name,
+                match &child {
+                    Parsed::Pass(token) => token.name.clone(),
+                    Parsed::Fail(error) => match error {
+                        Some(err) => err.name.clone(),
+                        None => "-none-".to_string(),
+                    },
+                }
+            )
+        );
 
-    pub fn child(mut self, el: Parsed) -> ErrorBuilder {
         match self.children {
             Some(mut els) => {
-                els.push(el);
+                els.push(child);
                 self.children = Some(els);
             }
             None => {
-                self.children = Some(vec![el]);
+                self.children = Some(vec![child]);
             }
         }
         self
     }
 
-    pub fn props(mut self, props: HashMap<String, usize>) -> ErrorBuilder {
-        self.keys = Some(props);
-        self
-    }
-
     pub fn prop(mut self, key: &str, value: Parsed) -> ErrorBuilder {
+        log::info!(
+            &["ERROR", "-", "PROP"],
+            &format!(
+                "{} : {} = {:?}",
+                self.name,
+                key,
+                match &value {
+                    Parsed::Pass(token) => token.name.clone(),
+                    Parsed::Fail(error) => match error {
+                        Some(err) => err.name.clone(),
+                        None => "-none-".to_string(),
+                    },
+                }
+            )
+        );
+
         self = self.child(value);
         let index = match &self.children {
             Some(els) => els.len() - 1,
@@ -104,6 +134,11 @@ impl ErrorBuilder {
 
 impl Builder<Option<Error>> for ErrorBuilder {
     fn build(self, start: usize, end: usize) -> Option<Error> {
+        log::info!(
+            &["ERROR", ":BUILD"],
+            &format!("{} : ({}, {})", self.name, start, end)
+        );
+
         return Some(Error {
             name: self.name,
             text: self.text,

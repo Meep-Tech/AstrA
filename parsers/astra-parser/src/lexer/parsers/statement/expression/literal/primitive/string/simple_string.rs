@@ -1,8 +1,6 @@
-pub mod simple_string;
-
 use crate::lexer::{cursor::Cursor, parser, results::end::End};
 
-pub const KEY: &str = "string";
+pub const KEY: &str = "simple_string";
 
 pub struct Parser;
 impl parser::Parser for Parser {
@@ -11,6 +9,10 @@ impl parser::Parser for Parser {
     }
 
     fn rule(&self, cursor: &mut Cursor) -> End {
-        End::Choice(&KEY, cursor, &[&simple_string::Parser::Get()])
+        if cursor.try_read('\'') {
+            loop {}
+        } else {
+            End::Missing("start-delimiter", "\'", &cursor.curr_str())
+        }
     }
 }

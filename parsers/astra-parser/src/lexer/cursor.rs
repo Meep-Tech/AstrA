@@ -1,9 +1,12 @@
 use crate::{lexer::indents::Indents, utils::log};
 
+use super::context::{Context, Language};
+
 pub struct Cursor {
     pub src: Vec<char>,
     pub indents: Indents,
     pub pos: usize,
+    ctx: Context,
     state: Vec<State>,
 }
 
@@ -14,6 +17,14 @@ pub struct State {
 
 impl Cursor {
     pub fn new(source: &str) -> Cursor {
+        Cursor::new_with(source, Context::new_empty())
+    }
+
+    pub fn new_for(source: &str, lang: Language) -> Cursor {
+        Cursor::new_with(source, Context::new_for(lang))
+    }
+
+    pub fn new_with(source: &str, ctx: Context) -> Cursor {
         log::add_color("CURSOR", log::Color::BrightGreen);
         log::add_color("TOKEN", log::Color::BrightBlue);
         log::add_color("INDENT", log::Color::BrightWhite);
@@ -29,6 +40,7 @@ impl Cursor {
         Cursor {
             pos: 0,
             src,
+            ctx,
             indents: Indents {
                 stack: Vec::new(),
                 is_reading: true,
@@ -311,5 +323,9 @@ impl Cursor {
 
     pub fn slice(&self, start: usize, end: usize) -> String {
         return self.src[start..end].iter().collect();
+    }
+
+    pub fn lang(&self) -> &Language {
+        return &self.ctx.lang;
     }
 }

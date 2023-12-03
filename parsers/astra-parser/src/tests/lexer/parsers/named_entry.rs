@@ -1,6 +1,6 @@
 use crate::lexer::{
     parsers::{
-        statement::entry::named_entry,
+        statement::assignment::entry::named_entry,
         statement::expression::{
             invocation::identifier::key::name, literal::markup::element::text,
         },

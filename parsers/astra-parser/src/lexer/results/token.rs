@@ -1,4 +1,4 @@
-use crate::lexer::results::token_builder::TokenBuilder;
+use crate::lexer::{parser, results::token_builder::TokenBuilder};
 
 use std::collections::{HashMap, HashSet};
 
@@ -20,6 +20,15 @@ pub struct Token {
 impl Token {
     pub fn new() -> TokenBuilder {
         return TokenBuilder::new();
+    }
+
+    pub fn with_name(name: &str) -> TokenBuilder {
+        return TokenBuilder::new().name(name);
+    }
+
+    pub fn of_type<T: parser::Parser + 'static>() -> TokenBuilder {
+        let name = T::Instance().get_name();
+        return TokenBuilder::new().name(name).tag(name);
     }
 
     pub fn result() -> End {

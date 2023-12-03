@@ -4,7 +4,7 @@ use crate::utils::log::{self, Color};
 
 use self::{
     statement::{
-        entry::named_entry,
+        assignment::entry::named_entry,
         expression::{
             invocation::identifier::{
                 key::name,
@@ -44,6 +44,23 @@ where
     return result;
 }
 
+pub fn get_for_key<TType>(key: &str) -> &'static Rc<dyn Parser>
+where
+    TType: Parser + Sync + 'static,
+{
+    let result: &'static Rc<dyn Parser>;
+    log::push_unique_key("PARSERS");
+    log::info!(&["GET", "FOR-KEY"], &format!("for key: {:?}", key));
+
+    unsafe {
+        result = _BY_KEY.as_ref().unwrap().get(key).unwrap();
+    }
+
+    log::pop_unique_key("PARSERS");
+
+    return result;
+}
+
 pub fn get_by_type<TType>() -> &'static Rc<TType>
 where
     TType: Parser + Sync + 'static,
@@ -64,6 +81,36 @@ where
     unsafe {
         let key = _BY_TYPE.as_ref().unwrap().get(&type_id).unwrap();
         result = get_by_key::<TType>(key);
+    }
+
+    log::pop_unique_key("PARSERS");
+
+    return result;
+}
+
+pub fn get_for_type<TType>() -> &'static Rc<dyn Parser>
+where
+    TType: Parser + Sync + 'static,
+{
+    log::push_unique_key("PARSERS");
+
+    let result: &'static Rc<dyn Parser>;
+    log::info!(
+        &["GET", "FOR-TYPE"],
+        &format!("for type: {:?}", std::any::type_name::<TType>()),
+    );
+    log::info!(
+        &["GET", "FOR-TYPE-ID"],
+        &format!("with type id: {:?}", TypeId::of::<TType>()),
+    );
+
+    unsafe {
+        let key = _BY_TYPE
+            .as_ref()
+            .unwrap()
+            .get(&TypeId::of::<TType>())
+            .unwrap();
+        result = get_for_key::<TType>(key);
     }
 
     log::pop_unique_key("PARSERS");

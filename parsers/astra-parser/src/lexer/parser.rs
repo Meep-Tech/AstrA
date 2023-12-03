@@ -18,6 +18,14 @@ pub trait Parser: Sync {
     }
 
     #[allow(non_snake_case)]
+    fn Get() -> &'static Rc<dyn Parser>
+    where
+        Self: Sync + 'static + Sized,
+    {
+        parsers::get_for_type::<Self>()
+    }
+
+    #[allow(non_snake_case)]
     fn Parse(input: &str) -> Parsed
     where
         Self: Sync + 'static + Sized,

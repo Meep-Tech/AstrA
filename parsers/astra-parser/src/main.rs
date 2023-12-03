@@ -11,7 +11,7 @@ pub mod utils;
 
 use std::collections::HashMap;
 
-use lexer::parsers::statement::entry::named_entry;
+use lexer::parsers::statement::assignment::entry::named_entry;
 use lexer::parsers::statement::expression::invocation::identifier::key::name;
 use lexer::results::end::End;
 use lexer::results::parsed::Parsed;

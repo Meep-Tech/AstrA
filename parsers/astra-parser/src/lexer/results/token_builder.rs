@@ -10,6 +10,7 @@ pub struct TokenBuilder {
 
 impl TokenBuilder {
     pub fn new() -> TokenBuilder {
+        log::info!(&["TOKEN", ":NEW"], "");
         TokenBuilder {
             name: None,
             tags: None,
@@ -19,7 +20,7 @@ impl TokenBuilder {
     }
 
     pub fn name(mut self, name: &str) -> TokenBuilder {
-        log::info!(&["TOKEN", "SET-NAME"], name);
+        log::info!(&["TOKEN", "-", "NAME"], name);
         self.name = Some(name.to_string());
         self
     }
@@ -32,7 +33,15 @@ impl TokenBuilder {
     }
 
     pub fn tag(mut self, tag: &str) -> TokenBuilder {
-        log::info!(&["TOKEN", "ADD-TAG"], tag);
+        log::info!(
+            &["TOKEN", "-", "TAG"],
+            &format!(
+                "{} : {}",
+                self.name.as_ref().unwrap_or(&"^".to_string()),
+                tag
+            )
+        );
+
         match self.tags {
             Some(ref mut tags) => {
                 tags.insert(tag.to_string());
@@ -45,7 +54,15 @@ impl TokenBuilder {
     }
 
     pub fn child(mut self, child: Token) -> TokenBuilder {
-        log::info!(&["TOKEN", "ADD-CHILD"], &format!("{:?}", child.name));
+        log::info!(
+            &["TOKEN", "-", "CHILD"],
+            &format!(
+                "{} : {}",
+                self.name.as_ref().unwrap_or(&"^".to_string()),
+                child.name
+            )
+        );
+
         match self.children {
             Some(ref mut children) => {
                 children.push(child);
@@ -59,8 +76,12 @@ impl TokenBuilder {
 
     pub fn prop(mut self, key: &str, value: Token) -> TokenBuilder {
         log::info!(
-            &["TOKEN", "ADD-PROP"],
-            &format!("{} = {:?}", key, value.name),
+            &["TOKEN", "-", "PROP"],
+            &format!(
+                "{} : {}",
+                self.name.as_ref().unwrap_or(&"^".to_string()),
+                key
+            )
         );
 
         self = self.child(value);
@@ -82,6 +103,16 @@ impl TokenBuilder {
 
 impl Builder<Token> for TokenBuilder {
     fn build(self, start: usize, end: usize) -> crate::Token {
+        log::info!(
+            &["TOKEN", ":BUILD"],
+            &format!(
+                "{} : ({}, {})",
+                self.name.as_ref().unwrap_or(&"^".to_string()),
+                start,
+                end
+            )
+        );
+
         return Token {
             name: self.name.unwrap(),
             tags: self.tags,
