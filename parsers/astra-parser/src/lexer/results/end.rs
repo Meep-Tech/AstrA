@@ -13,6 +13,14 @@ impl End {
     }
 
     #[allow(non_snake_case)]
+    pub fn Variant(parent: &str, token: Token) -> End {
+        let mut variant = token.to_builder();
+        variant = variant.tag(parent);
+
+        return End::Match(variant);
+    }
+
+    #[allow(non_snake_case)]
     pub fn New() -> TokenBuilder {
         Token::new()
     }
@@ -23,8 +31,18 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Error_In_Child(parent: TokenBuilder, err: Option<Error>) -> End {
+    pub fn Unexpected_Child(parent: TokenBuilder, err: Option<Error>) -> End {
         Error::in_child(parent, err)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Child(parent: TokenBuilder, err: Error) -> End {
+        Error::in_child(parent, Some(err))
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Missing_Child(parent: TokenBuilder) -> End {
+        Error::in_child(parent, None)
     }
 
     #[allow(non_snake_case)]
@@ -33,16 +51,11 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Error_In_Variant(parent: TokenBuilder, err: Option<Error>) -> End {
+    pub fn Error_In_Variant(parent: &str, err: Option<Error>) -> End {
         match err {
             Some(err) => {
                 let mut error = err.to_builder();
-                match parent.name {
-                    Some(name) => {
-                        error = error.tag(&name);
-                    }
-                    None => return End::Fail(error),
-                }
+                error = error.tag(parent);
 
                 return End::Fail(error);
             }

@@ -1,14 +1,19 @@
 {
 	"folders": [
 		{
-			"path": "."
-		},
-		{
 			"path": "parsers/astra-parser"
 		},
 		{
-			"path": "parsers/indra-web_astra"
+			"path": "docs"
+		},
+		{
+			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"rust-analyzer.linkedProjects": [
+			".\\Cargo.toml",
+			".\\Cargo.toml"
+		]
+	}
 }

@@ -1,11 +1,18 @@
 use crate::lexer::{
-    parsers::{indent, mutable_field_assigner, naked_text, name, named_entry},
+    parsers::{
+        statement::entry::named_entry,
+        statement::expression::{
+            invocation::identifier::key::name, literal::markup::element::text,
+        },
+        symbol::operator::assigner::mutable_field_assigner,
+        whitespace::indent,
+    },
     results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
 };
 
 use super::test::{IsFrom, Test, Testable};
 
-impl Testable for crate::lexer::parsers::named_entry::Parser {
+impl Testable for named_entry::Parser {
     fn tests() -> Vec<Test<Self>> {
         return vec![
             Test::<Self>::new(
@@ -21,7 +28,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
                             .name(mutable_field_assigner::KEY)
                             .build(4, 4))
                         .prop("value", Token::new()
-                            .name(naked_text::KEY)
+                            .name(text::KEY)
                             .build(6, 9))
                         .build(0, 9),
                 ),
@@ -42,7 +49,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
                                 .build(5, 5))
                         .prop("value",
                             Token::new()
-                                .name(naked_text::KEY)
+                                .name(text::KEY)
                                 .build(7, 10))
                         .build(0, 10),
                 ),
@@ -84,7 +91,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
                                 .build(5, 7))
                         .prop("value",
                             Token::new()
-                                .name(naked_text::KEY)
+                                .name(text::KEY)
                                 .build(8, 11))
                         .build(0, 11),
                 )
@@ -135,7 +142,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
                                 .build(7, 7))
                         .prop("value",
                             Token::new()
-                                .name(naked_text::KEY)
+                                .name(text::KEY)
                                 .build(9, 12))
                         .build(0, 12),
                 )
@@ -164,7 +171,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
                                 .build(8, 10))
                         .prop("value",
                             Token::new()
-                                .name(naked_text::KEY)
+                                .name(text::KEY)
                                 .build(11, 14))
                         .build(0, 14),
                 )
@@ -193,7 +200,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
                                 .build(8, 12))
                         .prop("value",
                             Token::new()
-                                .name(naked_text::KEY)
+                                .name(text::KEY)
                                 .build(13, 16))
                         .build(0, 16),
                 )

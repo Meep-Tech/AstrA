@@ -2,23 +2,26 @@ use std::{any::TypeId, collections::HashMap, rc::Rc};
 
 use crate::utils::log::{self, Color};
 
+use self::{
+    statement::{
+        entry::named_entry,
+        expression::{
+            invocation::identifier::{
+                key::name,
+                lookup::{dot_lookup, slash_lookup},
+            },
+            literal::{escape::escape_sequence, markup::element::text},
+        },
+    },
+    symbol::operator::assigner::mutable_field_assigner,
+    whitespace::indent,
+};
+
 use super::parser::Parser;
 
-pub mod dot_lookup;
-pub mod escape_sequence;
-pub mod indent;
-pub mod mutable_field_assigner;
-pub mod naked_text;
-pub mod name;
-/// named-entry
-///   - key: name
-///   - ?increase-indent | ?gap
-///   - operator: assigner
-///   - ?increase-indent | ?gap
-///   - value: value
-pub mod named_entry;
-pub mod slash_lookup;
-pub mod structure;
+pub mod statement;
+pub mod symbol;
+pub mod whitespace;
 
 pub type ParserType = dyn Parser + Sync + 'static;
 pub type Instance<TParser = ParserType> = TParser;
@@ -77,7 +80,7 @@ pub(crate) fn init_all() {
         Rc::new(dot_lookup::Parser {}),
         Rc::new(slash_lookup::Parser {}),
         Rc::new(escape_sequence::Parser {}),
-        Rc::new(naked_text::Parser {}),
+        Rc::new(text::Parser {}),
         Rc::new(indent::increase::Parser {}),
         Rc::new(indent::decrease::Parser {}),
         Rc::new(indent::current::Parser {}),

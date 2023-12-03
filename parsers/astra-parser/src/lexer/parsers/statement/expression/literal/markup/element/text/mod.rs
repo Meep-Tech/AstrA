@@ -1,17 +1,19 @@
-use super::{
-    dot_lookup, escape_sequence,
-    indent::{self},
-    slash_lookup,
-};
 use crate::{
     lexer::{
         parser::{self},
+        parsers::{
+            statement::expression::{
+                invocation::identifier::lookup::{dot_lookup, slash_lookup},
+                literal::escape::escape_sequence,
+            },
+            whitespace::indent,
+        },
         results::{builder::Builder, parsed::Parsed},
     },
     Cursor, End, Token,
 };
 
-pub const KEY: &str = "naked-text";
+pub const KEY: &str = "text";
 
 pub struct Parser {}
 impl parser::Parser for Parser {
@@ -43,7 +45,7 @@ impl parser::Parser for Parser {
                                 Parsed::Pass(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Fail(error) => return End::Error_In_Child(result, error),
+                                Parsed::Fail(error) => return End::Unexpected_Child(result, error),
                             }
                         }
                     }
@@ -53,7 +55,7 @@ impl parser::Parser for Parser {
                                 Parsed::Pass(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Fail(error) => return End::Error_In_Child(result, error),
+                                Parsed::Fail(error) => return End::Unexpected_Child(result, error),
                             }
                         }
                     }

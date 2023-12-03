@@ -1,11 +1,11 @@
 use crate::lexer::{
-    parsers::name,
+    parsers::statement::expression::invocation::identifier::key::name,
     results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
 };
 
 use super::test::{Test, Testable};
 
-impl Testable for crate::lexer::parsers::name::Parser {
+impl Testable for name::Parser {
     fn tests() -> Vec<Test<Self>> {
         return vec![
             Test::<Self>::new(
@@ -94,9 +94,19 @@ impl Testable for crate::lexer::parsers::name::Parser {
               Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 6)),
             ),
             Test::<Self>::new(
+              "Numeric & Underscore End & Error",
+              "123_",
+              Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 3)),
+            ),
+            Test::<Self>::new(
               "Alphabetic & Underscore End & Error",
               "abc_",
               Parsed::Fail(Error::new("unexpected-last-letter-in-name").build(0, 3)),
+            ),
+            Test::<Self>::new(
+              "Alphabetic & Underscore Start & Error",
+              "_abc",
+              Parsed::Fail(Error::new("unexpected-first-letter-in-name").build(0, 0)),
             ),
             Test::<Self>::new(
               "Dash Start & Error",

@@ -11,12 +11,13 @@ pub mod utils;
 
 use std::collections::HashMap;
 
-use lexer::cursor::Cursor;
+use lexer::parsers::statement::entry::named_entry;
+use lexer::parsers::statement::expression::invocation::identifier::key::name;
 use lexer::results::end::End;
 use lexer::results::parsed::Parsed;
 use lexer::results::token::Token;
+use lexer::{cursor::Cursor, parsers};
 
-use lexer::parsers::{self, name, named_entry};
 use tests::lexer::parsers::test::{log_results, Outcome, Testable};
 
 fn init() {

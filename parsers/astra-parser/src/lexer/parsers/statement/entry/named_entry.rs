@@ -1,13 +1,13 @@
 use crate::{
-    lexer::results::token::Token,
-    lexer::{parser, parsers::name},
-    lexer::{parsers::naked_text, results::builder::Builder},
+    lexer::{
+        parser,
+        parsers::{indent, mutable_field_assigner, name},
+    },
+    lexer::{parsers::indent::Indents, results::token::Token},
+    lexer::{
+        parsers::statement::expression::literal::markup::element::text, results::builder::Builder,
+    },
     Cursor, End, Parsed,
-};
-
-use super::{
-    indent::{self, Indents},
-    mutable_field_assigner,
 };
 
 pub const KEY: &str = "named-entry";
@@ -61,7 +61,7 @@ impl parser::Parser for Parser {
                             _ => {}
                         }
 
-                        let value = naked_text::Parser::Parse_At(cursor);
+                        let value = text::Parser::Parse_At(cursor);
 
                         match value {
                             Parsed::Pass(value) => {
