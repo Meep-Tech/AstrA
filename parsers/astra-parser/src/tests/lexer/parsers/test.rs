@@ -9,8 +9,8 @@ use crate::{
 };
 
 pub enum Outcome {
-    Pass(String, Parsed, Parsed),
-    Fail(String, Parsed, Parsed, String),
+    Pass(String, String, Parsed, Parsed),
+    Fail(String, String, Parsed, Parsed, String),
 }
 
 enum Comparison {
@@ -94,13 +94,14 @@ pub trait Testable {
             );
 
             let result = test.parser.parse(&test.input);
-            let outcome: Outcome = _verify_outcome(&test.input, result, test.expected);
+            let outcome: Outcome =
+                _verify_outcome(&test.parser.get_name(), &test.input, result, test.expected);
 
             match &outcome {
-                Outcome::Pass(_, _, _) => {
+                Outcome::Pass(_, _, _, _) => {
                     log::info!(&[":END", "PASS"], &format!("Test passed"));
                 }
-                Outcome::Fail(_, expected, result, reason) => {
+                Outcome::Fail(_, _, result, expected, reason) => {
                     _log_failure(&test.name, expected, result, reason);
                 }
             }
@@ -113,12 +114,12 @@ pub trait Testable {
         }
 
         log::pop_key();
-        log::pop_key();
         log::info!(&[":END"], "Finished running tests.");
         log::ln!();
 
-        _log_report(&results);
+        log_results(&results);
 
+        log::pop_key();
         log::ln!();
         results
     }
@@ -132,17 +133,17 @@ fn _format_input(input: &str, prefix: &str) -> String {
     )
 }
 
-fn _log_report(results: &HashMap<String, Outcome>) {
+pub fn log_results(results: &HashMap<String, Outcome>) {
     log::push_key(&"RESULTS".color(Color::Magenta));
 
     // log the percentage of tests that passed
     let mut passes = 0;
     for (_, outcome) in results.iter() {
         match outcome {
-            Outcome::Pass(_, _, _) => {
+            Outcome::Pass(_, _, _, _) => {
                 passes += 1;
             }
-            Outcome::Fail(_, _, _, _) => {}
+            Outcome::Fail(_, _, _, _, _) => {}
         }
     }
 
@@ -157,19 +158,50 @@ fn _log_report(results: &HashMap<String, Outcome>) {
     let mut failures: Vec<(&str, &Outcome)> = Vec::new();
     for (name, outcome) in results.iter() {
         match outcome {
-            Outcome::Pass(input, _, _) => {
+            Outcome::Pass(parser, input, result, _) => {
                 log::plain!(
-                    &[&name.color(Color::Yellow), "PASS"],
+                    &[parser, &name.color(Color::Yellow), "PASS"],
                     &format!(
-                        "{}",
-                        &_format_input(input, &"✔\t".color(Color::BrightGreen))
+                        "{}\n\t => {}",
+                        &_format_input(input, &"✔\t".color(Color::BrightGreen)),
+                        match result {
+                            Parsed::Token(token) => format!(
+                                "{} ({}, {})",
+                                token.name.color(Color::Green),
+                                token.start,
+                                token.end
+                            ),
+                            Parsed::Error(err) => format!(
+                                "{} ({}, {})",
+                                err.name.color(Color::Red),
+                                err.start,
+                                err.end
+                            ),
+                        }
                     )
                 );
             }
-            Outcome::Fail(input, _, _, _) => {
+            Outcome::Fail(parser, input, result, _, _) => {
                 log::plain!(
-                    &[&name.color(Color::Yellow), "FAIL"],
-                    &format!("{}", &_format_input(input, &"✘\t".color(Color::BrightRed)))
+                    &[parser, &name.color(Color::Yellow), "FAIL"],
+                    &format!(
+                        "{}\n\t => {}",
+                        &_format_input(input, &"✘\t".color(Color::BrightRed)),
+                        match result {
+                            Parsed::Token(token) => format!(
+                                "{} ({}, {})",
+                                token.name.color(Color::Green),
+                                token.start,
+                                token.end
+                            ),
+                            Parsed::Error(err) => format!(
+                                "{} ({}, {})",
+                                err.name.color(Color::Red),
+                                err.start,
+                                err.end
+                            ),
+                        }
+                    )
                 );
                 failures.push((name, outcome));
             }
@@ -199,8 +231,8 @@ fn _log_failures(failures: Vec<(&str, &Outcome)>) {
 
     for (name, outcome) in failures {
         match outcome {
-            Outcome::Pass(_, _, _) => {}
-            Outcome::Fail(_, expected, result, reason) => {
+            Outcome::Pass(_, _, _, _) => {}
+            Outcome::Fail(_, _, result, expected, reason) => {
                 _log_failure(name, expected, result, reason);
             }
         }
@@ -238,12 +270,14 @@ where
 
 const _TEST_IS_FROM_PARSER_TAG: &str = "__test__is_from_parser__";
 
-fn _verify_outcome(input: &str, result: Parsed, expected: Parsed) -> Outcome {
+fn _verify_outcome(parser: &str, input: &str, result: Parsed, expected: Parsed) -> Outcome {
     match _compare_token_or_error(&result, &expected) {
-        Comparison::AreEqual => Outcome::Pass(input.to_string(), result, expected),
+        Comparison::AreEqual => {
+            Outcome::Pass(parser.to_string(), input.to_string(), result, expected)
+        }
         Comparison::NotEqual(msg) => {
             log::warning!(&["!", "COMPARE", "FAIL"], &msg);
-            Outcome::Fail(input.to_string(), expected, result, msg)
+            Outcome::Fail(parser.to_string(), input.to_string(), result, expected, msg)
         }
     }
 }

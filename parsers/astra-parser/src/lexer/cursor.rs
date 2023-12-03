@@ -261,7 +261,10 @@ impl Cursor {
     }
 
     pub fn prev_pos(&self) -> usize {
-        return self.pos - 1;
+        return match self.pos {
+            0 => 0,
+            _ => self.pos - 1,
+        };
     }
 
     pub fn next_is(&self, c: char) -> bool {

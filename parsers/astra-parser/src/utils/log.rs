@@ -325,6 +325,7 @@ pub enum Effect {
     Framed,
     Encircled,
     Overlined,
+    Reset,
 }
 
 impl Color {
@@ -455,6 +456,7 @@ fn _escape_reset() -> String {
 
 fn _get_escape_code_for_effect(effect: Effect) -> u8 {
     match effect {
+        Effect::Reset => 0,
         Effect::Bold => 1,
         Effect::Dim => 2,
         Effect::Italic => 3,

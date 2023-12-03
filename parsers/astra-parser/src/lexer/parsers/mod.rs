@@ -18,6 +18,7 @@ pub mod name;
 ///   - value: value
 pub mod named_entry;
 pub mod slash_lookup;
+pub mod structure;
 
 pub type ParserType = dyn Parser + Sync + 'static;
 pub type Instance<TParser = ParserType> = TParser;

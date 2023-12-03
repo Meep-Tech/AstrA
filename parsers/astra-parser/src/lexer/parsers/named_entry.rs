@@ -58,16 +58,7 @@ impl parser::Parser for Parser {
                             Indents::Decrease(_) => {
                                 return result.end();
                             }
-                            Indents::Ignored(_) => {
-                                if indent_increased {
-                                    return End::Missing("indent", "current or increase", "none");
-                                }
-                            }
-                            Indents::Error(error) => {
-                                if indent_increased {
-                                    return End::Error_In_Child(result, error);
-                                }
-                            }
+                            _ => {}
                         }
 
                         let value = naked_text::Parser::Parse_At(cursor);

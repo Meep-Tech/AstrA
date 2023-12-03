@@ -35,11 +35,36 @@ impl Error {
         )
     }
 
+    pub fn to_builder(self) -> ErrorBuilder {
+        return ErrorBuilder {
+            name: self.name,
+            tags: self.tags,
+            text: self.text,
+            children: if !self.children.is_empty() {
+                Some(self.children)
+            } else {
+                None
+            },
+            keys: self.keys,
+        };
+    }
+
     pub fn unexpected(key: &str, value: &str) -> End {
         End::Fail(
             Error::new(&["unexpected-", key, "-in-{}"].concat())
                 .text(&format!("Unexpected: `{}`.", value))
                 .tag("unexpected"),
+        )
+    }
+
+    pub fn mismatch(key: &str, expected: &str, found: &str) -> End {
+        End::Fail(
+            Error::new(&["unexpected-", key, "-in-{}"].concat())
+                .text(&format!(
+                    "Expected: `{}`, but found: `{}`.",
+                    expected, found
+                ))
+                .tag("missing"),
         )
     }
 
@@ -56,7 +81,7 @@ impl Error {
 
     pub fn in_child(parent: TokenBuilder, err: Error) -> End {
         let mut parent_err = ErrorBuilder {
-            name: "incomplete::".to_string(),
+            name: "incomplete-{}".to_string(),
             text: None,
             tags: parent.tags,
             children: Some(

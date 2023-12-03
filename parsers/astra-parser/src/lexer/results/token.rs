@@ -25,6 +25,19 @@ impl Token {
     pub fn result() -> End {
         return End::Match(Token::new());
     }
+
+    pub fn to_builder(self) -> TokenBuilder {
+        return TokenBuilder {
+            name: Some(self.name),
+            tags: self.tags,
+            children: if !self.children.is_empty() {
+                Some(self.children)
+            } else {
+                None
+            },
+            keys: self.keys,
+        };
+    }
 }
 
 impl Data<Token> for Token {

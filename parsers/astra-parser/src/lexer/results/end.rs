@@ -45,4 +45,9 @@ impl End {
     pub fn Missing(key: &str, expected: &str, found: &str) -> End {
         Error::missing(key, expected, found)
     }
+
+    #[allow(non_snake_case)]
+    pub fn Mismatch(key: &str, expected: &str, found: &str) -> End {
+        Error::mismatch(key, expected, found)
+    }
 }
