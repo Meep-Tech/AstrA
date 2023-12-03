@@ -165,18 +165,21 @@ pub fn log_results(results: &HashMap<String, Outcome>) {
                         "{}\n\t => {}",
                         &_format_input(input, &"✔\t".color(Color::BrightGreen)),
                         match result {
-                            Parsed::Token(token) => format!(
+                            Parsed::Pass(token) => format!(
                                 "{} ({}, {})",
                                 token.name.color(Color::Green),
                                 token.start,
                                 token.end
                             ),
-                            Parsed::Error(err) => format!(
-                                "{} ({}, {})",
-                                err.name.color(Color::Red),
-                                err.start,
-                                err.end
-                            ),
+                            Parsed::Fail(err) => match err {
+                                Some(err) => format!(
+                                    "{} ({}, {})",
+                                    err.name.color(Color::Red),
+                                    err.start,
+                                    err.end
+                                ),
+                                None => "-none-".to_string(),
+                            },
                         }
                     )
                 );
@@ -188,18 +191,21 @@ pub fn log_results(results: &HashMap<String, Outcome>) {
                         "{}\n\t => {}",
                         &_format_input(input, &"✘\t".color(Color::BrightRed)),
                         match result {
-                            Parsed::Token(token) => format!(
+                            Parsed::Pass(token) => format!(
                                 "{} ({}, {})",
                                 token.name.color(Color::Green),
                                 token.start,
                                 token.end
                             ),
-                            Parsed::Error(err) => format!(
-                                "{} ({}, {})",
-                                err.name.color(Color::Red),
-                                err.start,
-                                err.end
-                            ),
+                            Parsed::Fail(err) => match err {
+                                Some(err) => format!(
+                                    "{} ({}, {})",
+                                    err.name.color(Color::Red),
+                                    err.start,
+                                    err.end
+                                ),
+                                None => "-none-".to_string(),
+                            },
                         }
                     )
                 );
@@ -284,21 +290,21 @@ fn _verify_outcome(parser: &str, input: &str, result: Parsed, expected: Parsed) 
 
 fn _compare_token_or_error(result: &Parsed, expected: &Parsed) -> Comparison {
     match expected {
-        Parsed::Token(expected) => match result {
-            Parsed::Token(token) => _compare_token_result(&token, &expected),
-            Parsed::Error(err) => Comparison::NotEqual(_mismatch(
+        Parsed::Pass(expected) => match result {
+            Parsed::Pass(token) => _compare_token_result(&token, &expected),
+            Parsed::Fail(err) => Comparison::NotEqual(_mismatch(
                 "error (Expected a token)",
                 &format!("{:#?}", expected),
                 &format!("{:#?}", err),
             )),
         },
-        Parsed::Error(expected) => match result {
-            Parsed::Token(result) => Comparison::NotEqual(_mismatch(
+        Parsed::Fail(expected) => match result {
+            Parsed::Pass(result) => Comparison::NotEqual(_mismatch(
                 "token (Expected an error)",
                 &format!("{:#?}", expected),
                 &format!("{:#?}", result),
             )),
-            Parsed::Error(err) => _compare_error_result(&err, &expected),
+            Parsed::Fail(err) => _compare_error_result(&err, &expected),
         },
     }
 }
@@ -412,152 +418,193 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
     return Comparison::AreEqual;
 }
 
-fn _compare_error_result(result: &Error, expected: &Error) -> Comparison {
-    if result.name != expected.name {
-        return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
-    }
+fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Comparison {
+    match result {
+        Some(result) => match expected {
+            Some(expected) => {
+                if result.name != expected.name {
+                    return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
+                }
 
-    if result.start != expected.start {
-        return Comparison::NotEqual(_mismatch(
-            "start",
-            &expected.start.to_string(),
-            &result.start.to_string(),
-        ));
-    }
-
-    if result.end != expected.end {
-        return Comparison::NotEqual(_mismatch(
-            "end",
-            &expected.end.to_string(),
-            &result.end.to_string(),
-        ));
-    }
-
-    if expected.children.len() > 0 {
-        if expected.children.len() != result.children.len() {
-            return Comparison::NotEqual(_mismatch(
-                "child count",
-                &expected.children.len().to_string(),
-                &result.children.len().to_string(),
-            ));
-        }
-
-        for i in 0..expected.children.len() {
-            let expected_child = &expected.children[i];
-            let result_child = &result.children[i];
-            match _compare_token_or_error(result_child, expected_child) {
-                Comparison::AreEqual => {}
-                Comparison::NotEqual(msg) => {
+                if result.start != expected.start {
                     return Comparison::NotEqual(_mismatch(
-                        &format!("child at index: {}. {}", i, msg),
-                        &format!("{:#?}", expected_child),
-                        &format!("{:#?}", result_child),
+                        "start",
+                        &expected.start.to_string(),
+                        &result.start.to_string(),
+                    ));
+                }
+
+                if result.end != expected.end {
+                    return Comparison::NotEqual(_mismatch(
+                        "end",
+                        &expected.end.to_string(),
+                        &result.end.to_string(),
+                    ));
+                }
+
+                if expected.children.len() > 0 {
+                    if expected.children.len() != result.children.len() {
+                        return Comparison::NotEqual(_mismatch(
+                            "child count",
+                            &expected.children.len().to_string(),
+                            &result.children.len().to_string(),
+                        ));
+                    }
+
+                    for i in 0..expected.children.len() {
+                        let expected_child = &expected.children[i];
+                        let result_child = &result.children[i];
+                        match _compare_token_or_error(result_child, expected_child) {
+                            Comparison::AreEqual => {}
+                            Comparison::NotEqual(msg) => {
+                                return Comparison::NotEqual(_mismatch(
+                                    &format!("child at index: {}. {}", i, msg),
+                                    &format!("{:#?}", expected_child),
+                                    &format!("{:#?}", result_child),
+                                ));
+                            }
+                        }
+                    }
+                } else if result.children.len() > 0 {
+                    return Comparison::NotEqual(_mismatch(
+                        "child count",
+                        &expected.children.len().to_string(),
+                        &result.children.len().to_string(),
+                    ));
+                }
+
+                if let Some(expected_props) = &expected.keys {
+                    if let Some(result_props) = &result.keys {
+                        if expected_props.len() != result_props.len() {
+                            return Comparison::NotEqual(_mismatch(
+                                "prop count",
+                                &expected_props.len().to_string(),
+                                &result_props.len().to_string(),
+                            ));
+                        }
+
+                        for (key, index) in expected_props {
+                            if index >= &result.children.len() {
+                                return Comparison::NotEqual(format!(
+                                    "Expected prop: {}, with type {} is missing.",
+                                    key,
+                                    match &expected.children[*index] {
+                                        Parsed::Pass(token) => token.name.clone(),
+                                        Parsed::Fail(err) => match err {
+                                            Some(err) => err.name.clone(),
+                                            None => "-none-".to_string(),
+                                        },
+                                    },
+                                ));
+                            }
+
+                            let expected_prop = &expected.children[*index];
+                            let result_prop = &result.children[*index];
+
+                            let expected_prop_name = match expected_prop {
+                                Parsed::Pass(token) => token.name.clone(),
+                                Parsed::Fail(err) => match err {
+                                    Some(err) => err.name.clone(),
+                                    None => "-none-".to_string(),
+                                },
+                            };
+
+                            match result_prop {
+                                Parsed::Pass(result) => match expected_prop {
+                                    Parsed::Pass(expected) => {
+                                        match _compare_token_result(&result, &expected) {
+                                            Comparison::AreEqual => {}
+                                            Comparison::NotEqual(msg) => {
+                                                return Comparison::NotEqual(_mismatch(
+                                                    &format!(
+                                                        "prop: {}. {}",
+                                                        expected_prop_name, msg
+                                                    ),
+                                                    &format!("{:#?}", result),
+                                                    &format!("{:#?}", expected),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                    Parsed::Fail(err) => {
+                                        return Comparison::NotEqual(_mismatch(
+                                            &format!(
+                                                "Expected prop: {}, Actual prop: {}",
+                                                expected_prop_name,
+                                                match err {
+                                                    Some(err) => err.name.clone(),
+                                                    None => "-none-".to_string(),
+                                                }
+                                            ),
+                                            &format!("{:#?}", result),
+                                            &format!("{:#?}", err),
+                                        ));
+                                    }
+                                },
+                                Parsed::Fail(result) => match expected_prop {
+                                    Parsed::Pass(expected) => {
+                                        return Comparison::NotEqual(_mismatch(
+                                            &format!(
+                                                "type. Expected error: {}, found token: {}.",
+                                                expected_prop_name, expected.name
+                                            ),
+                                            &format!("{:#?}", result),
+                                            &format!("{:#?}", expected),
+                                        ));
+                                    }
+                                    Parsed::Fail(existing_err) => {
+                                        match _compare_error_result(&existing_err, &result) {
+                                            Comparison::AreEqual => {}
+                                            Comparison::NotEqual(msg) => {
+                                                return Comparison::NotEqual(_mismatch(
+                                                    &format!(
+                                                        "prop: {}. {}",
+                                                        expected_prop_name, msg
+                                                    ),
+                                                    &format!("{:#?}", result),
+                                                    &format!("{:#?}", existing_err),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                },
+                            }
+                        }
+                    } else {
+                        return Comparison::NotEqual(_mismatch(
+                            "prop count",
+                            &expected_props.len().to_string(),
+                            &0.to_string(),
+                        ));
+                    }
+                } else if result.keys.is_some() {
+                    return Comparison::NotEqual(_mismatch(
+                        "prop count",
+                        &0.to_string(),
+                        &result.keys.as_ref().unwrap().len().to_string(),
                     ));
                 }
             }
-        }
-    } else if result.children.len() > 0 {
-        return Comparison::NotEqual(_mismatch(
-            "child count",
-            &expected.children.len().to_string(),
-            &result.children.len().to_string(),
-        ));
-    }
-
-    if let Some(expected_props) = &expected.keys {
-        if let Some(result_props) = &result.keys {
-            if expected_props.len() != result_props.len() {
+            None => {
                 return Comparison::NotEqual(_mismatch(
-                    "prop count",
-                    &expected_props.len().to_string(),
-                    &result_props.len().to_string(),
+                    "error (Expected a token)",
+                    &format!("{:#?}", expected),
+                    &format!("{:#?}", result),
                 ));
             }
-
-            for (key, index) in expected_props {
-                if index >= &result.children.len() {
-                    return Comparison::NotEqual(format!(
-                        "Expected prop: {}, with type {} is missing.",
-                        key,
-                        match &expected.children[*index] {
-                            Parsed::Token(token) => token.name.clone(),
-                            Parsed::Error(err) => err.name.clone(),
-                        },
-                    ));
-                }
-
-                let expected_prop = &expected.children[*index];
-                let result_prop = &result.children[*index];
-
-                let expected_prop_name = match expected_prop {
-                    Parsed::Token(token) => token.name.clone(),
-                    Parsed::Error(err) => err.name.clone(),
-                };
-
-                match result_prop {
-                    Parsed::Token(result) => match expected_prop {
-                        Parsed::Token(expected) => {
-                            match _compare_token_result(&result, &expected) {
-                                Comparison::AreEqual => {}
-                                Comparison::NotEqual(msg) => {
-                                    return Comparison::NotEqual(_mismatch(
-                                        &format!("prop: {}. {}", expected_prop_name, msg),
-                                        &format!("{:#?}", result),
-                                        &format!("{:#?}", expected),
-                                    ));
-                                }
-                            }
-                        }
-                        Parsed::Error(err) => {
-                            return Comparison::NotEqual(_mismatch(
-                                &format!(
-                                    "Expected prop: {}, Actual prop: {}",
-                                    expected_prop_name, err.name
-                                ),
-                                &format!("{:#?}", result),
-                                &format!("{:#?}", err),
-                            ));
-                        }
-                    },
-                    Parsed::Error(result) => match expected_prop {
-                        Parsed::Token(expected) => {
-                            return Comparison::NotEqual(_mismatch(
-                                &format!(
-                                    "type. Expected error: {}, found token: {}.",
-                                    expected_prop_name, expected.name
-                                ),
-                                &format!("{:#?}", result),
-                                &format!("{:#?}", expected),
-                            ));
-                        }
-                        Parsed::Error(existing_err) => {
-                            match _compare_error_result(&existing_err, &result) {
-                                Comparison::AreEqual => {}
-                                Comparison::NotEqual(msg) => {
-                                    return Comparison::NotEqual(_mismatch(
-                                        &format!("prop: {}. {}", expected_prop_name, msg),
-                                        &format!("{:#?}", result),
-                                        &format!("{:#?}", existing_err),
-                                    ));
-                                }
-                            }
-                        }
-                    },
-                }
+        },
+        None => match expected {
+            Some(expected) => {
+                return Comparison::NotEqual(_mismatch(
+                    "token (Expected an error)",
+                    &format!("{:#?}", expected),
+                    &format!("{:#?}", result),
+                ));
             }
-        } else {
-            return Comparison::NotEqual(_mismatch(
-                "prop count",
-                &expected_props.len().to_string(),
-                &0.to_string(),
-            ));
-        }
-    } else if result.keys.is_some() {
-        return Comparison::NotEqual(_mismatch(
-            "prop count",
-            &0.to_string(),
-            &result.keys.as_ref().unwrap().len().to_string(),
-        ));
+            None => {
+                return Comparison::AreEqual;
+            }
+        },
     }
 
     return Comparison::AreEqual;

@@ -3,6 +3,7 @@ use super::{error::Error, error_builder::ErrorBuilder, token::Token, token_build
 pub enum End {
     Match(TokenBuilder),
     Fail(ErrorBuilder),
+    None,
 }
 
 impl End {
@@ -22,18 +23,31 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn None() -> End {
-        Error::none()
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Error_In_Child(parent: TokenBuilder, err: Error) -> End {
+    pub fn Error_In_Child(parent: TokenBuilder, err: Option<Error>) -> End {
         Error::in_child(parent, err)
     }
 
     #[allow(non_snake_case)]
-    pub fn Error_In_Prop(parent: TokenBuilder, key: &str, err: Error) -> End {
+    pub fn Error_In_Prop(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
         Error::in_prop(parent, key, err)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Variant(parent: TokenBuilder, err: Option<Error>) -> End {
+        match err {
+            Some(err) => {
+                let mut error = err.to_builder();
+                match parent.name {
+                    Some(name) => {
+                        error = error.tag(&name);
+                    }
+                    None => return End::Fail(error),
+                }
+
+                return End::Fail(error);
+            }
+            None => return End::None,
+        }
     }
 
     #[allow(non_snake_case)]

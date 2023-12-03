@@ -17,8 +17,8 @@ impl parser::Parser for Parser {
     fn rule(&self, cursor: &mut Cursor) -> End {
         if cursor.try_read('.') {
             match crate::lexer::parsers::name::Parser::Parse_At(cursor) {
-                Parsed::Token(name) => return Token::new().prop("key", name).end(),
-                Parsed::Error(error) => return End::Error_In_Child(Token::new(), error),
+                Parsed::Pass(name) => return Token::new().prop("key", name).end(),
+                Parsed::Fail(error) => return End::Error_In_Child(Token::new(), error),
             }
         } else {
             return End::Missing("prefix", ".", &cursor.curr_str());

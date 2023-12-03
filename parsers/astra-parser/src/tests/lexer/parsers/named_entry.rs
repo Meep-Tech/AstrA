@@ -11,7 +11,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "One Line & Spaced Right",
                 "name: value",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key", Token::new()
@@ -29,7 +29,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "One Line & Spaced Around",
                 "name : value",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key",
@@ -50,12 +50,12 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "One Line & Not-Spaced & Error",
                 "name:value",
-                Parsed::Error(
+                Parsed::Fail(
                     Error::new("incomplete-named-entry")
-                        .prop("key", Parsed::Token(IsFrom::<name::Parser>()))
+                        .prop("key", Parsed::Pass(IsFrom::<name::Parser>()))
                         .prop(
                             "operator",
-                            Parsed::Error(
+                            Parsed::Fail(
                                 Error::new(
                                     "missing-expected-trailing-whitespace-in-mutable-field-assigner"
                                 ).build(4, 4),
@@ -67,7 +67,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Two Lines & Spaced Indent Increase",
                 "name:\n  value",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key",
@@ -92,22 +92,22 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Two Lines & Spaced Indent Increase & Operator on Newline & Not Spaced & Error",
                 "name\n  :value",
-                Parsed::Error(
+                Parsed::Fail(
                     Error::new("incomplete-named-entry")
                         .prop("key",
-                            Parsed::Token(
+                            Parsed::Pass(
                                 Token::new()
                                     .name(name::KEY)
                                     .build(0, 3),
                             ))
                         .child(
-                            Parsed::Token(
+                            Parsed::Pass(
                                 Token::new()
                                     .name(indent::increase::KEY)
                                     .build(4, 6),
                             ))
                         .prop("operator",
-                            Parsed::Error(
+                            Parsed::Fail(
                                 Error::new(
                                     "missing-expected-trailing-whitespace-in-mutable-field-assigner"
                                 ).build(7, 7),
@@ -118,7 +118,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Two Lines & Spaced Indent Increase & Operator on Newline & Spaced",
                 "name\n  : value",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key",
@@ -143,7 +143,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Three Lines & Spaced Indent Increase",
                 "name\n  :\n  value",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key",
@@ -172,7 +172,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Three Lines & Multple Spaced Indent Increases",
                 "name\n  :\n    value",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key",
@@ -201,7 +201,7 @@ impl Testable for crate::lexer::parsers::named_entry::Parser {
             Test::<Self>::new(
                 "Three Lines & Spaced Indent Increase & Spaced Indent Decrease & Ends Early",
                 "name\n  :\nvalue",
-                Parsed::Token(
+                Parsed::Pass(
                     Token::new()
                         .name(named_entry::KEY)
                         .prop("key",

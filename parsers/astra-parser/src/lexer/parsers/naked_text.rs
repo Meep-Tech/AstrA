@@ -40,20 +40,20 @@ impl parser::Parser for Parser {
                     '.' => {
                         if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
                             match dot_lookup::Parser::Parse_At(cursor) {
-                                Parsed::Token(child) => {
+                                Parsed::Pass(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Error(error) => return End::Error_In_Child(result, error),
+                                Parsed::Fail(error) => return End::Error_In_Child(result, error),
                             }
                         }
                     }
                     '/' => {
                         if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
                             match slash_lookup::Parser::Parse_At(cursor) {
-                                Parsed::Token(child) => {
+                                Parsed::Pass(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Error(error) => return End::Error_In_Child(result, error),
+                                Parsed::Fail(error) => return End::Error_In_Child(result, error),
                             }
                         }
                     }

@@ -24,7 +24,7 @@ impl parser::Parser for Parser {
         let key = name::Parser::Parse_At(cursor);
         let mut indent_increased = false;
         match key {
-            Parsed::Token(key) => {
+            Parsed::Pass(key) => {
                 result = result.prop("key", key);
                 match indent::Parse_Opt_Or_Skip_At(cursor) {
                     Indents::Increase(token) => {
@@ -42,7 +42,7 @@ impl parser::Parser for Parser {
 
                 let operator = mutable_field_assigner::Parser::Parse_At(cursor);
                 match operator {
-                    Parsed::Token(operator) => {
+                    Parsed::Pass(operator) => {
                         result = result.prop("operator", operator);
                         match indent::Parse_Opt_Or_Skip_At(cursor) {
                             Indents::Increase(token) => {
@@ -64,18 +64,18 @@ impl parser::Parser for Parser {
                         let value = naked_text::Parser::Parse_At(cursor);
 
                         match value {
-                            Parsed::Token(value) => {
+                            Parsed::Pass(value) => {
                                 return result.prop("value", value).end();
                             }
-                            Parsed::Error(error) => {
+                            Parsed::Fail(error) => {
                                 return End::Error_In_Prop(result, "value", error)
                             }
                         }
                     }
-                    Parsed::Error(error) => return End::Error_In_Prop(result, "operator", error),
+                    Parsed::Fail(error) => return End::Error_In_Prop(result, "operator", error),
                 }
             }
-            Parsed::Error(error) => return End::Error_In_Prop(result, "key", error),
+            Parsed::Fail(error) => return End::Error_In_Prop(result, "key", error),
         }
     }
 }

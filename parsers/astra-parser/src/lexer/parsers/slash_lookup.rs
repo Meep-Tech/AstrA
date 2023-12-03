@@ -17,10 +17,10 @@ impl parser::Parser for Parser {
     fn rule(&self, cursor: &mut Cursor) -> End {
         if cursor.try_read('/') {
             match crate::lexer::parsers::name::Parser::Parse_At(cursor) {
-                Parsed::Token(name) => {
+                Parsed::Pass(name) => {
                     return Token::new().prop("key", name).end();
                 }
-                Parsed::Error(error) => return End::Error_In_Prop(Token::new(), "key", error),
+                Parsed::Fail(error) => return End::Error_In_Prop(Token::new(), "key", error),
             }
         } else {
             return End::Missing("prefix", "/", &cursor.curr_str());

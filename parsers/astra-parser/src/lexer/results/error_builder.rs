@@ -102,9 +102,9 @@ impl ErrorBuilder {
     }
 }
 
-impl Builder<Error> for ErrorBuilder {
-    fn build(self, start: usize, end: usize) -> Error {
-        return Error {
+impl Builder<Option<Error>> for ErrorBuilder {
+    fn build(self, start: usize, end: usize) -> Option<Error> {
+        return Some(Error {
             name: self.name,
             text: self.text,
             tags: self.tags,
@@ -112,7 +112,7 @@ impl Builder<Error> for ErrorBuilder {
             keys: self.keys,
             start,
             end,
-        };
+        });
     }
 
     fn end(self) -> End {

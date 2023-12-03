@@ -5,12 +5,7 @@ use crate::utils::log::{self, Styleable};
 use super::{
     cursor::Cursor,
     parsers,
-    results::{
-        builder::Builder,
-        end::End,
-        parsed::{Optional, Parsed},
-        token::Token,
-    },
+    results::{builder::Builder, end::End, parsed::Parsed, token::Token},
 };
 
 pub trait Parser: Sync {
@@ -55,7 +50,7 @@ pub trait Parser: Sync {
     }
 
     #[allow(non_snake_case)]
-    fn Parse_Opt(input: &str) -> Optional
+    fn Parse_Opt(input: &str) -> Parsed
     where
         Self: Sync + 'static + Sized,
     {
@@ -63,7 +58,7 @@ pub trait Parser: Sync {
     }
 
     #[allow(non_snake_case)]
-    fn Parse_Opt_At(cursor: &mut Cursor) -> Optional
+    fn Parse_Opt_At(cursor: &mut Cursor) -> Parsed
     where
         Self: Sync + 'static + Sized,
     {
@@ -99,48 +94,32 @@ pub trait Parser: Sync {
         self.parse_with_options_at(cursor, false, false)
     }
 
-    fn parse_opt(&self, input: &str) -> Optional {
-        let result = self.parse_with_options(input, true, true);
-        match result {
-            Parsed::Token(token) => Optional::Token(token),
-            Parsed::Error(err) => Optional::Ignored(err),
-        }
+    fn parse_opt(&self, input: &str) -> Parsed {
+        self.parse_with_options(input, true, true)
     }
 
-    fn parse_opt_or_skip(&self, input: &str) -> Optional {
-        let result = self.parse_with_options(input, false, true);
-        match result {
-            Parsed::Token(token) => Optional::Token(token),
-            Parsed::Error(err) => Optional::Ignored(err),
-        }
+    fn parse_opt_or_skip(&self, input: &str) -> Parsed {
+        self.parse_with_options(input, false, true)
     }
 
-    fn parse_opt_or_skip_at(&self, cursor: &mut Cursor) -> Optional {
-        let result = self.parse_with_options_at(cursor, false, true);
-        match result {
-            Parsed::Token(token) => Optional::Token(token),
-            Parsed::Error(err) => Optional::Ignored(err),
-        }
+    fn parse_opt_or_skip_at(&self, cursor: &mut Cursor) -> Parsed {
+        self.parse_with_options_at(cursor, false, true)
     }
 
-    fn parse_opt_at(&self, cursor: &mut Cursor) -> Optional {
-        let result = self.parse_with_options_at(cursor, true, true);
-        match result {
-            Parsed::Token(token) => Optional::Token(token),
-            Parsed::Error(err) => Optional::Ignored(err),
-        }
+    fn parse_opt_at(&self, cursor: &mut Cursor) -> Parsed {
+        self.parse_with_options_at(cursor, true, true)
     }
 
     fn try_parse_at(&self, cursor: &mut Cursor) -> Option<Token> {
         match self.parse_opt_at(cursor) {
-            Optional::Token(token) => Some(token),
+            Parsed::Pass(token) => Some(token),
             _ => None,
         }
     }
 
     fn try_parse(&self, input: &str) -> Option<Token> {
         match self.parse_opt(input) {
-            Optional::Token(token) => Some(token),
+            Parsed::Pass(token) => Some(token),
             _ => None,
         }
     }
@@ -168,7 +147,7 @@ pub trait Parser: Sync {
                     &[":END", "MATCH"],
                     &format!("@ {} = {:#?}", cursor.prev_pos(), token).color(log::Color::Green),
                 );
-                Parsed::Token(token)
+                Parsed::Pass(token)
             }
             End::Fail(error) => {
                 let err = error
@@ -201,7 +180,15 @@ pub trait Parser: Sync {
                     );
                 }
 
-                Parsed::Error(err)
+                Parsed::Fail(err)
+            }
+            End::None => {
+                if optional {
+                    cursor.restore();
+                }
+
+                log::info!(&[":END", "NONE"], &format!("@ {}", cursor.prev_pos()));
+                Parsed::Fail(None)
             }
         };
 

@@ -79,7 +79,7 @@ impl Error {
         )
     }
 
-    pub fn in_child(parent: TokenBuilder, err: Error) -> End {
+    pub fn in_child(parent: TokenBuilder, err: Option<Error>) -> End {
         let mut parent_err = ErrorBuilder {
             name: "incomplete-{}".to_string(),
             text: None,
@@ -89,19 +89,19 @@ impl Error {
                     .children
                     .unwrap_or(Vec::new())
                     .into_iter()
-                    .map(|c| Parsed::Token(c))
+                    .map(|c| Parsed::Pass(c))
                     .collect(),
             ),
             keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
         parent_err = parent_err.tag("incomplete");
-        parent_err = parent_err.child(Parsed::Error(err));
+        parent_err = parent_err.child(Parsed::Fail(err));
 
         return End::Fail(parent_err);
     }
 
-    pub fn in_prop(parent: TokenBuilder, key: &str, err: Error) -> End {
+    pub fn in_prop(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
         let mut parent_err = ErrorBuilder {
             name: "incomplete-{}".to_string(),
             text: None,
@@ -111,14 +111,14 @@ impl Error {
                     .children
                     .unwrap_or(Vec::new())
                     .into_iter()
-                    .map(|c| Parsed::Token(c))
+                    .map(|c| Parsed::Pass(c))
                     .collect(),
             ),
             keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
         parent_err = parent_err.tag("incomplete");
-        parent_err = parent_err.prop(key, Parsed::Error(err));
+        parent_err = parent_err.prop(key, Parsed::Fail(err));
 
         return End::Fail(parent_err);
     }

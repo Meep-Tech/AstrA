@@ -57,7 +57,7 @@ impl parser::Parser for Parser {
         loop {
             if cursor.is_eof() {
                 cursor.read();
-                return _check_is_not_numeric(is_pure_numeric, cursor, start);
+                return _check_end(is_pure_numeric, cursor, start);
             }
 
             curr = cursor.curr();
@@ -84,7 +84,7 @@ impl parser::Parser for Parser {
                 cursor.read();
                 continue;
             } else {
-                return _check_is_not_numeric(is_pure_numeric, cursor, start);
+                return _check_end(is_pure_numeric, cursor, start);
             }
 
             last_lone_char = None;
@@ -93,8 +93,13 @@ impl parser::Parser for Parser {
     }
 }
 
-fn _check_is_not_numeric(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {
+fn _check_end(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {
     if !is_pure_numeric {
+        if Parser::is_allowed_in_middle_with_repeating(cursor.prev())
+            || Parser::is_allowed_in_middle_without_repeating(cursor.prev())
+        {
+            return End::Unexpected("last-letter", &cursor.slice(cursor.pos - 1, cursor.pos));
+        }
         return End::Token();
     } else {
         return End::Unexpected("pure-numeric-key", &cursor.slice(start, cursor.pos));
