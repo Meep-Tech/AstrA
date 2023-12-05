@@ -25,11 +25,11 @@ impl Cursor {
     }
 
     pub fn new_with(source: &str, ctx: Context) -> Cursor {
-        log::add_color("CURSOR", log::Color::BrightGreen);
-        log::add_color("TOKEN", log::Color::BrightBlue);
-        log::add_color("INDENT", log::Color::BrightWhite);
-        log::add_bg("INDENT", log::Color::BrightBlack);
-        log::push_unique_key("PARSE");
+        log::color!("CURSOR", log::Color::BrightGreen);
+        log::color!("TOKEN", log::Color::BrightBlue);
+        log::color!("INDENT", log::Color::BrightWhite);
+        log::bg!("INDENT", log::Color::BrightBlack);
+        log::push_unique!("PARSE");
 
         log::info!(
             &["CURSOR", ":NEW"],

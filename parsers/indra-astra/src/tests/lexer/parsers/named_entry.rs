@@ -10,7 +10,7 @@ use crate::lexer::{
     results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
 };
 
-use super::test::{IsFrom, Test, Testable};
+use super::test::{Test, Testable, TokenMocks};
 
 impl Testable for named_entry::Parser {
     fn get_tests(&self) -> Vec<Test> {
@@ -59,7 +59,7 @@ impl Testable for named_entry::Parser {
                 "name:value",
                 Parsed::Fail(
                     Error::new("incomplete-named-entry")
-                        .prop("key", Parsed::Pass(IsFrom::<name::Parser>()))
+                        .prop("key", Parsed::Pass(Token::Mock::<name::Parser>()))
                         .prop(
                             "operator",
                             Parsed::Fail(
@@ -206,7 +206,7 @@ impl Testable for named_entry::Parser {
                 )
             ),
             Test::tags::<Self>(
-                &["Three Lines", "Spaced Indent Increase", "Spaced Indent Decrease", "Ends Early"],
+                &["Three Lines", "Spaced Indent Increase", "Spaced Indent Decrease"],
                 "name\n  :\nvalue",
                 Parsed::Pass(
                     Token::new()
@@ -225,7 +225,7 @@ impl Testable for named_entry::Parser {
                                 .build(7, 7))
                         .build(0, 8),
                 )
-            ),
+            ).partial(),
         ];
     }
 }

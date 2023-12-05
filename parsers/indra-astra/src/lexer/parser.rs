@@ -12,6 +12,8 @@ use super::{
 };
 
 pub trait Parser: Sync {
+    // #region Static
+    // #region Get
     #[allow(non_snake_case)]
     fn Instance() -> &'static Rc<Self>
     where
@@ -27,6 +29,9 @@ pub trait Parser: Sync {
     {
         parsers::get_for_type::<Self>()
     }
+
+    // #endregion
+    // #region Parse Methods
 
     #[allow(non_snake_case)]
     fn Parse(input: &str) -> Parsed
@@ -75,31 +80,28 @@ pub trait Parser: Sync {
     {
         return Self::Instance().parse_opt_at(cursor);
     }
+    // #endregion
+    // #endregion
 
-    fn get_name(&self) -> &'static str;
+    // #region Data
+    fn name(&self) -> &'static str;
 
-    fn get_type_id(&self) -> TypeId
+    fn type_id(&self) -> TypeId
     where
         Self: 'static,
     {
         std::any::TypeId::of::<Self>()
     }
 
-    fn get_type_name(&self) -> &'static str
+    fn type_name(&self) -> &'static str
     where
         Self: 'static,
     {
         std::any::type_name::<Self>()
     }
+    // #endregion
 
-    fn as_tests(&self) -> Option<&dyn Testable> {
-        None
-    }
-
-    fn is_ignored(&self) -> bool {
-        false
-    }
-
+    // #region Parser Methods
     fn rule(&self, start: &mut Cursor) -> End;
 
     fn parse(&self, input: &str) -> Parsed {
@@ -147,10 +149,10 @@ pub trait Parser: Sync {
     }
 
     fn parse_with_options_at(&self, cursor: &mut Cursor, optional: bool, ignored: bool) -> Parsed {
-        log::add_color("PARSE", log::Color::Green);
-        log::push_unique_key("PARSE");
-        log::push_key(self.get_name());
-        log::push_key_div(":", log::Color::Green);
+        log::color!("PARSE", log::Color::Green);
+        log::push_unique!("PARSE");
+        log::push!(self.name());
+        log::push_div!(":", log::Color::Green);
         log::info!(&[":START"], &format!("@ {}", cursor.pos));
 
         let start = if optional { cursor.save() } else { cursor.pos };
@@ -158,7 +160,7 @@ pub trait Parser: Sync {
         let result = match self.rule(cursor) {
             End::Match(token) => {
                 let token = token
-                    .assure_name(self.get_name())
+                    .assure_name(self.name())
                     .build(start, cursor.prev_pos());
                 log::info!(
                     &[":END", "MATCH"],
@@ -168,8 +170,8 @@ pub trait Parser: Sync {
             }
             End::Fail(error) => {
                 let err = error
-                    .tag(self.get_name())
-                    .assure_name(self.get_name())
+                    .tag(self.name())
+                    .assure_name(self.name())
                     .build(start, cursor.prev_pos());
 
                 if optional {
@@ -209,10 +211,20 @@ pub trait Parser: Sync {
             }
         };
 
-        log::pop_key();
-        log::pop_key();
-        log::pop_unique_key("PARSE");
+        log::pop!();
+        log::pop!();
+        log::pop_unique!("PARSE");
 
         result
     }
+
+    // #endregion
+
+    // #region Conversions
+
+    fn as_tests(&self) -> Option<&dyn Testable> {
+        None
+    }
+
+    // #endregion
 }

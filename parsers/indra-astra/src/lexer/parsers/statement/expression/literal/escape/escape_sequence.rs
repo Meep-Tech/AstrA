@@ -6,7 +6,7 @@ pub const KEY: &str = "escape-sequence";
 
 pub struct Parser {}
 impl parser::Parser for Parser {
-    fn get_name(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         return &KEY;
     }
 

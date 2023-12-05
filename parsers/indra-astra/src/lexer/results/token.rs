@@ -27,7 +27,7 @@ impl Token {
     }
 
     pub fn of_type<T: parser::Parser + 'static>() -> TokenBuilder {
-        let name = T::Instance().get_name();
+        let name = T::Instance().name();
         return TokenBuilder::new().name(name).tag(name);
     }
 

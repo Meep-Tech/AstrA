@@ -139,6 +139,7 @@ impl Test {
 
     pub fn partial(mut self) -> Self {
         self.tags.push("partial".to_string());
+        self.name = format!("{} & Partial", self.name);
         self
     }
 
@@ -218,8 +219,9 @@ impl Mockable<Token> for TokenBuilder {
         let end_val: usize;
 
         let mut builder = self.tag(_TEST_MOCK_TAG);
-        builder = builder.tag(_TEST_IGNORE_CHILDREN_TAG);
-        builder = builder.tag(_TEST_IGNORE_PROPS_TAG);
+        builder = builder.tag(_TEST_PARTIAL_CHILDREN_TAG);
+        builder = builder.tag(_TEST_PARTIAL_PROPS_TAG);
+        builder = builder.tag(_TEST_PARTIAL_TAGS_TAG);
         match start {
             Some(val) => {
                 start_val = val;
@@ -324,24 +326,26 @@ pub trait Testable: Parser {
     fn get_tests(&self) -> Vec<Test>;
 
     fn run_tests(&self) -> Vec<Outcome> {
-        log::add_color("FAIL", Color::BrightRed);
-        log::add_color("PASS", Color::BrightGreen);
-        log::add_color("TOKEN", Color::BrightBlue);
+        log::color!("FAIL", Color::BrightRed);
+        log::color!("PASS", Color::BrightGreen);
+        log::color!("TOKEN", Color::BrightBlue);
 
         log::ln!();
-        log::push_key(&"TEST".color(Color::Yellow));
-        log::push_unique_key("INIT");
-        let key = self.get_name();
-        log::pop_unique_key("INIT");
-        log::push_key(key);
+        log::push!(&"TEST".color(Color::Yellow));
 
-        log::push_unique_key("INIT");
+        log::push_unique!("INIT");
+        let key = self.name();
+        log::pop_unique!("INIT");
+
+        log::push!(key);
+
+        log::push_unique!("INIT");
         let tests = self.get_tests();
-        log::pop_unique_key("INIT");
+        log::pop_unique!("INIT");
 
         log::ln!();
         log::info!(&[":START"], "Running tests");
-        log::push_key_div("-", Color::Yellow);
+        log::push_div!("-", Color::Yellow);
 
         let mut results: Vec<Outcome> = Vec::new();
         for test in tests {
@@ -349,8 +353,8 @@ pub trait Testable: Parser {
                 continue;
             }
 
-            log::push_key(&test.name.color(Color::BrightYellow));
-            log::push_key_div("-", Color::Yellow);
+            log::push!(&test.name.color(Color::BrightYellow));
+            log::push_div!("-", Color::Yellow);
             log::plain!(
                 &[":START"],
                 &format!(
@@ -376,7 +380,7 @@ pub trait Testable: Parser {
                     } => {
                         _log_failure(
                             &test.name,
-                            &test.parser.get_name(),
+                            &test.parser.name(),
                             &test.expected,
                             result,
                             reason,
@@ -388,25 +392,25 @@ pub trait Testable: Parser {
                 results.push(outcome);
             }
 
-            log::pop_key();
-            log::pop_key();
+            log::pop!();
+            log::pop!();
             log::ln!();
         }
 
-        log::pop_key();
+        log::pop!();
         log::info!(&[":END"], "Finished running tests.");
         log::ln!();
 
         log_results(&results);
 
-        log::pop_key();
+        log::pop!();
         log::ln!();
         results
     }
 }
 
 pub fn log_results(results: &Vec<Outcome>) {
-    log::push_key(&"RESULTS".color(Color::Magenta));
+    log::push!(&"RESULTS".color(Color::Magenta));
 
     // log the percentage of tests that passed
     let mut passes = 0;
@@ -426,18 +430,14 @@ pub fn log_results(results: &Vec<Outcome>) {
     );
     log::ln!();
 
-    log::push_key_div("-", Color::Magenta);
+    log::push_div!("-", Color::Magenta);
 
     let mut failures: Vec<&Outcome> = Vec::new();
     for outcome in results {
         match outcome {
             Outcome::Pass { test, result } => {
                 log::plain!(
-                    &[
-                        test.parser.get_name(),
-                        &test.name.color(Color::Yellow),
-                        "PASS"
-                    ],
+                    &[test.parser.name(), &test.name.color(Color::Yellow), "PASS"],
                     &format!(
                         "{}\n\t => {}",
                         &_format_input(&test.input, &"✔\t".color(Color::BrightGreen)),
@@ -468,7 +468,7 @@ pub fn log_results(results: &Vec<Outcome>) {
             } => {
                 log::plain!(
                     &[
-                        test.parser.get_name(),
+                        test.parser.name(),
                         &test.name.color(Color::Yellow),
                         &"FAIL".color(Color::BrightRed)
                     ],
@@ -499,7 +499,7 @@ pub fn log_results(results: &Vec<Outcome>) {
         }
     }
 
-    log::pop_key();
+    log::pop!();
     log::ln!();
 
     if failures.len() == 0 {
@@ -515,14 +515,14 @@ pub fn log_results(results: &Vec<Outcome>) {
         _log_failures(failures);
     }
 
-    log::pop_key();
-    log::pop_key();
+    log::pop!();
+    log::pop!();
 }
 
 fn _log_failures(failures: Vec<&Outcome>) {
     log::ln!();
-    log::push_key(&"FAILURES".color(Color::BrightRed));
-    log::push_key_div("-", Color::BrightRed);
+    log::push!(&"FAILURES".color(Color::BrightRed));
+    log::push_div!("-", Color::BrightRed);
 
     for outcome in failures {
         match outcome {
@@ -533,7 +533,7 @@ fn _log_failures(failures: Vec<&Outcome>) {
             } => {
                 _log_failure(
                     &test.name,
-                    &test.parser.get_name(),
+                    &test.parser.name(),
                     &test.expected,
                     result,
                     reason,
@@ -544,8 +544,8 @@ fn _log_failures(failures: Vec<&Outcome>) {
         }
     }
 
-    log::pop_key();
-    log::pop_key();
+    log::pop!();
+    log::pop!();
 }
 
 fn _log_failure(
@@ -568,31 +568,51 @@ fn _log_failure(
             _format_input(input, "\t").indent(1),
             "\n\t:: Reason".color(Color::BrightYellow),
             reason.color(Color::Yellow),
-            log::color(Color::BrightGreen, "\n\t?> Expected"),
+            "\n\t?> Expected".color(Color::BrightGreen),
             format!("{:#?}", expected).color(Color::Green).indent(2),
-            log::color(Color::BrightRed, "\n\t!> Actual"),
+            "\n\t!> Actual".color(Color::BrightRed),
             format!("{:#?}", result).color(Color::Red).indent(2)
         ),
     );
 }
 
-#[allow(non_snake_case)]
-pub fn IsFrom<T>() -> Token
-where
-    T: Parser + 'static,
-{
-    Token::new()
-        .name(T::Instance().get_name())
-        .tag(_TEST_IS_FROM_PARSER_TAG)
-        .build(0, 0)
+pub trait TokenMocks {
+    #[allow(non_snake_case)]
+    fn Mock<T>() -> Token
+    where
+        T: Parser + 'static,
+    {
+        Token::new()
+            .name(T::Instance().name())
+            .tag(_TEST_MOCK_TAG)
+            .tag(_TEST_NAME_ONLY)
+            .mock()
+    }
+
+    #[allow(non_snake_case)]
+    fn With_Tag<T>(tag: &str) -> Token
+    where
+        T: Parser + 'static,
+    {
+        Token::new()
+            .name(T::Instance().name())
+            .tag(_TEST_MOCK_TAG)
+            .tag(_TEST_PARTIAL_TAGS_TAG)
+            .tag(tag)
+            .mock()
+    }
 }
 
-const _TEST_IS_FROM_PARSER_TAG: &str = "__test__is_from_parser__";
+impl TokenMocks for Token {}
+
 const _TEST_MOCK_TAG: &str = "__test__mock__";
-const _TEST_IGNORE_CHILDREN_TAG: &str = "__test__ignore_children__";
-const _TEST_IGNORE_PROPS_TAG: &str = "__test__ignore_props__";
+const _TEST_NAME_ONLY: &str = "__test__name_only__";
+const _TEST_IGNORE_TAGS_TAG: &str = "__test__ignore_tags__";
 const _TEST_IGNORE_START_TAG: &str = "__test__ignore_start__";
 const _TEST_IGNORE_END_TAG: &str = "__test__ignore_end__";
+const _TEST_PARTIAL_TAGS_TAG: &str = "__test__partial_tags__";
+const _TEST_PARTIAL_CHILDREN_TAG: &str = "__test__partial_children__";
+const _TEST_PARTIAL_PROPS_TAG: &str = "__test__partial_props__";
 
 fn _verify_outcome(test: Test, result: Parsed) -> Outcome {
     match _compare_token_or_error(&result, &test.expected) {
@@ -634,7 +654,7 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
         return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
     }
 
-    if let Some(value) = _compare_tags(&result.tags, &expected.tags) {
+    if let Some(value) = _compare_tags(&expected.tags, &result.tags) {
         return value;
     }
 
@@ -658,87 +678,103 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
         }
     }
 
-    if !expected.tag(_TEST_IGNORE_CHILDREN_TAG) {
-        if expected.children.len() > 0 {
-            if expected.children.len() != result.children.len() {
-                return Comparison::NotEqual(_mismatch(
-                    "child count",
-                    &expected.children.len().to_string(),
-                    &result.children.len().to_string(),
-                ));
-            }
-
-            for i in 0..expected.children.len() {
-                let expected_child = &expected.children[i];
-                let result_child = &result.children[i];
-                match _compare_token_result(result_child, expected_child) {
-                    Comparison::AreEqual => {}
-                    Comparison::NotEqual(msg) => {
-                        return Comparison::NotEqual(_mismatch(
-                            &format!("child at index: {}. {}", i, msg),
-                            &format!("{:#?}", expected_child),
-                            &format!("{:#?}", result_child),
-                        ));
-                    }
-                }
-            }
-        } else if result.children.len() > 0 {
+    if expected.children.len() > 0 {
+        if !expected.tag(_TEST_PARTIAL_CHILDREN_TAG)
+            && expected.children.len() != result.children.len()
+        {
             return Comparison::NotEqual(_mismatch(
                 "child count",
                 &expected.children.len().to_string(),
                 &result.children.len().to_string(),
             ));
         }
-    }
 
-    if !expected.tag(_TEST_IGNORE_PROPS_TAG) {
-        if let Some(expected_props) = &expected.keys {
-            if let Some(result_props) = &result.keys {
-                if expected_props.len() != result_props.len() {
+        for i in 0..expected.children.len() {
+            if result.children.len() <= i {
+                break;
+            }
+
+            let expected_child = &expected.children[i];
+            let result_child = &result.children[i];
+
+            match _compare_token_result(result_child, expected_child) {
+                Comparison::AreEqual => {}
+                Comparison::NotEqual(msg) => {
                     return Comparison::NotEqual(_mismatch(
-                        "prop count",
-                        &expected_props.len().to_string(),
-                        &result_props.len().to_string(),
+                        &format!("child at index: {}. {}", i, msg),
+                        &format!("{:#?}", expected_child),
+                        &format!("{:#?}", result_child),
                     ));
                 }
+            }
+        }
+    } else if !expected.tag(_TEST_PARTIAL_CHILDREN_TAG) && result.children.len() > 0 {
+        return Comparison::NotEqual(_mismatch(
+            "child count",
+            &expected.children.len().to_string(),
+            &result.children.len().to_string(),
+        ));
+    }
 
-                for (key, index) in expected_props {
-                    if index >= &result.children.len() {
-                        return Comparison::NotEqual(format!(
-                            "Expected prop: {}, with type {} is missing.",
-                            key, expected.children[*index].name,
-                        ));
-                    }
-
-                    let expected_prop = &expected.children[*index];
-                    let result_prop = &result.children[*index];
-                    let expected_prop_name = &expected_prop.name;
-
-                    match _compare_token_result(result_prop, expected_prop) {
-                        Comparison::AreEqual => {}
-                        Comparison::NotEqual(msg) => {
-                            return Comparison::NotEqual(_mismatch(
-                                &format!("prop: {}. {}", expected_prop_name, msg),
-                                &format!("{:#?}", expected_prop),
-                                &format!("{:#?}", result_prop),
-                            ));
-                        }
-                    }
-                }
-            } else {
+    if let Some(expected_props) = &expected.keys {
+        if let Some(result_props) = &result.keys {
+            if !expected.tag(_TEST_PARTIAL_PROPS_TAG) && expected_props.len() != result_props.len()
+            {
                 return Comparison::NotEqual(_mismatch(
                     "prop count",
                     &expected_props.len().to_string(),
-                    &0.to_string(),
+                    &result_props.len().to_string(),
                 ));
             }
-        } else if result.keys.is_some() {
+
+            for (key, index) in expected_props {
+                let expected_prop: &Token;
+                let result_prop: &Token;
+
+                if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
+                    if index >= &result.children.len() {
+                        if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
+                            return Comparison::NotEqual(format!(
+                                "Expected prop: {}, with type {} is missing.",
+                                key, expected.children[*index].name,
+                            ));
+                        } else {
+                            break;
+                        }
+                    }
+
+                    expected_prop = &expected.children[*index];
+                    result_prop = &result.children[*index];
+                } else {
+                    expected_prop = &expected.children[0];
+                    result_prop = &result.field(key).unwrap();
+                }
+
+                let expected_prop_name = &expected_prop.name;
+                match _compare_token_result(result_prop, expected_prop) {
+                    Comparison::AreEqual => {}
+                    Comparison::NotEqual(msg) => {
+                        return Comparison::NotEqual(_mismatch(
+                            &format!("prop: {}. {}", expected_prop_name, msg),
+                            &format!("{:#?}", expected_prop),
+                            &format!("{:#?}", result_prop),
+                        ));
+                    }
+                }
+            }
+        } else {
             return Comparison::NotEqual(_mismatch(
                 "prop count",
+                &expected_props.len().to_string(),
                 &0.to_string(),
-                &result.keys.as_ref().unwrap().len().to_string(),
             ));
         }
+    } else if !expected.tag(_TEST_PARTIAL_PROPS_TAG) && result.keys.is_some() {
+        return Comparison::NotEqual(_mismatch(
+            "prop count",
+            &0.to_string(),
+            &result.keys.as_ref().unwrap().len().to_string(),
+        ));
     }
 
     return Comparison::AreEqual;
@@ -752,7 +788,7 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                     return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
                 }
 
-                if let Some(value) = _compare_tags(&result.tags, &expected.tags) {
+                if let Some(value) = _compare_tags(&expected.tags, &result.tags) {
                     return value;
                 }
 
@@ -772,51 +808,55 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                     ));
                 }
 
-                if !expected.tag(_TEST_IGNORE_CHILDREN_TAG) {
-                    if expected.children.len() > 0 {
-                        if expected.children.len() != result.children.len() {
-                            return Comparison::NotEqual(_mismatch(
-                                "child count",
-                                &expected.children.len().to_string(),
-                                &result.children.len().to_string(),
-                            ));
-                        }
-
-                        for i in 0..expected.children.len() {
-                            let expected_child = &expected.children[i];
-                            let result_child = &result.children[i];
-                            match _compare_token_or_error(result_child, expected_child) {
-                                Comparison::AreEqual => {}
-                                Comparison::NotEqual(msg) => {
-                                    return Comparison::NotEqual(_mismatch(
-                                        &format!("child at index: {}. {}", i, msg),
-                                        &format!("{:#?}", expected_child),
-                                        &format!("{:#?}", result_child),
-                                    ));
-                                }
-                            }
-                        }
-                    } else if result.children.len() > 0 {
+                if expected.children.len() > 0 {
+                    if !expected.tag(_TEST_PARTIAL_CHILDREN_TAG)
+                        && expected.children.len() != result.children.len()
+                    {
                         return Comparison::NotEqual(_mismatch(
                             "child count",
                             &expected.children.len().to_string(),
                             &result.children.len().to_string(),
                         ));
                     }
-                }
 
-                if !expected.tag(_TEST_IGNORE_PROPS_TAG) {
-                    if let Some(expected_props) = &expected.keys {
-                        if let Some(result_props) = &result.keys {
-                            if expected_props.len() != result_props.len() {
+                    for i in 0..expected.children.len() {
+                        let expected_child = &expected.children[i];
+                        let result_child = &result.children[i];
+                        match _compare_token_or_error(result_child, expected_child) {
+                            Comparison::AreEqual => {}
+                            Comparison::NotEqual(msg) => {
                                 return Comparison::NotEqual(_mismatch(
-                                    "prop count",
-                                    &expected_props.len().to_string(),
-                                    &result_props.len().to_string(),
+                                    &format!("child at index: {}. {}", i, msg),
+                                    &format!("{:#?}", expected_child),
+                                    &format!("{:#?}", result_child),
                                 ));
                             }
+                        }
+                    }
+                } else if result.children.len() > 0 {
+                    return Comparison::NotEqual(_mismatch(
+                        "child count",
+                        &expected.children.len().to_string(),
+                        &result.children.len().to_string(),
+                    ));
+                }
 
-                            for (key, index) in expected_props {
+                if let Some(expected_props) = &expected.keys {
+                    if let Some(result_props) = &result.keys {
+                        if !expected.tag(_TEST_PARTIAL_PROPS_TAG)
+                            && expected_props.len() != result_props.len()
+                        {
+                            return Comparison::NotEqual(_mismatch(
+                                "prop count",
+                                &expected_props.len().to_string(),
+                                &result_props.len().to_string(),
+                            ));
+                        }
+
+                        for (key, index) in expected_props {
+                            let expected_prop: &Parsed;
+                            let result_prop: &Parsed;
+                            if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
                                 if index >= &result.children.len() {
                                     return Comparison::NotEqual(format!(
                                         "Expected prop: {}, with type {} is missing.",
@@ -831,92 +871,95 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                                     ));
                                 }
 
-                                let expected_prop = &expected.children[*index];
-                                let result_prop = &result.children[*index];
-
-                                let expected_prop_name = match expected_prop {
-                                    Parsed::Pass(token) => token.name.clone(),
-                                    Parsed::Fail(err) => match err {
-                                        Some(err) => err.name.clone(),
-                                        None => "-none-".to_string(),
-                                    },
-                                };
-
-                                match result_prop {
-                                    Parsed::Pass(result) => match expected_prop {
-                                        Parsed::Pass(expected) => {
-                                            match _compare_token_result(&result, &expected) {
-                                                Comparison::AreEqual => {}
-                                                Comparison::NotEqual(msg) => {
-                                                    return Comparison::NotEqual(_mismatch(
-                                                        &format!(
-                                                            "prop: {} = {}. {}",
-                                                            key, expected_prop_name, msg
-                                                        ),
-                                                        &format!("{:#?}", expected),
-                                                        &format!("{:#?}", result),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                        Parsed::Fail(expected) => {
-                                            return Comparison::NotEqual(_mismatch(
-                                                &format!(
-                                                    "Expected prop: {}, Actual prop: {}",
-                                                    expected_prop_name,
-                                                    match expected {
-                                                        Some(err) => err.name.clone(),
-                                                        None => "-none-".to_string(),
-                                                    }
-                                                ),
-                                                &format!("{:#?}", expected),
-                                                &format!("{:#?}", result),
-                                            ));
-                                        }
-                                    },
-                                    Parsed::Fail(result) => match expected_prop {
-                                        Parsed::Pass(expected) => {
-                                            return Comparison::NotEqual(_mismatch(
-                                                &format!(
-                                                    "type. Expected error: {}, found token: {}.",
-                                                    expected_prop_name, expected.name
-                                                ),
-                                                &format!("{:#?}", expected),
-                                                &format!("{:#?}", result),
-                                            ));
-                                        }
-                                        Parsed::Fail(expected) => {
-                                            match _compare_error_result(&result, &expected) {
-                                                Comparison::AreEqual => {}
-                                                Comparison::NotEqual(msg) => {
-                                                    return Comparison::NotEqual(_mismatch(
-                                                        &format!(
-                                                            "prop: {} = {}. {}",
-                                                            key, expected_prop_name, msg
-                                                        ),
-                                                        &format!("{:#?}", expected),
-                                                        &format!("{:#?}", result),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    },
-                                }
+                                expected_prop = &expected.children[*index];
+                                result_prop = &result.children[*index];
+                            } else {
+                                expected_prop = &expected.children[0];
+                                result_prop = &result.field(key).unwrap();
                             }
-                        } else {
-                            return Comparison::NotEqual(_mismatch(
-                                "prop count",
-                                &expected_props.len().to_string(),
-                                &0.to_string(),
-                            ));
+
+                            let expected_prop_name = match expected_prop {
+                                Parsed::Pass(token) => token.name.clone(),
+                                Parsed::Fail(err) => match err {
+                                    Some(err) => err.name.clone(),
+                                    None => "-none-".to_string(),
+                                },
+                            };
+
+                            match result_prop {
+                                Parsed::Pass(result) => match expected_prop {
+                                    Parsed::Pass(expected) => {
+                                        match _compare_token_result(&result, &expected) {
+                                            Comparison::AreEqual => {}
+                                            Comparison::NotEqual(msg) => {
+                                                return Comparison::NotEqual(_mismatch(
+                                                    &format!(
+                                                        "prop: {} = {}. {}",
+                                                        key, expected_prop_name, msg
+                                                    ),
+                                                    &format!("{:#?}", expected),
+                                                    &format!("{:#?}", result),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                    Parsed::Fail(expected) => {
+                                        return Comparison::NotEqual(_mismatch(
+                                            &format!(
+                                                "Expected prop: {}, Actual prop: {}",
+                                                expected_prop_name,
+                                                match expected {
+                                                    Some(err) => err.name.clone(),
+                                                    None => "-none-".to_string(),
+                                                }
+                                            ),
+                                            &format!("{:#?}", expected),
+                                            &format!("{:#?}", result),
+                                        ));
+                                    }
+                                },
+                                Parsed::Fail(result) => match expected_prop {
+                                    Parsed::Pass(expected) => {
+                                        return Comparison::NotEqual(_mismatch(
+                                            &format!(
+                                                "type. Expected error: {}, found token: {}.",
+                                                expected_prop_name, expected.name
+                                            ),
+                                            &format!("{:#?}", expected),
+                                            &format!("{:#?}", result),
+                                        ));
+                                    }
+                                    Parsed::Fail(expected) => {
+                                        match _compare_error_result(&result, &expected) {
+                                            Comparison::AreEqual => {}
+                                            Comparison::NotEqual(msg) => {
+                                                return Comparison::NotEqual(_mismatch(
+                                                    &format!(
+                                                        "prop: {} = {}. {}",
+                                                        key, expected_prop_name, msg
+                                                    ),
+                                                    &format!("{:#?}", expected),
+                                                    &format!("{:#?}", result),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                },
+                            }
                         }
-                    } else if result.keys.is_some() {
+                    } else {
                         return Comparison::NotEqual(_mismatch(
                             "prop count",
+                            &expected_props.len().to_string(),
                             &0.to_string(),
-                            &result.keys.as_ref().unwrap().len().to_string(),
                         ));
                     }
+                } else if !expected.tag(_TEST_PARTIAL_PROPS_TAG) && result.keys.is_some() {
+                    return Comparison::NotEqual(_mismatch(
+                        "prop count",
+                        &0.to_string(),
+                        &result.keys.as_ref().unwrap().len().to_string(),
+                    ));
                 }
             }
             None => {
@@ -949,8 +992,10 @@ fn _compare_tags(
     result_tags: &Option<HashSet<String>>,
 ) -> Option<Comparison> {
     if let Some(expected_tags) = expected_tags {
-        if expected_tags.contains(_TEST_IS_FROM_PARSER_TAG) {
+        if expected_tags.contains(_TEST_NAME_ONLY) {
             return Some(Comparison::AreEqual);
+        } else if expected_tags.contains(_TEST_IGNORE_TAGS_TAG) {
+            return None;
         } else {
             let countable_tags = expected_tags
                 .iter()
@@ -959,7 +1004,9 @@ fn _compare_tags(
 
             if countable_tags > 0 {
                 if let Some(result_tags) = result_tags {
-                    if countable_tags != result_tags.len() {
+                    if !expected_tags.contains(_TEST_PARTIAL_TAGS_TAG)
+                        && (countable_tags != result_tags.len())
+                    {
                         return Some(Comparison::NotEqual(_mismatch(
                             "tag count",
                             &countable_tags.to_string(),
@@ -968,12 +1015,16 @@ fn _compare_tags(
                     }
 
                     for tag in expected_tags {
-                        if !result_tags.contains(tag) {
+                        if !tag.starts_with("__test__") && !result_tags.contains(tag) {
                             return Some(Comparison::NotEqual(format!(
                                 "Missing expected tag: {}",
                                 tag
                             )));
                         }
+                    }
+
+                    if expected_tags.contains(_TEST_PARTIAL_TAGS_TAG) {
+                        return Some(Comparison::AreEqual);
                     }
                 } else {
                     return Some(Comparison::NotEqual(_mismatch(
@@ -992,9 +1043,9 @@ fn _mismatch(prop: &str, expected: &str, result: &str) -> String {
     return format!(
         "Mismatch in {}. {}: \n\t\t{}, {}: \n\t\t{}",
         prop,
-        log::color(Color::BrightGreen, "\n\t?> Expected"),
+        "Expected".color(Color::BrightGreen),
         format!("{}", expected).color(Color::Green).indent(2),
-        log::color(Color::BrightRed, "\n\t!> Actual"),
+        "Actual".color(Color::BrightRed),
         format!("{}", result).color(Color::Red).indent(2)
     );
 }
@@ -1003,7 +1054,7 @@ fn _add_default_tags<TParser>(test: &mut Test)
 where
     TParser: Parser + 'static,
 {
-    test.tags.push(TParser::Instance().get_name().to_string());
+    test.tags.push(TParser::Instance().name().to_string());
     if let Parsed::Pass(_) = &test.expected {
         test.tags.push("Pass".to_string());
     } else if let Parsed::Fail(err) = &test.expected {
@@ -1068,7 +1119,7 @@ fn _run_pattern_tests(test: &Test, patterns: Vec<(String, Vec<usize>)>) -> Vec<O
             } => {
                 _log_failure(
                     &test.name,
-                    &test.parser.get_name(),
+                    &test.parser.name(),
                     &test.expected,
                     result,
                     reason,
@@ -1077,8 +1128,8 @@ fn _run_pattern_tests(test: &Test, patterns: Vec<(String, Vec<usize>)>) -> Vec<O
             }
         }
 
-        log::pop_key();
-        log::pop_key();
+        log::pop!();
+        log::pop!();
         log::ln!();
 
         results.push(outcome);
@@ -1088,7 +1139,7 @@ fn _run_pattern_tests(test: &Test, patterns: Vec<(String, Vec<usize>)>) -> Vec<O
 }
 
 fn _build_tests_from_pattern(test: &Test, subs: &Vec<String>) -> Vec<(String, Vec<usize>)> {
-    log::push_key("PATTERN");
+    log::push!("PATTERN");
     let sub_pattern_count = &test.input.matches("{}").count();
 
     if subs.len() != *sub_pattern_count {
@@ -1186,7 +1237,7 @@ fn _build_tests_from_pattern(test: &Test, subs: &Vec<String>) -> Vec<(String, Ve
         results.push((result, combo));
     }
 
-    log::pop_key();
+    log::pop!();
     results
 }
 

@@ -45,7 +45,7 @@ impl End {
 
         return End::Missing_Variant_Of(
             parent,
-            variants.iter().map(|option| option.get_name()).collect(),
+            variants.iter().map(|option| option.name()).collect(),
             errors,
         );
     }
@@ -68,7 +68,7 @@ impl End {
 
         return End::Missing_One_Of(
             parent,
-            options.iter().map(|option| option.get_name()).collect(),
+            options.iter().map(|option| option.name()).collect(),
             errors,
         );
     }

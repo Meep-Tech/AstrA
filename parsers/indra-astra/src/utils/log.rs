@@ -6,6 +6,8 @@ use std::{
 
 // #region Loggers
 
+// #region Macros
+
 macro_rules! info {
     ($($rest:tt)*) => {
         #[cfg(debug_assertions)]
@@ -45,6 +47,8 @@ macro_rules! ln {
     };
 }
 pub(crate) use ln;
+
+// #endregion
 
 pub fn log(keys: &[&str], message: &str) {
     if Some(unsafe { &_STYLES }).is_some() {
@@ -127,6 +131,54 @@ pub fn log_ln() {
 
 // #region Style Setters
 
+// #region Macros
+
+macro_rules! bg {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::add_bg($($rest)*);
+    }
+}
+pub(crate) use bg;
+
+macro_rules! color {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::add_color($($rest)*);
+    }
+}
+pub(crate) use color;
+
+#[allow(unused_macros)]
+macro_rules! effect {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::add_effect($($rest)*);
+    }
+}
+#[allow(unused_imports)]
+pub(crate) use effect;
+
+#[allow(unused_macros)]
+macro_rules! style {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::add_style($($rest)*);
+    }
+}
+#[allow(unused_imports)]
+pub(crate) use style;
+
+macro_rules! random_style {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::set_random_style($($rest)*);
+    }
+}
+pub(crate) use random_style;
+
+// #endregion
+
 pub fn add_bg(text: &str, bg: Color) {
     add_style(text, &_escape_bg(bg));
 }
@@ -189,6 +241,50 @@ pub fn set_random_style(message: &str) {
 
 // #region Key Setters
 
+// #region Macros
+
+macro_rules! push_unique {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::push_unique_key($($rest)*);
+    }
+}
+pub(crate) use push_unique;
+
+macro_rules! push {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::push_key($($rest)*);
+    }
+}
+pub(crate) use push;
+
+macro_rules! push_div {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::push_key_div($($rest)*);
+    }
+}
+pub(crate) use push_div;
+
+macro_rules! pop {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::pop_key($($rest)*);
+    }
+}
+pub(crate) use pop;
+
+macro_rules! pop_unique {
+    ($($rest:tt)*) => {
+        #[cfg(debug_assertions)]
+        log::pop_unique_key($($rest)*);
+    }
+}
+pub(crate) use pop_unique;
+
+// #endregion
+
 pub fn push_unique_key(key: &str) {
     let key = key.to_string();
     unsafe {
@@ -228,23 +324,23 @@ pub fn pop_unique_key(key: &str) {
 
 // #region Stylizers
 
-pub fn color(color: Color, message: &str) -> String {
+fn _color(color: Color, message: &str) -> String {
     return format!("{}{}{}", _escape_color(color), message, _escape_reset());
 }
 
-pub fn bg(message: &str, color: Color) -> String {
+fn _bg(message: &str, color: Color) -> String {
     return format!("{}{}{}", _escape_bg(color), message, _escape_reset());
 }
 
-pub fn effect(effect: Effect, message: &str) -> String {
+fn _effect(effect: Effect, message: &str) -> String {
     return format!("{}{}{}", _escape_effect(effect), message, _escape_reset());
 }
 
-pub fn indent(text: &str, indent: usize) -> String {
+fn _indent(text: &str, indent: usize) -> String {
     text.replace('\n', &format!("\n{}", "\t".repeat(indent)))
 }
 
-pub fn style_keys(keys: &[&str]) -> Vec<String> {
+fn style_keys(keys: &[&str]) -> Vec<String> {
     let mut styled_keys: Vec<String> = Vec::new();
     for key in keys {
         unsafe {
@@ -258,7 +354,7 @@ pub fn style_keys(keys: &[&str]) -> Vec<String> {
     styled_keys
 }
 
-pub fn style_text(message: &str) -> String {
+fn style_text(message: &str) -> String {
     let message_parts = message.split_whitespace().collect::<Vec<&str>>();
     let mut message_splitters: Vec<(usize, &str)> =
         message.match_indices(|c: char| c.is_whitespace()).collect();
@@ -377,31 +473,31 @@ pub trait Styleable {
 
 impl Styleable for String {
     fn color(&self, color: Color) -> String {
-        return super::log::color(color, self);
+        _color(color, self)
     }
     fn bg(&self, color: Color) -> String {
-        return super::log::bg(self, color);
+        _bg(self, color)
     }
     fn indent(&self, indent: usize) -> String {
-        super::log::indent(self, indent)
+        _indent(self, indent)
     }
     fn effect(&self, effect: Effect) -> String {
-        return super::log::effect(effect, self);
+        _effect(effect, self)
     }
 }
 
 impl Styleable for &str {
     fn color(&self, color: Color) -> String {
-        return super::log::color(color, self);
+        _color(color, self)
     }
     fn bg(&self, color: Color) -> String {
-        return super::log::bg(self, color);
+        _bg(self, color)
     }
     fn indent(&self, indent: usize) -> String {
-        super::log::indent(self, indent)
+        _indent(self, indent)
     }
     fn effect(&self, effect: Effect) -> String {
-        return super::log::effect(effect, self);
+        _effect(effect, self)
     }
 }
 

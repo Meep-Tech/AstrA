@@ -24,7 +24,7 @@ where
     TType: Parser + 'static,
 {
     let result: &Rc<TType>;
-    log::push_unique_key("PARSERS");
+    log::push_unique!("PARSERS");
     log::info!(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
 
     unsafe {
@@ -32,21 +32,21 @@ where
         result = std::mem::transmute::<&Rc<dyn Parser>, &Rc<TType>>(parser);
     }
 
-    log::pop_unique_key("PARSERS");
+    log::pop_unique!("PARSERS");
 
     return result;
 }
 
 pub fn get_for_key(key: &str) -> &'static Rc<dyn Parser> {
     let result: &'static Rc<dyn Parser>;
-    log::push_unique_key("PARSERS");
+    log::push_unique!("PARSERS");
     log::info!(&["GET", "FOR-KEY"], &format!("for key: {:?}", key));
 
     unsafe {
         result = _BY_KEY.as_ref().unwrap().get(key).unwrap();
     }
 
-    log::pop_unique_key("PARSERS");
+    log::pop_unique!("PARSERS");
 
     return result;
 }
@@ -55,7 +55,7 @@ pub fn get_by_type<TType>() -> &'static Rc<TType>
 where
     TType: Parser + Sync + 'static,
 {
-    log::push_unique_key("PARSERS");
+    log::push_unique!("PARSERS");
 
     let result: &'static Rc<TType>;
     log::info!(
@@ -73,7 +73,7 @@ where
         result = get_by_key::<TType>(key);
     }
 
-    log::pop_unique_key("PARSERS");
+    log::pop_unique!("PARSERS");
 
     return result;
 }
@@ -82,7 +82,7 @@ pub fn get_for_type<TType>() -> &'static Rc<dyn Parser>
 where
     TType: Parser + Sync + 'static,
 {
-    log::push_unique_key("PARSERS");
+    log::push_unique!("PARSERS");
 
     let result: &'static Rc<dyn Parser>;
     log::info!(
@@ -103,19 +103,19 @@ where
         result = get_for_key(key);
     }
 
-    log::pop_unique_key("PARSERS");
+    log::pop_unique!("PARSERS");
 
     return result;
 }
 
 pub fn get_tests_for(key: &str) -> &'static dyn Testable {
     let result: &'static dyn Testable;
-    log::push_unique_key("PARSERS");
+    log::push_unique!("PARSERS");
     log::info!(&["GET", "TESTS"], &format!("for key: {:?}", key));
     let parser = get_for_key(key);
     result = parser.as_tests().unwrap();
 
-    log::pop_unique_key("PARSERS");
+    log::pop_unique!("PARSERS");
 
     return result;
 }
@@ -167,15 +167,15 @@ pub(crate) fn init_all() {
 }
 
 pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
-    log::add_color("INIT", Color::Cyan);
-    log::add_color("PARSERS", Color::Green);
-    log::add_color(":START", Color::BrightMagenta);
-    log::add_color(":END", Color::BrightMagenta);
-    log::add_color(":NEW", Color::BrightMagenta);
-    log::add_color(":EOF", Color::BrightMagenta);
+    log::color!("INIT", Color::Cyan);
+    log::color!("PARSERS", Color::Green);
+    log::color!(":START", Color::BrightMagenta);
+    log::color!(":END", Color::BrightMagenta);
+    log::color!(":NEW", Color::BrightMagenta);
+    log::color!(":EOF", Color::BrightMagenta);
 
-    log::push_unique_key("INIT");
-    log::push_unique_key("PARSERS");
+    log::push_unique!("INIT");
+    log::push_unique!("PARSERS");
 
     unsafe {
         match &mut _BY_KEY {
@@ -184,20 +184,20 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
             }
             None => {
                 log::info!(&[":START"], "Initializing parsers");
-                log::push_key_div("-", Color::Green);
+                log::push_div!("-", Color::Green);
 
                 _BY_KEY = Some(HashMap::new());
                 for p in parsers {
                     //let parser = Box::new(p);
-                    let key: &'static str = p.get_name();
-                    let type_id: TypeId = p.get_type_id();
-                    let type_name: &'static str = p.get_type_name();
+                    let key: &'static str = p.name();
+                    let type_id: TypeId = p.type_id();
+                    let type_name: &'static str = p.type_name();
 
-                    log::push_key(key);
-                    log::set_random_style(key);
-                    log::push_key_div("-", Color::Green);
+                    log::push!(key);
+                    log::random_style!(key);
+                    log::push_div!("-", Color::Green);
                     log::info!(&[":START"], "Initializing parser");
-                    log::push_key_div("-", Color::Green);
+                    log::push_div!("-", Color::Green);
 
                     log::info!(&["KEY"], key);
                     log::info!(&["TYPE"], &format!("{:?}: {:?}", type_name, type_id));
@@ -206,20 +206,20 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
 
                     _BY_TYPE.get_or_insert(HashMap::new()).insert(type_id, key);
 
-                    log::pop_key();
+                    log::pop!();
                     log::info!(&[":END"], "Initialized parser");
-                    log::pop_key();
-                    log::pop_key();
+                    log::pop!();
+                    log::pop!();
                 }
 
-                log::pop_key();
+                log::pop!();
                 log::info!(&[":END"], "Initialized parsers");
             }
         }
     }
 
-    log::pop_unique_key("PARSERS");
-    log::pop_unique_key("INIT");
+    log::pop_unique!("PARSERS");
+    log::pop_unique!("INIT");
 }
 
 static mut _BY_KEY: Option<HashMap<&'static str, Rc<dyn Parser>>> = None;

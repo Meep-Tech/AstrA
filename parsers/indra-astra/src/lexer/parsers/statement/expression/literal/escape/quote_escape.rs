@@ -7,7 +7,7 @@ pub mod single {
 
     pub struct Parser;
     impl parser::Parser for Parser {
-        fn get_name(&self) -> &'static str {
+        fn name(&self) -> &'static str {
             &KEY
         }
 
@@ -30,7 +30,7 @@ pub mod double {
 
     pub struct Parser;
     impl parser::Parser for Parser {
-        fn get_name(&self) -> &'static str {
+        fn name(&self) -> &'static str {
             &KEY
         }
 
@@ -48,7 +48,7 @@ pub mod double {
 
 pub struct Parser;
 impl parser::Parser for Parser {
-    fn get_name(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         "quote-escape"
     }
 

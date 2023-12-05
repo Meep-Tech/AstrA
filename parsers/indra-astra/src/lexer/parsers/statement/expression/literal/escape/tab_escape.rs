@@ -4,7 +4,7 @@ pub const KEY: &str = "tab-escape";
 
 pub struct Parser;
 impl parser::Parser for Parser {
-    fn get_name(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         &KEY
     }
 
