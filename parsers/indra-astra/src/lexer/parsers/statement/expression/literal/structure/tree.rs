@@ -29,11 +29,11 @@ impl parser::Parser for Parser {
             Indents::Increase(token) => {
                 result = result.child(token);
             }
+            Indents::Current(token) => {
+                result = result.child(token);
+            }
             Indents::Decrease(_) => {
                 return End::Unexpected("initial-indent-decrease", &cursor.curr_str())
-            }
-            Indents::Current(_) => {
-                return End::Unexpected("initial-current-indent", &cursor.curr_str())
             }
             _ => {}
         };

@@ -102,7 +102,7 @@ impl TokenBuilder {
 }
 
 impl Builder<Token> for TokenBuilder {
-    fn build(self, start: usize, end: usize) -> crate::Token {
+    fn build(self, start: usize, end: usize) -> Token {
         log::info!(
             &["TOKEN", ":BUILD"],
             &format!(

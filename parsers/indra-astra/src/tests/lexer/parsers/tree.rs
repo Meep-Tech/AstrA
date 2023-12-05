@@ -1,11 +1,12 @@
 use crate::{
     lexer::{
-        parsers::statement::{
-            assignment::entry::named_entry, expression::literal::structure::tree,
+        parsers::{
+            statement::{assignment::entry::named_entry, expression::literal::structure::tree},
+            whitespace::indent,
         },
-        results::parsed::Parsed,
+        results::{parsed::Parsed, token::Token},
     },
-    tests::lexer::parsers::test::{IsFrom, Test},
+    tests::lexer::parsers::test::{IsFrom, Mockable, Test},
 };
 
 use super::test::Testable;
@@ -19,7 +20,13 @@ impl Testable for tree::Parser {
             &["Single Entry"],
             "{}",
             &[&named_entry::KEY],
-            Parsed::Pass(IsFrom::<tree::Parser>()),
+            Parsed::Pass(
+                Token::new()
+                    .name(tree::KEY)
+                    .child(IsFrom::<indent::current::Parser>())
+                    .child(Token::new().name(named_entry::KEY).mock())
+                    .mock(),
+            ),
         )]
     }
 }

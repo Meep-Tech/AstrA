@@ -18,105 +18,131 @@ impl Testable for name::Parser {
                 "abc-def",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 6)),
             ),
-            Test::new::<Self>(
-                "Alphabetic & Underscore & Dash",
+            Test::tags::<Self>(
+                &["Alphabetic", "Underscore", "Dash"],
                 "abc_efg-hij",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 10)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Numeric Start",
+            Test::tags::<Self>(
+                &["Alphanumeric", "Numeric Start"],
                 "123abc",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 5)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Underscore",
+            Test::tags::<Self>(
+                &["Alphanumeric", "Underscore"],
                 "abc_123",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 6)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Underscore & Dash",
+            Test::tags::<Self>(
+                &["Alphanumeric", "Underscore", "Dash"],
                 "abc_123-456",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 10)),
             ),
-            Test::new::<Self>(
-                "Alphabetic & Double Dash & Error",
+            Test::tags::<Self>(
+                &["Alphabetic", "Double Dash", "Error"],
                 "abc--def",
                 Parsed::Fail(Error::new("unexpected-repeat-lone-symbol-in-name").build(0, 3)),
             ),
-            Test::new::<Self>(
-                "Alphabetic & Double Underscore",
+            Test::tags::<Self>(
+                &["Alphabetic", "Double Underscore"],
                 "abc__def",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 7)),
             ),
-            Test::new::<Self>(
-                "Alphabetic & Double Underscore & Dash",
+            Test::tags::<Self>(
+                &["Alphabetic", "Double Underscore", "Dash"],
                 "abc__def-ghi",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 11)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Numeric End",
+            Test::tags::<Self>(
+                &["Alphanumeric", "Numeric End"],
                 "abc123",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 5)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Numeric Middle",
+            Test::tags::<Self>(
+                &["Alphanumeric", "Numeric Middle"],
                 "abc123def",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 8)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Alphabetic Middle & Numeric End & Numeric Start",
+            Test::tags::<Self>(
+                &[
+                    "Alphanumeric",
+                    "Alphabetic Middle",
+                    "Numeric End",
+                    "Numeric Start",
+                ],
                 "123abc456",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 8)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Alphabetic Middle & Numeric End & Numeric Start & Underscore",
+            Test::tags::<Self>(
+                &[
+                    "Alphanumeric",
+                    "Alphabetic Middle",
+                    "Numeric End",
+                    "Numeric Start",
+                    "Underscore",
+                ],
                 "123abc_456",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 9)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Alphabetic Middle & Numeric End & Numeric Start & Underscore & Dash",
+            Test::tags::<Self>(
+                &[
+                    "Alphanumeric",
+                    "Alphabetic Middle",
+                    "Numeric End",
+                    "Numeric Start",
+                    "Underscore",
+                    "Dash",
+                ],
                 "123abc_456-789",
                 Parsed::Pass(Token::new().name(name::KEY).build(0, 13)),
             ),
-            Test::new::<Self>(
-                "Alphanumeric & Alphabetic Middle & Numeric End & Numeric Start & Underscore & Double Dash & Error",
+            Test::tags::<Self>(
+                &[
+                    "Alphanumeric",
+                    "Alphabetic Middle",
+                    "Numeric End",
+                    "Numeric Start",
+                    "Underscore",
+                    "Double Dash",
+                    "Error",
+                ],
                 "123abc_456--789",
                 Parsed::Fail(Error::new("unexpected-repeat-lone-symbol-in-name").build(0, 10)),
             ),
-            Test::new::<Self>(
-              "Numeric & Error",
-              "123",
-              Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 2)),
+            Test::tags::<Self>(
+                &["Numeric", "Error"],
+                "123",
+                Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 2)),
             ),
-            Test::new::<Self>(
-              "Numeric Start & Numeric End & Underscore & Error",
-              "123_123",
-              Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 6)),
+            Test::tags::<Self>(
+                &["Numeric Start", "Numeric End", "Underscore", "Error"],
+                "123_123",
+                Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 6)),
             ),
-            Test::new::<Self>(
-              "Numeric & Underscore End & Error",
-              "123_",
-              Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 3)),
+            Test::tags::<Self>(
+                &["Numeric", "Underscore End", "Error"],
+                "123_",
+                Parsed::Fail(Error::new("unexpected-pure-numeric-key-in-name").build(0, 3)),
             ),
-            Test::new::<Self>(
-              "Alphabetic & Underscore End & Error",
-              "abc_",
-              Parsed::Fail(Error::new("unexpected-last-letter-in-name").build(0, 3)),
+            Test::tags::<Self>(
+                &["Alphabetic", "Underscore End", "Error"],
+                "abc_",
+                Parsed::Fail(Error::new("unexpected-last-letter-in-name").build(0, 3)),
             ),
-            Test::new::<Self>(
-              "Alphabetic & Underscore Start & Error",
-              "_abc",
-              Parsed::Fail(Error::new("unexpected-first-letter-in-name").build(0, 0)),
+            Test::tags::<Self>(
+                &["Alphabetic", "Underscore Start", "Error"],
+                "_abc",
+                Parsed::Fail(Error::new("unexpected-first-letter-in-name").build(0, 0)),
             ),
-            Test::new::<Self>(
-              "Dash Start & Error",
-              "-abc",
-              Parsed::Fail(Error::new("unexpected-first-letter-in-name").build(0, 0)),
+            Test::tags::<Self>(
+                &["Dash Start", "Error"],
+                "-abc",
+                Parsed::Fail(Error::new("unexpected-first-letter-in-name").build(0, 0)),
             ),
-            Test::new::<Self>(
-              "Dash End & Error",
-              "abc-",
-              Parsed::Fail(Error::new("unexpected-last-letter-in-name").build(0, 3)),
+            Test::tags::<Self>(
+                &["Dash End", "Error"],
+                "abc-",
+                Parsed::Fail(Error::new("unexpected-last-letter-in-name").build(0, 3)),
             ),
         ];
     }

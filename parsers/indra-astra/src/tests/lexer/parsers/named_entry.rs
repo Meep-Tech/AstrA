@@ -15,8 +15,8 @@ use super::test::{IsFrom, Test, Testable};
 impl Testable for named_entry::Parser {
     fn get_tests(&self) -> Vec<Test> {
         return vec![
-            Test::new::<Self>(
-                "One Line & Spaced Right",
+            Test::tags::<Self>(
+                &["One Line", "Spaced Right"],
                 "name: value",
                 Parsed::Pass(
                     Token::new()
@@ -33,8 +33,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 9),
                 ),
             ),
-            Test::new::<Self>(
-                "One Line & Spaced Around",
+            Test::tags::<Self>(
+                &["One Line", "Spaced Around"],
                 "name : value",
                 Parsed::Pass(
                     Token::new()
@@ -54,8 +54,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 10),
                 ),
             ),
-            Test::new::<Self>(
-                "One Line & Not-Spaced & Error",
+            Test::tags::<Self>(
+                &["One Line", "Not-Spaced", "Error"],
                 "name:value",
                 Parsed::Fail(
                     Error::new("incomplete-named-entry")
@@ -71,8 +71,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 4),
                 ),
             ),
-            Test::new::<Self>(
-                "Two Lines & Spaced Indent Increase",
+            Test::tags::<Self>(
+                &["Two Lines", "Spaced Indent Increase"],
                 "name:\n  value",
                 Parsed::Pass(
                     Token::new()
@@ -96,8 +96,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 11),
                 )
             ),
-            Test::new::<Self>(
-                "Two Lines & Spaced Indent Increase & Operator on Newline & Not Spaced & Error",
+            Test::tags::<Self>(
+                &["Two Lines", "Spaced Indent Increase", "Operator on Newline", "Not Spaced", "Error"],
                 "name\n  :value",
                 Parsed::Fail(
                     Error::new("incomplete-named-entry")
@@ -122,8 +122,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 7),
                 )
             ),
-            Test::new::<Self>(
-                "Two Lines & Spaced Indent Increase & Operator on Newline & Spaced",
+            Test::tags::<Self>(
+                &["Two Lines", "Spaced Indent Increase", "Operator on Newline", "Spaced"],
                 "name\n  : value",
                 Parsed::Pass(
                     Token::new()
@@ -147,8 +147,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 12),
                 )
             ),
-            Test::new::<Self>(
-                "Three Lines & Spaced Indent Increase",
+            Test::tags::<Self>(
+                &["Three Lines", "Spaced Indent Increase"],
                 "name\n  :\n  value",
                 Parsed::Pass(
                     Token::new()
@@ -176,8 +176,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 14),
                 )
             ),
-            Test::new::<Self>(
-                "Three Lines & Multple Spaced Indent Increases",
+            Test::tags::<Self>(
+                &["Three Lines", "Multple Spaced Indent Increases"],
                 "name\n  :\n    value",
                 Parsed::Pass(
                     Token::new()
@@ -205,8 +205,8 @@ impl Testable for named_entry::Parser {
                         .build(0, 16),
                 )
             ),
-            Test::new::<Self>(
-                "Three Lines & Spaced Indent Increase & Spaced Indent Decrease & Ends Early",
+            Test::tags::<Self>(
+                &["Three Lines", "Spaced Indent Increase", "Spaced Indent Decrease", "Ends Early"],
                 "name\n  :\nvalue",
                 Parsed::Pass(
                     Token::new()
