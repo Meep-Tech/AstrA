@@ -9,16 +9,28 @@ use std::{
 // #region Macros
 
 macro_rules! info {
-    ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+    (v: $($rest:tt)*) => {
+        #[cfg(feature = "v")]
         log::log_info($($rest)*);
-    }
+    };
+    (vv: $($rest:tt)*) => {
+        #[cfg(feature = "vv")]
+        log::log_info($($rest)*);
+    };
+    (vvv: $($rest:tt)*) => {
+        #[cfg(feature = "vvv")]
+        log::log_info($($rest)*);
+    };
+    ($($rest:tt)*) => {
+        #[cfg(feature = "log")]
+        log::log_info($($rest)*);
+    };
 }
 pub(crate) use info;
 
 macro_rules! plain {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::log_info_plain($($rest)*);
     }
 }
@@ -26,7 +38,7 @@ pub(crate) use plain;
 
 macro_rules! warning {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::log_warn($($rest)*);
     }
 }
@@ -34,7 +46,7 @@ pub(crate) use warning;
 
 macro_rules! error {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::log_error($($rest)*);
     }
 }
@@ -42,7 +54,7 @@ pub(crate) use error;
 
 macro_rules! ln {
     () => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::log_ln();
     };
 }
@@ -135,7 +147,7 @@ pub fn log_ln() {
 
 macro_rules! bg {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::add_bg($($rest)*);
     }
 }
@@ -143,7 +155,7 @@ pub(crate) use bg;
 
 macro_rules! color {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::add_color($($rest)*);
     }
 }
@@ -152,7 +164,7 @@ pub(crate) use color;
 #[allow(unused_macros)]
 macro_rules! effect {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::add_effect($($rest)*);
     }
 }
@@ -162,7 +174,7 @@ pub(crate) use effect;
 #[allow(unused_macros)]
 macro_rules! style {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::add_style($($rest)*);
     }
 }
@@ -171,7 +183,7 @@ pub(crate) use style;
 
 macro_rules! random_style {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::set_random_style($($rest)*);
     }
 }
@@ -245,7 +257,7 @@ pub fn set_random_style(message: &str) {
 
 macro_rules! push_unique {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::push_unique_key($($rest)*);
     }
 }
@@ -253,7 +265,7 @@ pub(crate) use push_unique;
 
 macro_rules! push {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::push_key($($rest)*);
     }
 }
@@ -261,7 +273,7 @@ pub(crate) use push;
 
 macro_rules! push_div {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::push_key_div($($rest)*);
     }
 }
@@ -269,7 +281,7 @@ pub(crate) use push_div;
 
 macro_rules! pop {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::pop_key($($rest)*);
     }
 }
@@ -277,7 +289,7 @@ pub(crate) use pop;
 
 macro_rules! pop_unique {
     ($($rest:tt)*) => {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         log::pop_unique_key($($rest)*);
     }
 }

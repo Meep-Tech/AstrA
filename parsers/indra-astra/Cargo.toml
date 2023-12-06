@@ -1,3 +1,11 @@
+[features]
+default = []
+log = []
+verbose = ["v"]
+v = ["log"]
+vv = ["v"]
+vvv = ["vv"]
+
 [package]
 name = "astra-parser"
 version = "0.1.0"

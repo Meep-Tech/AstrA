@@ -2,8 +2,11 @@ use std::{any::TypeId, collections::HashMap, rc::Rc};
 
 use crate::{
     tests::lexer::parsers::test::Testable,
-    utils::log::{self, Color},
+    utils::log::{self},
 };
+
+#[cfg(feature = "log")]
+use crate::utils::log::Color;
 
 use self::{
     statement::expression::invocation::identifier::key::name,
@@ -191,7 +194,6 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                     //let parser = Box::new(p);
                     let key: &'static str = p.name();
                     let type_id: TypeId = p.type_id();
-                    let type_name: &'static str = p.type_name();
 
                     log::push!(key);
                     log::random_style!(key);
@@ -200,7 +202,7 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                     log::push_div!("-", Color::Green);
 
                     log::info!(&["KEY"], key);
-                    log::info!(&["TYPE"], &format!("{:?}: {:?}", type_name, type_id));
+                    log::info!(&["TYPE"], &format!("{:?}: {:?}", p.type_name(), type_id));
 
                     _BY_KEY.as_mut().unwrap().insert(key, p);
 

@@ -191,10 +191,10 @@ pub fn test_parsers(parsers: &[&'static dyn Testable]) -> Vec<Outcome> {
     }
 
     log::info!(
-        &[&"REPORT".color(Color::Magenta)],
-        &"FINAL TEST RESULTS ===============================".color(Color::BrightMagenta)
+        &[&"RESULTS".color(Color::Magenta)],
+        &"FINAL TEST REPORT ===============================".color(Color::BrightMagenta)
     );
-    log::ln!();
+    #[cfg(feature = "log")]
     log_results(&results);
 
     return results;
@@ -334,10 +334,9 @@ pub trait Testable: Parser {
         log::push!(&"TEST".color(Color::Yellow));
 
         log::push_unique!("INIT");
-        let key = self.name();
         log::pop_unique!("INIT");
 
-        log::push!(key);
+        log::push!(self.name());
 
         log::push_unique!("INIT");
         let tests = self.get_tests();
@@ -369,6 +368,7 @@ pub trait Testable: Parser {
                 let result = test.parser.parse(&test.input);
                 let outcome: Outcome = _verify_outcome(test, result);
 
+                #[cfg(feature = "log")]
                 match &outcome {
                     Outcome::Pass { test: _, result: _ } => {
                         log::info!(&[":END", "PASS"], &format!("Test passed"));
@@ -401,6 +401,7 @@ pub trait Testable: Parser {
         log::info!(&[":END"], "Finished running tests.");
         log::ln!();
 
+        #[cfg(feature = "log")]
         log_results(&results);
 
         log::pop!();
@@ -409,11 +410,14 @@ pub trait Testable: Parser {
     }
 }
 
+#[cfg(feature = "log")]
 pub fn log_results(results: &Vec<Outcome>) {
     log::push!(&"RESULTS".color(Color::Magenta));
 
     // log the percentage of tests that passed
+    #[cfg(feature = "log")]
     let mut passes = 0;
+    #[cfg(feature = "log")]
     for outcome in results {
         match outcome {
             Outcome::Pass { test: _, result: _ } => {
@@ -423,16 +427,20 @@ pub fn log_results(results: &Vec<Outcome>) {
         }
     }
 
-    let percentage = (passes as f32 / results.len() as f32) * 100.0;
     log::info!(
         &[":ALL", &"REPORT".color(Color::Blue)],
-        &format!("{}% of tests passed", percentage)
+        &format!(
+            "{}% of tests passed",
+            (passes as f32 / results.len() as f32) * 100.0
+        )
     );
     log::ln!();
 
     log::push_div!("-", Color::Magenta);
 
+    #[cfg(feature = "log")]
     let mut failures: Vec<&Outcome> = Vec::new();
+    #[cfg(feature = "log")]
     for outcome in results {
         match outcome {
             Outcome::Pass { test, result } => {
@@ -502,6 +510,7 @@ pub fn log_results(results: &Vec<Outcome>) {
     log::pop!();
     log::ln!();
 
+    #[cfg(feature = "log")]
     if failures.len() == 0 {
         log::info!(&[":ALL", "PASS"], "All tests passed");
         log::ln!();
@@ -519,6 +528,7 @@ pub fn log_results(results: &Vec<Outcome>) {
     log::pop!();
 }
 
+#[cfg(feature = "log")]
 fn _log_failures(failures: Vec<&Outcome>) {
     log::ln!();
     log::push!(&"FAILURES".color(Color::BrightRed));
@@ -548,6 +558,7 @@ fn _log_failures(failures: Vec<&Outcome>) {
     log::pop!();
 }
 
+#[cfg(feature = "log")]
 fn _log_failure(
     test_name: &str,
     parser_name: &str,
@@ -1108,6 +1119,7 @@ fn _run_pattern_tests(test: &Test, patterns: Vec<(String, Vec<usize>)>) -> Vec<O
             result,
         );
 
+        #[cfg(feature = "log")]
         match &outcome {
             Outcome::Pass { test: _, result: _ } => {
                 log::info!(&[":END", "PASS"], &format!("Test passed"));

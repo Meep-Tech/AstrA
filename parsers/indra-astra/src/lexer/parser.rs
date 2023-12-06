@@ -2,7 +2,7 @@ use std::{any::TypeId, rc::Rc};
 
 use crate::{
     tests::lexer::parsers::test::Testable,
-    utils::log::{self, Styleable},
+    utils::log::{self},
 };
 
 use super::{
@@ -10,6 +10,9 @@ use super::{
     parsers,
     results::{builder::Builder, end::End, parsed::Parsed, token::Token},
 };
+
+#[cfg(feature = "log")]
+use crate::utils::log::Styleable;
 
 pub trait Parser: Sync {
     // #region Static
