@@ -5,10 +5,11 @@ use crate::{
         parser::Parser,
         parsers,
         results::{
-            builder::Builder, data::Data, error::Error, error_builder::ErrorBuilder,
-            parsed::Parsed, token::Token, token_builder::TokenBuilder,
+            builder::Builder, error::Error, error_builder::ErrorBuilder, parsed::Parsed,
+            token::Token, token_builder::TokenBuilder,
         },
     },
+    node::Node,
     utils::log::{self, Color, Styleable},
 };
 
@@ -184,18 +185,21 @@ impl Test {
 }
 
 pub fn test_parsers(parsers: &[&'static dyn Testable]) -> Vec<Outcome> {
+    log::push_unique!(&"TEST".color(Color::Yellow));
     let mut results: Vec<Outcome> = Vec::new();
 
     for parser in parsers {
         results.extend(parser.run_tests());
     }
 
+    log::push_unique!(&"TEST".color(Color::Yellow));
     log::info!(
         &[&"RESULTS".color(Color::Magenta)],
         &"FINAL TEST REPORT ===============================".color(Color::BrightMagenta)
     );
     #[cfg(feature = "log")]
     log_results(&results);
+    log::pop_unique!(&"TEST".color(Color::Yellow));
 
     return results;
 }
@@ -331,13 +335,13 @@ pub trait Testable: Parser {
         log::color!("TOKEN", Color::BrightBlue);
 
         log::ln!();
-        log::push!(&"TEST".color(Color::Yellow));
+        log::push_unique!(&"TEST".color(Color::Yellow));
 
         log::push_unique!("INIT");
+        #[cfg(feature = "log")]
+        let name = self.name();
         log::pop_unique!("INIT");
-
-        log::push!(self.name());
-
+        log::push!(name);
         log::push_unique!("INIT");
         let tests = self.get_tests();
         log::pop_unique!("INIT");
@@ -354,6 +358,7 @@ pub trait Testable: Parser {
 
             log::push!(&test.name.color(Color::BrightYellow));
             log::push_div!("-", Color::Yellow);
+            #[cfg(feature = "verbose")]
             log::plain!(
                 &[":START"],
                 &format!(
@@ -398,13 +403,14 @@ pub trait Testable: Parser {
         }
 
         log::pop!();
+        log::pop!();
         log::info!(&[":END"], "Finished running tests.");
         log::ln!();
 
-        #[cfg(feature = "log")]
+        #[cfg(feature = "verbose")]
         log_results(&results);
 
-        log::pop!();
+        log::pop_unique!(&"TEST".color(Color::Yellow));
         log::ln!();
         results
     }
@@ -415,19 +421,24 @@ pub fn log_results(results: &Vec<Outcome>) {
     log::push!(&"RESULTS".color(Color::Magenta));
 
     // log the percentage of tests that passed
-    #[cfg(feature = "log")]
     let mut passes = 0;
-    #[cfg(feature = "log")]
+    let mut failures: Vec<&Outcome> = Vec::new();
     for outcome in results {
         match outcome {
             Outcome::Pass { test: _, result: _ } => {
                 passes += 1;
             }
-            _ => {}
+            Outcome::Fail {
+                test: _,
+                result: _,
+                reason: _,
+            } => {
+                failures.push(outcome);
+            }
         }
     }
 
-    log::info!(
+    log::log!(
         &[":ALL", &"REPORT".color(Color::Blue)],
         &format!(
             "{}% of tests passed",
@@ -445,7 +456,12 @@ pub fn log_results(results: &Vec<Outcome>) {
         match outcome {
             Outcome::Pass { test, result } => {
                 log::plain!(
-                    &[test.parser.name(), &test.name.color(Color::Yellow), "PASS"],
+                    &[
+                        test.parser.name(),
+                        "-",
+                        &test.name.color(Color::Yellow),
+                        "PASS"
+                    ],
                     &format!(
                         "{}\n\t => {}",
                         &_format_input(&test.input, &"✔\t".color(Color::BrightGreen)),
@@ -477,6 +493,7 @@ pub fn log_results(results: &Vec<Outcome>) {
                 log::plain!(
                     &[
                         test.parser.name(),
+                        "-",
                         &test.name.color(Color::Yellow),
                         &"FAIL".color(Color::BrightRed)
                     ],
@@ -510,16 +527,15 @@ pub fn log_results(results: &Vec<Outcome>) {
     log::pop!();
     log::ln!();
 
-    #[cfg(feature = "log")]
     if failures.len() == 0 {
-        log::info!(&[":ALL", "PASS"], "All tests passed");
+        log::log!(&[":ALL", "PASS"], "All tests passed");
         log::ln!();
     } else if failures.len() < results.len() {
-        log::error!(&[":SOME", "FAIL"], "Some tests failed");
+        log::log!(&[":SOME", "FAIL"], "Some tests failed");
         log::ln!();
         _log_failures(failures);
     } else {
-        log::error!(&[":ALL", "FAIL"], "All tests failed");
+        log::log!(&[":ALL", "FAIL"], "All tests failed");
         log::ln!();
         _log_failures(failures);
     }
@@ -758,7 +774,7 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
                     result_prop = &result.children[*index];
                 } else {
                     expected_prop = &expected.children[0];
-                    result_prop = &result.field(key).unwrap();
+                    result_prop = &result.prop(key).unwrap();
                 }
 
                 let expected_prop_name = &expected_prop.name;
@@ -886,7 +902,7 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                                 result_prop = &result.children[*index];
                             } else {
                                 expected_prop = &expected.children[0];
-                                result_prop = &result.field(key).unwrap();
+                                result_prop = &result.prop(key).unwrap();
                             }
 
                             let expected_prop_name = match expected_prop {
@@ -1052,11 +1068,11 @@ fn _compare_tags(
 
 fn _mismatch(prop: &str, expected: &str, result: &str) -> String {
     return format!(
-        "Mismatch in {}. {}: \n\t\t{}, {}: \n\t\t{}",
+        "Mismatch in {}.{}: \n\t\t{}, {}: \n\t\t{}",
         prop,
-        "Expected".color(Color::BrightGreen),
+        "\n\tExpected".color(Color::BrightGreen),
         format!("{}", expected).color(Color::Green).indent(2),
-        "Actual".color(Color::BrightRed),
+        "\n\tActual".color(Color::BrightRed),
         format!("{}", result).color(Color::Red).indent(2)
     );
 }
@@ -1094,12 +1110,19 @@ fn _run_test_via_pattern(test: &Test, subs: &Vec<String>) -> Vec<Outcome> {
 fn _run_pattern_tests(test: &Test, patterns: Vec<(String, Vec<usize>)>) -> Vec<Outcome> {
     let mut results: Vec<Outcome> = Vec::new();
     for (pattern, combo) in patterns {
-        let result = test.parser.parse(&pattern);
         let merged_combo = combo
             .iter()
             .map(|i| i.to_string())
             .intersperse(", ".to_string())
             .collect::<String>();
+        log::push_div!("-", Color::Yellow);
+        #[cfg(feature = "verbose")]
+        log::plain!(
+            &["PATTERN", &"COMBO".color(Color::BrightYellow)],
+            &format!("Running test on input: {}", _format_input(&pattern, "\t")),
+        );
+
+        let result = test.parser.parse(&pattern);
         let pattern_key = &format!("Pattern ({})", merged_combo);
         let outcome: Outcome = _verify_outcome(
             Test {
@@ -1140,7 +1163,6 @@ fn _run_pattern_tests(test: &Test, patterns: Vec<(String, Vec<usize>)>) -> Vec<O
             }
         }
 
-        log::pop!();
         log::pop!();
         log::ln!();
 

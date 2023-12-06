@@ -4,7 +4,9 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
-use super::data::{Data, _EMPTY_KEYS, _EMPTY_TAGS};
+use crate::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
+
+use super::span::Span;
 
 pub struct ChildOrError {
     pub child: Option<Token>,
@@ -124,7 +126,7 @@ impl Error {
     }
 }
 
-impl Data<Parsed> for Error {
+impl Node<Parsed> for Error {
     fn name(&self) -> &str {
         return &self.name;
     }
@@ -134,14 +136,6 @@ impl Data<Parsed> for Error {
         hash_set.unwrap_or(&_EMPTY_TAGS)
     }
 
-    fn start(&self) -> usize {
-        return self.start;
-    }
-
-    fn end(&self) -> usize {
-        return self.end;
-    }
-
     fn children(&self) -> Vec<&Parsed> {
         return self.children.iter().collect();
     }
@@ -149,5 +143,15 @@ impl Data<Parsed> for Error {
     fn keys(&self) -> &HashMap<String, usize> {
         let hash_map = self.keys.as_ref();
         hash_map.unwrap_or(&_EMPTY_KEYS)
+    }
+}
+
+impl Span<Parsed> for Error {
+    fn start(&self) -> usize {
+        return self.start;
+    }
+
+    fn end(&self) -> usize {
+        return self.end;
     }
 }

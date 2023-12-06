@@ -1,10 +1,17 @@
 use crate::{
     lexer::{
         parsers::{
-            statement::{assignment::entry::named_entry, expression::literal::structure::tree},
+            statement::{
+                assignment::entry::named_entry,
+                expression::{
+                    invocation::identifier::key::name,
+                    literal::{markup::element::text, structure::tree},
+                },
+            },
+            symbol::operator::assigner::mutable_field_assigner,
             whitespace::indent,
         },
-        results::{parsed::Parsed, token::Token},
+        results::{builder::Builder, parsed::Parsed, token::Token},
     },
     tests::lexer::parsers::test::{Mockable, Test, TokenMocks},
 };
@@ -17,8 +24,29 @@ impl Testable for tree::Parser {
         Self: 'static + Sized + crate::lexer::parser::Parser,
     {
         vec![
+            Test::tags::<Self>(
+                &["One Named Entry"],
+                "name: value",
+                Parsed::Pass(
+                    Token::new()
+                        .name(tree::KEY)
+                        .child(Token::Mock::<indent::current::Parser>())
+                        .child(
+                            Token::new()
+                                .name(named_entry::KEY)
+                                .prop("key", Token::new().name(name::KEY).build(0, 3))
+                                .prop(
+                                    "operator",
+                                    Token::new().name(mutable_field_assigner::KEY).build(4, 4),
+                                )
+                                .prop("value", Token::new().name(text::KEY).build(6, 9))
+                                .build(0, 9),
+                        )
+                        .build(0, 9),
+                ),
+            ),
             Test::pattern_with_tags::<Self>(
-                &["One Entry"],
+                &["One Named Entry"],
                 "{}",
                 &[&named_entry::KEY],
                 Parsed::Pass(
@@ -30,8 +58,22 @@ impl Testable for tree::Parser {
                 ),
             ),
             Test::pattern_with_tags::<Self>(
-                &["Two Entries"],
+                &["Two Named Entries"],
                 "{}\n{}",
+                &[&named_entry::KEY, &named_entry::KEY],
+                Parsed::Pass(
+                    Token::new()
+                        .name(tree::KEY)
+                        .child(Token::Mock::<indent::current::Parser>())
+                        .child(Token::Mock::<named_entry::Parser>())
+                        .child(Token::Mock::<indent::current::Parser>())
+                        .child(Token::Mock::<named_entry::Parser>())
+                        .mock(),
+                ),
+            ),
+            Test::pattern_with_tags::<Self>(
+                &["Two Named Entries", "Empty Lines In Between"],
+                "{}\n\n\n{}",
                 &[&named_entry::KEY, &named_entry::KEY],
                 Parsed::Pass(
                     Token::new()

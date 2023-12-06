@@ -1,10 +1,10 @@
 [features]
 default = []
 log = []
-verbose = ["v"]
-v = ["log"]
-vv = ["v"]
-vvv = ["vv"]
+verbose = ["v", "log"]
+v = ["log", "verbose"]
+vv = ["log", "verbose", "v"]
+vvv = ["log", "verbose", "v", "vv"]
 
 [package]
 name = "astra-parser"
@@ -14,4 +14,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cast_trait_object = "0.1.3"
+indexmap = "2.1.0"
+lazy_static = "1.4.0"

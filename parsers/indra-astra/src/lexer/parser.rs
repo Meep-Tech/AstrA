@@ -11,7 +11,7 @@ use super::{
     results::{builder::Builder, end::End, parsed::Parsed, token::Token},
 };
 
-#[cfg(feature = "log")]
+#[cfg(feature = "verbose")]
 use crate::utils::log::Styleable;
 
 pub trait Parser: Sync {

@@ -8,32 +8,32 @@ use std::{
 
 // #region Macros
 
-macro_rules! info {
-    (v: $($rest:tt)*) => {
-        #[cfg(feature = "v")]
-        log::log_info($($rest)*);
-    };
-    (vv: $($rest:tt)*) => {
-        #[cfg(feature = "vv")]
-        log::log_info($($rest)*);
-    };
-    (vvv: $($rest:tt)*) => {
-        #[cfg(feature = "vvv")]
-        log::log_info($($rest)*);
-    };
+#[cfg(feature = "log")]
+macro_rules! log {
     ($($rest:tt)*) => {
         #[cfg(feature = "log")]
         log::log_info($($rest)*);
     };
 }
+#[cfg(feature = "log")]
+pub(crate) use log;
+
+macro_rules! info {
+    ($($rest:tt)*) => {
+        #[cfg(feature = "v")]
+        log::log_info($($rest)*);
+    };
+}
 pub(crate) use info;
 
+#[cfg(feature = "log")]
 macro_rules! plain {
     ($($rest:tt)*) => {
         #[cfg(feature = "log")]
         log::log_info_plain($($rest)*);
     }
 }
+#[cfg(feature = "log")]
 pub(crate) use plain;
 
 macro_rules! warning {
@@ -54,7 +54,7 @@ pub(crate) use error;
 
 macro_rules! ln {
     () => {
-        #[cfg(feature = "log")]
+        #[cfg(feature = "verbose")]
         log::log_ln();
     };
 }
@@ -62,7 +62,7 @@ pub(crate) use ln;
 
 // #endregion
 
-pub fn log(keys: &[&str], message: &str) {
+pub fn print(keys: &[&str], message: &str) {
     if Some(unsafe { &_STYLES }).is_some() {
         let styled_keys = style_keys(keys);
         let styled_message = style_text(message);
@@ -101,7 +101,7 @@ pub fn log_info_plain(keys: &[&str], message: &str) {
 
 pub fn log_info(keys: &[&str], message: &str) {
     let info_separator = "-".color(Color::BrightBlue);
-    log(
+    print(
         _get_keys(keys, &info_separator)
             .iter()
             .map(|key| key.as_str())
@@ -113,7 +113,7 @@ pub fn log_info(keys: &[&str], message: &str) {
 
 pub fn log_warn(keys: &[&str], message: &str) {
     let warn_separator = "*".color(Color::BrightYellow);
-    log(
+    print(
         &_get_keys(keys, &warn_separator)
             .iter()
             .map(|key| key.as_str())
@@ -125,7 +125,7 @@ pub fn log_warn(keys: &[&str], message: &str) {
 
 pub fn log_error(keys: &[&str], message: &str) {
     let error_prefix = "!".color(Color::BrightRed);
-    log(
+    print(
         &_get_keys(keys, &error_prefix)
             .iter()
             .map(|key| key.as_str())

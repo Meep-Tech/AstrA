@@ -1,11 +1,8 @@
 use crate::lexer::{parser, results::token_builder::TokenBuilder};
 
+use super::{end::End, span::Span};
+use crate::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use std::collections::{HashMap, HashSet};
-
-use super::{
-    data::{Data, _EMPTY_KEYS, _EMPTY_TAGS},
-    end::End,
-};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Token {
@@ -49,7 +46,7 @@ impl Token {
     }
 }
 
-impl Data<Token> for Token {
+impl Node<Token> for Token {
     fn name(&self) -> &str {
         return &self.name;
     }
@@ -59,14 +56,6 @@ impl Data<Token> for Token {
         hash_set.unwrap_or(&_EMPTY_TAGS)
     }
 
-    fn start(&self) -> usize {
-        return self.start;
-    }
-
-    fn end(&self) -> usize {
-        return self.end;
-    }
-
     fn children(&self) -> Vec<&Token> {
         return self.children.iter().collect();
     }
@@ -74,5 +63,15 @@ impl Data<Token> for Token {
     fn keys(&self) -> &HashMap<String, usize> {
         let hash_map = self.keys.as_ref();
         hash_map.unwrap_or(&_EMPTY_KEYS)
+    }
+}
+
+impl Span<Token> for Token {
+    fn start(&self) -> usize {
+        return self.start;
+    }
+
+    fn end(&self) -> usize {
+        return self.end;
     }
 }

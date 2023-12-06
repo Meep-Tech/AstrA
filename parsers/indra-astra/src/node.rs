@@ -6,21 +6,13 @@ use std::{
 pub(crate) static _EMPTY_KEYS: LazyLock<HashMap<String, usize>> = LazyLock::new(|| HashMap::new());
 pub(crate) static _EMPTY_TAGS: LazyLock<HashSet<String>> = LazyLock::new(|| HashSet::new());
 
-pub trait Data<TNode> {
+pub trait Node<TNode> {
     fn name(&self) -> &str;
 
     fn tags(&self) -> &HashSet<String>;
     fn tag(&self, tag: &str) -> bool {
         return self.tags().contains(tag);
     }
-
-    fn start(&self) -> usize;
-    fn end(&self) -> usize;
-    fn range(&self) -> std::ops::Range<usize> {
-        return self.start()..self.end();
-    }
-
-    //fn parent(&self) -> Option<&TNode>;
 
     fn children(&self) -> Vec<&TNode>;
     fn child(&self, index: usize) -> Option<&TNode> {
@@ -44,14 +36,14 @@ pub trait Data<TNode> {
         };
     }
 
-    fn fields(&self) -> HashMap<String, &TNode> {
+    fn props(&self) -> HashMap<String, &TNode> {
         return self
             .keys()
             .iter()
             .map(|(key, index)| (key.clone(), self.child(*index).unwrap()))
             .collect();
     }
-    fn field(&self, key: &str) -> Option<&TNode> {
+    fn prop(&self, key: &str) -> Option<&TNode> {
         return match self.index(key) {
             Some(index) => self.child(index),
             None => None,

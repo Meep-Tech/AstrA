@@ -7,11 +7,13 @@
 
 pub mod highlighter;
 pub mod lexer;
+pub mod node;
+pub mod runtime;
 pub mod tests;
 pub mod utils;
 
-//use lexer::parsers::statement::assignment::entry::named_entry;
-//use lexer::parsers::statement::expression::invocation::identifier::key::name;
+use lexer::parsers::statement::assignment::entry::named_entry;
+use lexer::parsers::statement::expression::invocation::identifier::key::name;
 use lexer::parsers::statement::expression::literal::structure::tree;
 use lexer::results::end::End;
 use lexer::results::parsed::Parsed;
@@ -27,8 +29,8 @@ fn init() {
 fn main() {
     init();
     test_parsers(&[
-        //named_entry::Parser::Tests(),
-        //name::Parser::Tests(),
+        named_entry::Parser::Tests(),
+        name::Parser::Tests(),
         tree::Parser::Tests(),
     ]);
 }
