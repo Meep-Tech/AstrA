@@ -1,6 +1,8 @@
+use self::nodes::Node;
 use std::{collections::HashMap, rc::Rc};
 
-use self::nodes::Node;
+pub mod nodes;
+pub mod project;
 
 pub struct Runtime<'rt> {
     pub root: Rc<dyn Node<'rt>>,
@@ -18,5 +20,3 @@ pub struct FileSystem {
 pub struct Directory {
     pub name: String,
 }
-
-pub mod nodes;

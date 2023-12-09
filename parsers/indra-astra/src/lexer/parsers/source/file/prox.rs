@@ -3,17 +3,11 @@ use crate::lexer::parsers::parser;
 parser! {
     prox_file => |cursor: &mut Cursor| {
         match cursor.file_type() {
+            fs::Type::AstrA => {
+                End::TODO()
+            },
             fs::Type::Trait(file_type) => match file_type {
-                fs::Trait::Trait => {
-                    End::TODO()
-                },
-                fs::Trait::Prototype => {
-                    End::TODO()
-                },
-                fs::Trait::Archetype => {
-                    End::TODO()
-                },
-                fs::Trait::Enum => {
+                fs::Trait::ProX => {
                     End::TODO()
                 },
                 _ => End::TODO()

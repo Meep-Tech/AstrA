@@ -1,16 +1,8 @@
+use crate::lexer::parsers::parser;
+
 pub mod current;
 pub mod decrease;
 pub mod increase;
-
-use crate::{
-    lexer::{
-        parser::{self, Parser as _},
-        results::{builder::Builder, error::Error, parsed::Parsed},
-    },
-    Cursor, End, Token,
-};
-
-pub const KEY: &str = "indent";
 
 pub enum Indents {
     Increase(Token),
@@ -20,28 +12,21 @@ pub enum Indents {
     None,
 }
 
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        return &KEY;
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    indent => |cursor: &mut Cursor| {
         cursor.skip_ws();
         if !cursor.indents.is_reading {
             return End::None;
         }
         if cursor.indents.curr > cursor.indents.prev() {
-            Token::new().name(increase::KEY).end()
+            Token::New().name(increase::KEY).end()
         } else if cursor.indents.curr < cursor.indents.prev() {
-            Token::new().name(decrease::KEY).end()
+            Token::New().name(decrease::KEY).end()
         } else {
-            Token::new().name(current::KEY).end()
+            Token::New().name(current::KEY).end()
         }
     }
 }
-
-// boilerplate
-pub struct Parser {}
 
 #[allow(non_snake_case)]
 pub fn Parse(input: &str) -> Indents {
@@ -100,7 +85,7 @@ pub fn Match(result: Parsed) -> Indents {
             current::KEY => Indents::Current(token).into(),
             increase::KEY => Indents::Increase(token).into(),
             decrease::KEY => Indents::Decrease(token).into(),
-            _ => Indents::Error(Error::new("unknown-indent-type").build(0, 0).unwrap()),
+            _ => Indents::Error(Error::New("unknown-indent-type").build(0, 0).unwrap()),
         },
         Parsed::Fail(error) => match error {
             Some(error) => Indents::Error(error),

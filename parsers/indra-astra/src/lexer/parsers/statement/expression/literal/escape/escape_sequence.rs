@@ -1,16 +1,8 @@
-use crate::{lexer::parser, Cursor, End};
-
 use super::newline_escape;
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "escape-sequence";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        return &KEY;
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    escape_sequence => |cursor: &mut Cursor| {
         if cursor.try_read('\\') {
             cursor.read();
             match cursor.prev() {

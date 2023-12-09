@@ -1,5 +1,5 @@
 use crate::lexer::parsers::splayed;
 
 splayed! {
-    struct: [tree]
+    quote_escape: [single, double]
 }

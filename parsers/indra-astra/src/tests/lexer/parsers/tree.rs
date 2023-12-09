@@ -28,18 +28,18 @@ impl Testable for tree::Parser {
                 &["One Named Entry"],
                 "name: value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(tree::KEY)
                         .child(Token::Mock::<indent::current::Parser>())
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(named_entry::KEY)
-                                .prop("key", Token::new().name(name::KEY).build(0, 3))
+                                .prop("key", Token::New().name(name::KEY).build(0, 3))
                                 .prop(
                                     "operator",
-                                    Token::new().name(mutable_field_assigner::KEY).build(4, 4),
+                                    Token::New().name(mutable_field_assigner::KEY).build(4, 4),
                                 )
-                                .prop("value", Token::new().name(text::KEY).build(6, 9))
+                                .prop("value", Token::New().name(text::KEY).build(6, 9))
                                 .build(0, 9),
                         )
                         .build(0, 9),
@@ -50,7 +50,7 @@ impl Testable for tree::Parser {
                 "{}",
                 &[&named_entry::KEY],
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(tree::KEY)
                         .child(Token::Mock::<indent::current::Parser>())
                         .child(Token::Mock::<named_entry::Parser>())
@@ -62,7 +62,7 @@ impl Testable for tree::Parser {
                 "{}\n{}",
                 &[&named_entry::KEY, &named_entry::KEY],
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(tree::KEY)
                         .child(Token::Mock::<indent::current::Parser>())
                         .child(Token::Mock::<named_entry::Parser>())
@@ -76,7 +76,7 @@ impl Testable for tree::Parser {
                 "{}\n\n\n{}",
                 &[&named_entry::KEY, &named_entry::KEY],
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(tree::KEY)
                         .child(Token::Mock::<indent::current::Parser>())
                         .child(Token::Mock::<named_entry::Parser>())

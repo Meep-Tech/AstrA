@@ -25,11 +25,13 @@ pub struct Error {
 }
 
 impl Error {
-    pub(crate) fn new(key: &str) -> ErrorBuilder {
+    #[allow(non_snake_case)]
+    pub(crate) fn New(key: &str) -> ErrorBuilder {
         return ErrorBuilder::new(key);
     }
 
-    pub fn none() -> End {
+    #[allow(non_snake_case)]
+    pub fn None() -> End {
         End::Fail(
             ErrorBuilder::new("no-match-for-{}")
                 .text("No match found.")
@@ -53,7 +55,7 @@ impl Error {
 
     pub fn unexpected(key: &str, value: &str) -> End {
         End::Fail(
-            Error::new(&["unexpected-", key, "-in-{}"].concat())
+            Error::New(&["unexpected-", key, "-in-{}"].concat())
                 .text(&format!("Unexpected: `{}`.", value))
                 .tag("unexpected"),
         )
@@ -61,7 +63,7 @@ impl Error {
 
     pub fn mismatch(key: &str, expected: &str, found: &str) -> End {
         End::Fail(
-            Error::new(&["unexpected-", key, "-in-{}"].concat())
+            Error::New(&["unexpected-", key, "-in-{}"].concat())
                 .text(&format!(
                     "Expected: `{}`, but found: `{}`.",
                     expected, found
@@ -72,7 +74,7 @@ impl Error {
 
     pub fn missing(key: &str, expected: &str, found: &str) -> End {
         End::Fail(
-            Error::new(&["missing-expected-", key, "-in-{}"].concat())
+            Error::New(&["missing-expected-", key, "-in-{}"].concat())
                 .text(&format!(
                     "Expected: `{}`, but found: `{}`.",
                     expected, found

@@ -1,17 +1,7 @@
-use crate::{
-    lexer::{context::Language, parser},
-    Cursor, End,
-};
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "mutable-field-assigner";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        &KEY
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    mutable_field_assigner => |cursor: &mut Cursor| {
         match cursor.lang() {
             Language::StruX => {
                 if cursor.try_read(':') {

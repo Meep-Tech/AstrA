@@ -1,14 +1,12 @@
-use crate::lexer::{cursor::Cursor, parser, results::end::End};
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "mote";
-
-pub struct Parser;
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        &KEY
-    }
-
-    fn rule(&self, _start: &mut Cursor) -> End {
-        todo!()
+parser! {
+    mote_file => |cursor: &mut Cursor| {
+        match cursor.file_type() {
+            fs::Type::Mote => {
+                End::TODO()
+            },
+            _ => End::TODO()
+        }
     }
 }

@@ -1,12 +1,17 @@
-use crate::{lexer::indents::Indents, utils::log};
-
-use super::context::{Context, Language};
+use crate::{
+    lexer::{
+        context::{Context, Language},
+        fs,
+        indents::Indents,
+    },
+    utils::log,
+};
 
 pub struct Cursor {
     pub src: Vec<char>,
     pub indents: Indents,
     pub pos: usize,
-    ctx: Context,
+    pub ctx: Context,
     state: Vec<State>,
 }
 
@@ -272,6 +277,14 @@ impl Cursor {
         return self.at(self.pos).to_string();
     }
 
+    pub fn next_str(&self) -> String {
+        return self.ahead(1).to_string();
+    }
+
+    pub fn prev_str(&self) -> String {
+        return self.back(1).to_string();
+    }
+
     pub fn prev_pos(&self) -> usize {
         return match self.pos {
             0 => 0,
@@ -327,5 +340,12 @@ impl Cursor {
 
     pub fn lang(&self) -> &Language {
         return &self.ctx.lang;
+    }
+
+    pub fn file_type(&self) -> &fs::Type {
+        return match &self.ctx.file {
+            Some(file) => &file.kind,
+            None => &fs::Type::Unknown,
+        };
     }
 }

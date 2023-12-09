@@ -1,24 +1,11 @@
-use crate::{
-    lexer::{
-        parser,
-        results::{builder::Builder, parsed::Parsed, token::Token},
-    },
-    Cursor, End,
-};
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "dot-lookup";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        return &KEY;
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    dot_lookup => |cursor: &mut Cursor| {
         if cursor.try_read('.') {
             match crate::lexer::parsers::name::Parser::Parse_At(cursor) {
-                Parsed::Pass(name) => return Token::new().prop("key", name).end(),
-                Parsed::Fail(error) => return End::Unexpected_Child(Token::new(), error),
+                Parsed::Pass(name) => return End::New().prop("key", name).end(),
+                Parsed::Fail(error) => return End::Unexpected_Child_Of(End::New(), error),
             }
         } else {
             return End::Missing("prefix", ".", &cursor.curr_str());

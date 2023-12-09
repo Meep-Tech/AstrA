@@ -1,14 +1,7 @@
-use crate::lexer::{cursor::Cursor, parser, results::end::End};
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "indent-decrease";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        return &KEY;
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    decrease_indent => |cursor: &mut Cursor| {
         cursor.skip_ws();
 
         if cursor.indents.curr < cursor.indents.prev() {

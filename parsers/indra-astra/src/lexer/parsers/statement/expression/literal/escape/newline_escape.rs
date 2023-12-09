@@ -1,14 +1,7 @@
-use crate::lexer::{cursor::Cursor, parser, results::end::End};
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "newline-escape";
-
-pub struct Parser;
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        &KEY
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    newline_escape => |cursor: &mut Cursor| {
         if cursor.try_read('\\') {
             if cursor.try_read('n') {
                 return End::Token();

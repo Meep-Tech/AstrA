@@ -1,15 +1,7 @@
-/// A boilerplate template for a parser.
-use crate::{lexer::parser, Cursor, End};
+use crate::lexer::parsers::parser;
 
-pub const KEY: &str = "indent-increase";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        return &KEY;
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
+parser! {
+    increase_indent => |cursor: &mut Cursor| {
         cursor.skip_ws();
 
         if cursor.indents.curr > cursor.indents.prev() {

@@ -1,30 +1,13 @@
-use crate::{
-    lexer::{
-        cursor::Cursor,
-        parser,
-        parsers::{
-            indent::{self, Indents},
-            statement::branch,
-        },
-        results::{builder::Builder, end::End, parsed::Parsed, token::Token},
-    },
-    tests::lexer::parsers::test::Testable,
+use crate::lexer::parsers::{
+    parser,
+    statement::branch,
+    whitespace::indent::{self, Indents},
 };
 
-pub const KEY: &str = "tree";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        &KEY
-    }
-
-    fn as_tests(&self) -> Option<&dyn Testable> {
-        Some(self)
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
-        let mut result = Token::new();
+parser! {
+    #testable,
+    tree => |cursor: &mut Cursor| {
+        let mut result = Token::New();
         match indent::Parse_At(cursor) {
             Indents::Increase(token) => {
                 result = result.child(token);
@@ -52,7 +35,7 @@ impl parser::Parser for Parser {
                     };
                 }
                 Parsed::Fail(error) => match error {
-                    Some(error) => return End::Error_In_Child(result, error),
+                    Some(error) => return End::Error_In_Child_Of(result, error),
                     None => return result.end(),
                 },
             }

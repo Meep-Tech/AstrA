@@ -15,16 +15,34 @@ pub enum End {
 
 impl End {
     #[allow(non_snake_case)]
+    pub fn New() -> TokenBuilder {
+        Token::New()
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Fail(key: &str) -> ErrorBuilder {
+        Error::New(key)
+    }
+
+    #[allow(non_snake_case)]
     pub fn Token() -> End {
-        Token::result()
+        Token::End()
     }
 
     #[allow(non_snake_case)]
     pub fn Variant(parent: &str, result: Parsed) -> End {
         match result {
             Parsed::Pass(token) => End::Token_Variant(parent, token),
-            Parsed::Fail(error) => End::Unexpected_Variant(parent, error),
+            Parsed::Fail(error) => End::Unexpected_Variant_Of(parent, error),
         }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn As_Variant<TVariant>(parent: &str, cursor: &mut Cursor) -> End
+    where
+        TVariant: parser::Parser + 'static,
+    {
+        End::Variant(parent, TVariant::Parse_At(cursor))
     }
 
     #[allow(non_snake_case)]
@@ -43,7 +61,7 @@ impl End {
             }
         }
 
-        return End::Missing_Variant_Of(
+        return End::Missing_Variant(
             parent,
             variants.iter().map(|option| option.name()).collect(),
             errors,
@@ -59,14 +77,14 @@ impl End {
         let mut errors = Vec::new();
         for option in options {
             match option.parse_opt_at(cursor) {
-                Parsed::Pass(token) => return Token::new().name(parent).child(token).end(),
+                Parsed::Pass(token) => return Token::New().name(parent).child(token).end(),
                 Parsed::Fail(err) => {
                     errors.push(err);
                 }
             }
         }
 
-        return End::Missing_One_Of(
+        return End::Missing_Choice(
             parent,
             options.iter().map(|option| option.name()).collect(),
             errors,
@@ -74,45 +92,41 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Missing_One_Of(parent: &str, options: Vec<&str>, failures: Vec<Option<Error>>) -> End {
-        let mut error = Error::new("missing-choice-in-{}");
-        error = error.text(&format!(
-            "Required one of the following choices in '{}': \n{}",
-            parent,
-            options
-                .iter()
-                .map(|option| format!("\t- {}", option))
-                .collect::<Vec<String>>()
-                .join("\n")
-        ));
-        for failure in failures {
-            error = error.child(Parsed::Fail(failure));
-        }
-
-        return End::Fail(error);
+    pub fn Child<TChild>(parent: &str, cursor: &mut Cursor) -> End
+    where
+        TChild: parser::Parser + 'static,
+    {
+        End::Child_Of::<TChild>(Token::With_Name(parent), cursor)
     }
 
     #[allow(non_snake_case)]
-    pub fn Missing_Variant_Of(
-        parent: &str,
-        options: Vec<&str>,
-        failures: Vec<Option<Error>>,
-    ) -> End {
-        let mut error = Error::new("missing-variant-of-{}");
-        error = error.text(&format!(
-            "Required one of the following tokens as a variant of '{}': \n{}",
-            parent,
-            options
-                .iter()
-                .map(|option| format!("\t- {}", option))
-                .collect::<Vec<String>>()
-                .join("\n")
-        ));
-        for failure in failures {
-            error = error.child(Parsed::Fail(failure));
+    pub fn Child_Of<TChild>(parent: TokenBuilder, cursor: &mut Cursor) -> End
+    where
+        TChild: parser::Parser + 'static,
+    {
+        match TChild::Parse_At(cursor) {
+            Parsed::Pass(token) => parent.child(token).end(),
+            Parsed::Fail(error) => End::Unexpected_Child_Of(parent, error),
         }
+    }
 
-        return End::Fail(error);
+    #[allow(non_snake_case)]
+    pub fn Prop<TProp>(parent: &str, key: &str, cursor: &mut Cursor) -> End
+    where
+        TProp: parser::Parser + 'static,
+    {
+        End::Prop_Of::<TProp>(Token::With_Name(parent), key, cursor)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Prop_Of<TProp>(parent: TokenBuilder, key: &str, cursor: &mut Cursor) -> End
+    where
+        TProp: parser::Parser + 'static,
+    {
+        match TProp::Parse_At(cursor) {
+            Parsed::Pass(token) => parent.prop(key, token).end(),
+            Parsed::Fail(error) => End::Error_In_Prop_Of(parent, key, error),
+        }
     }
 
     #[allow(non_snake_case)]
@@ -144,7 +158,7 @@ impl End {
     where
         T: parser::Parser + 'static,
     {
-        let mut variant = Token::of_type::<T>();
+        let mut variant = Token::Of_Type::<T>();
         variant = variant.tag(parent);
 
         return End::Match(variant);
@@ -155,7 +169,7 @@ impl End {
     where
         T: parser::Parser + 'static,
     {
-        let mut error = Error::new("unexpected-{}");
+        let mut error = Error::New("unexpected-{}");
         error = error.text(&format!("Unexpected token in {}", parent));
         error = error.tag(parent);
 
@@ -163,59 +177,13 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn New() -> TokenBuilder {
-        Token::new()
+    pub fn TODO() -> End {
+        Error::New("not-implemented-{}").tag("TODO").end()
     }
 
     #[allow(non_snake_case)]
     pub fn Error(key: &str) -> End {
-        End::Fail(Error::new(key))
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Unexpected_Child(parent: TokenBuilder, err: Option<Error>) -> End {
-        Error::in_child(parent, err)
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Error_In_Child(parent: TokenBuilder, err: Error) -> End {
-        Error::in_child(parent, Some(err))
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Missing_Child(parent: TokenBuilder) -> End {
-        Error::in_child(parent, None)
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Error_In_Prop(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
-        Error::in_prop(parent, key, err)
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Error_In_Variant(parent: &str, err: Option<Error>) -> End {
-        match err {
-            Some(err) => {
-                let mut error = err.to_builder();
-                error = error.tag(parent);
-
-                return End::Fail(error);
-            }
-            None => return End::None,
-        }
-    }
-
-    #[allow(non_snake_case)]
-    pub fn Unexpected_Variant(parent: &str, err: Option<Error>) -> End {
-        match err {
-            Some(err) => {
-                let mut error = err.to_builder();
-                error = error.tag(parent);
-
-                return End::Fail(error);
-            }
-            None => return End::None,
-        }
+        End::Fail(Error::New(key))
     }
 
     #[allow(non_snake_case)]
@@ -231,5 +199,109 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Mismatch(key: &str, expected: &str, found: &str) -> End {
         Error::mismatch(key, expected, found)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Missing_Choice(parent: &str, options: Vec<&str>, failures: Vec<Option<Error>>) -> End {
+        let mut error = Error::New("missing-choice-in-{}");
+        error = error.text(&format!(
+            "Required one of the following choices in '{}': \n{}",
+            parent,
+            options
+                .iter()
+                .map(|option| format!("\t- {}", option))
+                .collect::<Vec<String>>()
+                .join("\n")
+        ));
+        for failure in failures {
+            error = error.child(Parsed::Fail(failure));
+        }
+
+        return End::Fail(error);
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Missing_Variant(parent: &str, options: Vec<&str>, failures: Vec<Option<Error>>) -> End {
+        let mut error = Error::New("missing-variant-of-{}");
+        error = error.text(&format!(
+            "Required one of the following tokens as a variant of '{}': \n{}",
+            parent,
+            options
+                .iter()
+                .map(|option| format!("\t- {}", option))
+                .collect::<Vec<String>>()
+                .join("\n")
+        ));
+        for failure in failures {
+            error = error.child(Parsed::Fail(failure));
+        }
+
+        return End::Fail(error);
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Unexpected_Child_Of(parent: TokenBuilder, err: Option<Error>) -> End {
+        Error::in_child(parent, err)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Unexpected_Child(parent: &str, err: Option<Error>) -> End {
+        Error::in_child(Token::With_Name(parent), err)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Child_Of(parent: TokenBuilder, err: Error) -> End {
+        Error::in_child(parent, Some(err))
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Child(parent: &str, err: Error) -> End {
+        Error::in_child(Token::With_Name(parent), Some(err))
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Missing_Child_Of(parent: TokenBuilder) -> End {
+        Error::in_child(parent, None)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Missing_Child(parent: &str) -> End {
+        Error::in_child(Token::With_Name(parent), None)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Prop_Of(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
+        Error::in_prop(parent, key, err)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Prop(parent: &str, key: &str, err: Option<Error>) -> End {
+        Error::in_prop(Token::With_Name(parent), key, err)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Error_In_Variant_Of(parent: &str, err: Option<Error>) -> End {
+        match err {
+            Some(err) => {
+                let mut error = err.to_builder();
+                error = error.tag(parent);
+
+                return End::Fail(error);
+            }
+            None => return End::None,
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Unexpected_Variant_Of(parent: &str, err: Option<Error>) -> End {
+        match err {
+            Some(err) => {
+                let mut error = err.to_builder();
+                error = error.tag(parent);
+
+                return End::Fail(error);
+            }
+            None => return End::None,
+        }
     }
 }

@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::{any::TypeId, collections::HashMap, rc::Rc};
 
 use crate::{
@@ -22,6 +23,136 @@ pub mod whitespace;
 
 pub type ParserType = dyn Parser + Sync + 'static;
 pub type Instance<TParser = ParserType> = TParser;
+
+macro_rules! parser {
+    ($key:ident => $rule:expr) => {
+        use crate::lexer::{
+            context::{self, Context, Language},
+            cursor::Cursor,
+            fs,
+            parser::Parser as _,
+            parsers::{self, source, statement, symbol, whitespace},
+            results::{builder::Builder, end::End, error::Error, parsed::Parsed, token::Token},
+        };
+
+        pub const KEY: &str = stringify!($key);
+
+        pub struct Parser;
+        impl crate::lexer::parser::Parser for Parser {
+            fn name(&self) -> &'static str {
+                &KEY
+            }
+
+            fn rule(&self, cursor: &mut Cursor) -> End {
+                let rule = |cursor: &mut Cursor| -> End { $rule(cursor) };
+                rule(cursor)
+            }
+        }
+    };
+
+    (#testable, $key:ident => $rule:expr) => {
+        use crate::{
+            lexer::{
+                context::{self, Context, Language},
+                cursor::Cursor,
+                fs,
+                parser::Parser as _,
+                parsers::{self, source, statement, symbol, whitespace},
+                results::{builder::Builder, end::End, error::Error, parsed::Parsed, token::Token},
+            },
+            tests::lexer::parsers::test::Testable,
+        };
+
+        pub const KEY: &str = stringify!($key);
+
+        pub struct Parser;
+        impl crate::lexer::parser::Parser for Parser {
+            fn name(&self) -> &'static str {
+                &KEY
+            }
+
+            fn as_tests(&self) -> Option<&dyn Testable> {
+                Some(self)
+            }
+
+            fn rule(&self, cursor: &mut Cursor) -> End {
+                let rule = |cursor: &mut Cursor| -> End { $rule(cursor) };
+                rule(cursor)
+            }
+        }
+    };
+}
+pub(crate) use parser;
+
+macro_rules! splayed {
+    ($key:ident: [$($parsers:ident $(,)?)*]) => {
+        $(pub mod $parsers;)*
+
+        crate::lexer::parsers::parser! {
+            $key => |cursor: &mut Cursor| {
+                End::Splay(
+                    &KEY,
+                    cursor,
+                    &[
+                        $(
+                            &$parsers::Parser::Get(),
+                        )*
+                    ]
+                )
+            }
+        }
+    };
+
+    (#testable, $key:ident: [$($parsers:ident $(,)?)*]) => {
+        $(pub mod $parsers;)*
+
+        crate::lexer::parsers::parser! {
+            #testable,
+            $key => |cursor: &mut Cursor| {
+                End::Splay(
+                    &KEY,
+                    cursor,
+                    &[
+                        $(
+                            &$parsers::Parser::Get(),
+                        )*
+                    ]
+                )
+            }
+        }
+    };
+}
+pub(crate) use splayed;
+
+macro_rules! tests {
+    ($(
+        [$(
+            $tag:literal $(&)?
+        )*]: $input:literal => $expected:expr
+    )*) => {
+        use crate::{
+            tests::lexer::parsers::test::{Test, Mockable}
+        };
+
+        impl crate::tests::lexer::parsers::test::Testable for Parser {
+            fn get_tests(&self) -> Vec<Test>
+            where
+                Self: 'static + Sized + crate::lexer::parser::Parser,
+            {
+                vec![
+                    $(
+                        Test::tags::<Self>(
+                            &[$($tag,)*],
+                            $input,
+                            $expected,
+                        ),
+                    )*
+                ]
+            }
+        }
+    };
+}
+pub(crate) use tests;
 
 pub fn get_by_key<TType>(key: &str) -> &'static Rc<TType>
 where

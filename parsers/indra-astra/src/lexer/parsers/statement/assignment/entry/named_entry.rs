@@ -1,28 +1,12 @@
 use crate::{
-    lexer::results::builder::Builder,
-    lexer::{
-        parser,
-        parsers::{indent, mutable_field_assigner, name, statement::expression},
-    },
-    lexer::{parsers::indent::Indents, results::token::Token},
-    tests::lexer::parsers::test::Testable,
-    Cursor, End, Parsed,
+    lexer::parsers::indent::Indents,
+    lexer::parsers::{indent, mutable_field_assigner, name, parser, statement::expression},
 };
 
-pub const KEY: &str = "named-entry";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        &KEY
-    }
-
-    fn as_tests(&self) -> Option<&dyn Testable> {
-        Some(self)
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
-        let mut result = Token::new();
+parser! {
+    #testable,
+    named_entry => |cursor: &mut Cursor | {
+        let mut result = Token::New();
 
         let key = name::Parser::Parse_At(cursor);
         let mut indent_increased = false;
@@ -71,14 +55,14 @@ impl parser::Parser for Parser {
                                 return result.prop("value", value).end();
                             }
                             Parsed::Fail(error) => {
-                                return End::Error_In_Prop(result, "value", error)
+                                return End::Error_In_Prop_Of(result, "value", error)
                             }
                         }
                     }
-                    Parsed::Fail(error) => return End::Error_In_Prop(result, "operator", error),
+                    Parsed::Fail(error) => return End::Error_In_Prop_Of(result, "operator", error),
                 }
             }
-            Parsed::Fail(error) => return End::Error_In_Prop(result, "key", error),
+            Parsed::Fail(error) => return End::Error_In_Prop_Of(result, "key", error),
         }
     }
 }

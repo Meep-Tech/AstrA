@@ -15,21 +15,25 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new() -> TokenBuilder {
+    #[allow(non_snake_case)]
+    pub fn New() -> TokenBuilder {
         return TokenBuilder::new();
     }
 
-    pub fn with_name(name: &str) -> TokenBuilder {
+    #[allow(non_snake_case)]
+    pub fn With_Name(name: &str) -> TokenBuilder {
         return TokenBuilder::new().name(name);
     }
 
-    pub fn of_type<T: parser::Parser + 'static>() -> TokenBuilder {
+    #[allow(non_snake_case)]
+    pub fn Of_Type<T: parser::Parser + 'static>() -> TokenBuilder {
         let name = T::Instance().name();
         return TokenBuilder::new().name(name).tag(name);
     }
 
-    pub fn result() -> End {
-        return End::Match(Token::new());
+    #[allow(non_snake_case)]
+    pub fn End() -> End {
+        return End::Match(Token::New());
     }
 
     pub fn to_builder(self) -> TokenBuilder {

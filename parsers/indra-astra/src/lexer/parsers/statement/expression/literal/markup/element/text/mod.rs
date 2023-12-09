@@ -1,28 +1,15 @@
-use crate::{
-    lexer::{
-        parser::{self},
-        parsers::{
-            statement::expression::{
-                invocation::identifier::lookup::{dot_lookup, slash_lookup},
-                literal::escape::escape_sequence,
-            },
-            whitespace::indent,
-        },
-        results::{builder::Builder, parsed::Parsed},
+use crate::lexer::parsers::{
+    parser,
+    statement::expression::{
+        invocation::identifier::lookup::{dot_lookup, slash_lookup},
+        literal::escape::escape_sequence,
     },
-    Cursor, End, Token,
+    whitespace::indent,
 };
 
-pub const KEY: &str = "text";
-
-pub struct Parser {}
-impl parser::Parser for Parser {
-    fn name(&self) -> &'static str {
-        return &KEY;
-    }
-
-    fn rule(&self, cursor: &mut Cursor) -> End {
-        let mut result = Token::new();
+parser! {
+    text => |cursor: &mut Cursor| {
+        let mut result = End::New();
         loop {
             if cursor.is_eof() {
                 break;
@@ -45,7 +32,9 @@ impl parser::Parser for Parser {
                                 Parsed::Pass(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Fail(error) => return End::Unexpected_Child(result, error),
+                                Parsed::Fail(error) => {
+                                    return End::Unexpected_Child_Of(result, error)
+                                }
                             }
                         }
                     }
@@ -55,18 +44,20 @@ impl parser::Parser for Parser {
                                 Parsed::Pass(child) => {
                                     result = result.child(child);
                                 }
-                                Parsed::Fail(error) => return End::Unexpected_Child(result, error),
+                                Parsed::Fail(error) => {
+                                    return End::Unexpected_Child_Of(result, error)
+                                }
                             }
                         }
                     }
                     '{' => {
-                        todo!();
+                        End::TODO();
                     }
                     '#' => {
-                        todo!();
+                        End::TODO();
                     }
                     '|' => {
-                        todo!();
+                        End::TODO();
                     }
                     _ => {
                         cursor.read();

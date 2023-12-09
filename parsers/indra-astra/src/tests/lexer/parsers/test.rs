@@ -609,7 +609,7 @@ pub trait TokenMocks {
     where
         T: Parser + 'static,
     {
-        Token::new()
+        Token::New()
             .name(T::Instance().name())
             .tag(_TEST_MOCK_TAG)
             .tag(_TEST_NAME_ONLY)
@@ -621,7 +621,7 @@ pub trait TokenMocks {
     where
         T: Parser + 'static,
     {
-        Token::new()
+        Token::New()
             .name(T::Instance().name())
             .tag(_TEST_MOCK_TAG)
             .tag(_TEST_PARTIAL_TAGS_TAG)

@@ -19,15 +19,15 @@ impl Testable for named_entry::Parser {
                 &["One Line", "Spaced Right"],
                 "name: value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
-                        .prop("key", Token::new()
+                        .prop("key", Token::New()
                             .name(name::KEY)
                             .build(0, 3))
-                        .prop("operator", Token::new()
+                        .prop("operator", Token::New()
                             .name(mutable_field_assigner::KEY)
                             .build(4, 4))
-                        .prop("value", Token::new()
+                        .prop("value", Token::New()
                             .name(text::KEY)
                             .build(6, 9))
                         .build(0, 9),
@@ -37,18 +37,18 @@ impl Testable for named_entry::Parser {
                 &["One Line", "Spaced Around"],
                 "name : value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
                         .prop("key",
-                            Token::new()
+                            Token::New()
                                 .name(name::KEY)
                                 .build(0, 3))
                         .prop("operator",
-                            Token::new()
+                            Token::New()
                                 .name(mutable_field_assigner::KEY)
                                 .build(5, 5))
                         .prop("value",
-                            Token::new()
+                            Token::New()
                                 .name(text::KEY)
                                 .build(7, 10))
                         .build(0, 10),
@@ -58,12 +58,12 @@ impl Testable for named_entry::Parser {
                 &["One Line", "Not-Spaced", "Error"],
                 "name:value",
                 Parsed::Fail(
-                    Error::new("incomplete-named-entry")
+                    Error::New("incomplete-named-entry")
                         .prop("key", Parsed::Pass(Token::Mock::<name::Parser>()))
                         .prop(
                             "operator",
                             Parsed::Fail(
-                                Error::new(
+                                Error::New(
                                     "missing-expected-trailing-whitespace-in-mutable-field-assigner"
                                 ).build(4, 4),
                             ),
@@ -75,22 +75,22 @@ impl Testable for named_entry::Parser {
                 &["Two Lines", "Spaced Indent Increase"],
                 "name:\n  value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
                         .prop("key",
-                            Token::new()
+                            Token::New()
                                 .name(name::KEY)
                                 .build(0, 3))
                         .prop("operator",
-                            Token::new()
+                            Token::New()
                                 .name(mutable_field_assigner::KEY)
                                 .build(4, 4))
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(indent::increase::KEY)
                                 .build(5, 7))
                         .prop("value",
-                            Token::new()
+                            Token::New()
                                 .name(text::KEY)
                                 .build(8, 11))
                         .build(0, 11),
@@ -100,22 +100,22 @@ impl Testable for named_entry::Parser {
                 &["Two Lines", "Spaced Indent Increase", "Operator on Newline", "Not Spaced", "Error"],
                 "name\n  :value",
                 Parsed::Fail(
-                    Error::new("incomplete-named-entry")
+                    Error::New("incomplete-named-entry")
                         .prop("key",
                             Parsed::Pass(
-                                Token::new()
+                                Token::New()
                                     .name(name::KEY)
                                     .build(0, 3),
                             ))
                         .child(
                             Parsed::Pass(
-                                Token::new()
+                                Token::New()
                                     .name(indent::increase::KEY)
                                     .build(4, 6),
                             ))
                         .prop("operator",
                             Parsed::Fail(
-                                Error::new(
+                                Error::New(
                                     "missing-expected-trailing-whitespace-in-mutable-field-assigner"
                                 ).build(7, 7),
                             ))
@@ -126,22 +126,22 @@ impl Testable for named_entry::Parser {
                 &["Two Lines", "Spaced Indent Increase", "Operator on Newline", "Spaced"],
                 "name\n  : value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
                         .prop("key",
-                            Token::new()
+                            Token::New()
                                 .name(name::KEY)
                                 .build(0, 3))
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(indent::increase::KEY)
                                 .build(4, 6))
                         .prop("operator",
-                            Token::new()
+                            Token::New()
                                 .name(mutable_field_assigner::KEY)
                                 .build(7, 7))
                         .prop("value",
-                            Token::new()
+                            Token::New()
                                 .name(text::KEY)
                                 .build(9, 12))
                         .build(0, 12),
@@ -151,26 +151,26 @@ impl Testable for named_entry::Parser {
                 &["Three Lines", "Spaced Indent Increase"],
                 "name\n  :\n  value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
                         .prop("key",
-                            Token::new()
+                            Token::New()
                                 .name(name::KEY)
                                 .build(0, 3))
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(indent::increase::KEY)
                                 .build(4, 6))
                         .prop("operator",
-                            Token::new()
+                            Token::New()
                                 .name(mutable_field_assigner::KEY)
                                 .build(7, 7))
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(indent::current::KEY)
                                 .build(8, 10))
                         .prop("value",
-                            Token::new()
+                            Token::New()
                                 .name(text::KEY)
                                 .build(11, 14))
                         .build(0, 14),
@@ -180,26 +180,26 @@ impl Testable for named_entry::Parser {
                 &["Three Lines", "Multple Spaced Indent Increases"],
                 "name\n  :\n    value",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
                         .prop("key",
-                            Token::new()
+                            Token::New()
                                 .name(name::KEY)
                                 .build(0, 3))
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(indent::increase::KEY)
                                 .build(4, 6))
                         .prop("operator",
-                            Token::new()
+                            Token::New()
                                 .name(mutable_field_assigner::KEY)
                                 .build(7, 7))
                         .child(
-                            Token::new()
+                            Token::New()
                                 .name(indent::increase::KEY)
                                 .build(8, 12))
                         .prop("value",
-                            Token::new()
+                            Token::New()
                                 .name(text::KEY)
                                 .build(13, 16))
                         .build(0, 16),
@@ -209,18 +209,18 @@ impl Testable for named_entry::Parser {
                 &["Three Lines", "Spaced Indent Increase", "Spaced Indent Decrease"],
                 "name\n  :\nvalue",
                 Parsed::Pass(
-                    Token::new()
+                    Token::New()
                         .name(named_entry::KEY)
                         .prop("key",
-                          Token::new()
+                          Token::New()
                                 .name(name::KEY)
                                 .build(0, 3))
                         .child(
-                          Token::new()
+                          Token::New()
                                 .name(indent::increase::KEY)
                                 .build(4, 6))
                         .prop("operator",
-                          Token::new()
+                          Token::New()
                                 .name(mutable_field_assigner::KEY)
                                 .build(7, 7))
                         .build(0, 8),
