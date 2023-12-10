@@ -1,4 +1,9 @@
-use crate::lexer::parsers::parser;
+use crate::lexer::{
+    cursor::Cursor,
+    parser::Parser as _,
+    parsers::parser,
+    results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
+};
 
 pub mod current;
 pub mod decrease;
@@ -18,12 +23,13 @@ parser! {
         if !cursor.indents.is_reading {
             return End::None;
         }
+
         if cursor.indents.curr > cursor.indents.prev() {
-            Token::New().name(increase::KEY).end()
+            End::New_Variant::<increase::Parser>(&KEY)
         } else if cursor.indents.curr < cursor.indents.prev() {
-            Token::New().name(decrease::KEY).end()
+            End::New_Variant::<decrease::Parser>(&KEY)
         } else {
-            Token::New().name(current::KEY).end()
+            End::New_Variant::<current::Parser>(&KEY)
         }
     }
 }
@@ -85,7 +91,7 @@ pub fn Match(result: Parsed) -> Indents {
             current::KEY => Indents::Current(token).into(),
             increase::KEY => Indents::Increase(token).into(),
             decrease::KEY => Indents::Decrease(token).into(),
-            _ => Indents::Error(Error::New("unknown-indent-type").build(0, 0).unwrap()),
+            _ => Indents::Error(Error::New("unknown_indent_type").build(0, 0).unwrap()),
         },
         Parsed::Fail(error) => match error {
             Some(error) => Indents::Error(error),

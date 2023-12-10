@@ -1,7 +1,7 @@
 use crate::lexer::{parser, results::token_builder::TokenBuilder};
 
 use super::{end::End, span::Span};
-use crate::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
+use crate::lexer::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use std::collections::{HashMap, HashSet};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -22,13 +22,19 @@ impl Token {
 
     #[allow(non_snake_case)]
     pub fn With_Name(name: &str) -> TokenBuilder {
-        return TokenBuilder::new().name(name);
+        let mut token = TokenBuilder::new();
+        token.set_name(name);
+
+        return token;
     }
 
     #[allow(non_snake_case)]
     pub fn Of_Type<T: parser::Parser + 'static>() -> TokenBuilder {
         let name = T::Instance().name();
-        return TokenBuilder::new().name(name).tag(name);
+        let mut token = TokenBuilder::new();
+        token.set_name(name).add_tag(name);
+
+        return token;
     }
 
     #[allow(non_snake_case)]

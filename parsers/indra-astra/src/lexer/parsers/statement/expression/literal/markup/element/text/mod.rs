@@ -12,15 +12,16 @@ parser! {
         let mut result = End::New();
         loop {
             if cursor.is_eof() {
+                cursor.read();
                 break;
             }
             if let Some(escape) = escape_sequence::Parser::Try_Parse_At(cursor) {
-                result = result.child(escape);
+                result.add_child(escape);
             } else {
                 match cursor.curr() {
                     '\n' => match indent::increase::Parser::Try_Parse_At(cursor) {
                         Some(token) => {
-                            result = result.child(token);
+                            result.add_child(token);
                         }
                         None => {
                             return End::Token();
@@ -30,7 +31,7 @@ parser! {
                         if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
                             match dot_lookup::Parser::Parse_At(cursor) {
                                 Parsed::Pass(child) => {
-                                    result = result.child(child);
+                                    result.add_child(child);
                                 }
                                 Parsed::Fail(error) => {
                                     return End::Unexpected_Child_Of(result, error)
@@ -42,7 +43,7 @@ parser! {
                         if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
                             match slash_lookup::Parser::Parse_At(cursor) {
                                 Parsed::Pass(child) => {
-                                    result = result.child(child);
+                                    result.add_child(child);
                                 }
                                 Parsed::Fail(error) => {
                                     return End::Unexpected_Child_Of(result, error)

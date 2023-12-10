@@ -1,4 +1,4 @@
-use crate::lexer::parsers::parser;
+use crate::lexer::{cursor::Cursor, parsers::parser, results::end::End};
 
 pub fn is_allowed_symbol(c: char) -> bool {
     match c {
@@ -34,7 +34,7 @@ parser! {
             is_pure_numeric = false;
         } else {
             return End::Mismatch(
-                "first-letter",
+               "first_letter",
                 "alphanumeric or allowed symbol: $, @",
                 &cursor.curr_str(),
             );
@@ -62,7 +62,7 @@ parser! {
                 if let Some(last) = last_lone_char {
                     if last == curr {
                         return End::Unexpected(
-                            "repeat-lone-symbol",
+                          "repeat_lone_symbol",
                             &cursor.slice(cursor.pos - 1, cursor.pos),
                         );
                     }
@@ -87,10 +87,10 @@ fn _check_end(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {
         if is_allowed_in_middle_with_repeating(cursor.prev())
             || is_allowed_in_middle_without_repeating(cursor.prev())
         {
-            return End::Unexpected("last-letter", &cursor.slice(cursor.pos - 1, cursor.pos));
+            return End::Unexpected("last_letter", &cursor.slice(cursor.pos - 1, cursor.pos));
         }
         return End::Token();
     } else {
-        return End::Unexpected("pure-numeric-key", &cursor.slice(start, cursor.pos));
+        return End::Unexpected("pure_numeric_key", &cursor.slice(start, cursor.pos));
     }
 }

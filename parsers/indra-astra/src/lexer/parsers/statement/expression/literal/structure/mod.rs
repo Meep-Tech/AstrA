@@ -1,5 +1,5 @@
-use crate::lexer::parsers::splayed;
+use crate::lexer::parsers::splay_mods;
 
-splayed! {
-    struct: [tree]
+splay_mods! {
+    struct: [tree, closure]
 }

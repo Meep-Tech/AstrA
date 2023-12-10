@@ -36,7 +36,7 @@ impl Cursor {
         log::bg!("INDENT", log::Color::BrightBlack);
         log::push_unique!("PARSE");
 
-        log::info!(
+        log::vvv!(
             &["CURSOR", ":NEW"],
             &format!("Creating new cursor for input of length {}", source.len()),
         );
@@ -57,7 +57,7 @@ impl Cursor {
 
     pub fn save(&mut self) -> usize {
         if (self.state.last().is_none()) || (self.state.last().unwrap().pos == self.pos) {
-            log::info!(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
+            log::vv!(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
         }
 
         let state = self.state();
@@ -69,7 +69,7 @@ impl Cursor {
     pub fn restore(&mut self) -> usize {
         let state = self.state.pop().unwrap();
         if self.pos != state.pos {
-            log::info!(
+            log::vv!(
                 &["CURSOR", "RESTORE"],
                 &format!("{} ~> {}", self.pos, state.pos),
             );
@@ -134,7 +134,7 @@ impl Cursor {
         match self.curr() {
             '\n' => {
                 if self.indents.prev() != self.indents.curr {
-                    log::info!(
+                    log::vv!(
                         &["CURSOR", "INDENT", "PUSH"],
                         &format!(" prev: {} => {}", self.indents.prev(), self.indents.curr)
                     );
@@ -208,44 +208,44 @@ impl Cursor {
 
     // TODO: return a ws token with is_ignored = true
     pub fn skip_ws(&mut self) {
-        log::info!(&["CURSOR", "SKIP-WS"], &format!("{}..", self.pos));
+        log::vv!(&["CURSOR", "SKIP-WS"], &format!("{}..", self.pos));
         self.skip_while(|c| c.is_whitespace());
-        log::info!(&["CURSOR", "SKIP-WS"], &format!("..{}", self.pos));
+        log::vv!(&["CURSOR", "SKIP-WS"], &format!("..{}", self.pos));
     }
 
     pub fn skip_while(&mut self, f: fn(char) -> bool) {
-        log::info!(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
+        log::vvv!(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
         while f(self.curr()) {
             self.skip();
         }
-        log::info!(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
     }
 
     pub fn skip_until(&mut self, f: fn(char) -> bool) {
-        log::info!(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
+        log::vvv!(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
         while !f(self.curr()) {
             self.skip();
         }
-        log::info!(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
     }
 
     pub fn read_while(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        log::info!(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
+        log::vvv!(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
         let mut result = Vec::new();
         while f(self.curr()) {
             result.push(self.read());
         }
-        log::info!(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
         return result;
     }
 
     pub fn read_until(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        log::info!(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
+        log::vvv!(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
         let mut result = Vec::new();
         while !f(self.curr()) {
             result.push(self.read());
         }
-        log::info!(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
         return result;
     }
 
@@ -302,6 +302,18 @@ impl Cursor {
 
     pub fn prev_is(&self, c: char) -> bool {
         return self.prev() == c;
+    }
+
+    pub fn curr_is_ws(&self) -> bool {
+        self.curr_is(' ') || self.curr_is('\t') || self.curr_is('\n')
+    }
+
+    pub fn next_is_ws(&self) -> bool {
+        self.next_is(' ') || self.next_is('\t') || self.next_is('\n')
+    }
+
+    pub fn prev_is_ws(&self) -> bool {
+        self.prev_is(' ') || self.prev_is('\t') || self.prev_is('\n')
     }
 
     pub fn ahead(&self, offset: usize) -> char {

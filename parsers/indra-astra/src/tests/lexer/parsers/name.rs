@@ -1,11 +1,18 @@
 use crate::lexer::{
-    parsers::statement::expression::invocation::identifier::key::name,
+    parsers::statement::{assignment::entry, expression::invocation::identifier::key::name},
     results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
 };
 
 use super::test::{Test, Testable};
 
 impl Testable for name::Parser {
+    fn assure_tags(&self) -> Option<std::collections::HashSet<String>> {
+        let mut tags = std::collections::HashSet::new();
+        tags.insert(entry::KEY.to_string());
+
+        return Some(tags);
+    }
+
     fn get_tests(&self) -> Vec<Test> {
         return vec![
             Test::tags::<Self>(
@@ -41,7 +48,7 @@ impl Testable for name::Parser {
             Test::tags::<Self>(
                 &["Alphabetic", "Double Dash", "Error"],
                 "abc--def",
-                Parsed::Fail(Error::New("unexpected-repeat-lone-symbol-in-name").build(0, 3)),
+                Parsed::Fail(Error::New("unexpected_repeat_lone_symbol_in_name").build(0, 3)),
             ),
             Test::tags::<Self>(
                 &["Alphabetic", "Double Underscore"],
@@ -107,42 +114,42 @@ impl Testable for name::Parser {
                     "Error",
                 ],
                 "123abc_456--789",
-                Parsed::Fail(Error::New("unexpected-repeat-lone-symbol-in-name").build(0, 10)),
+                Parsed::Fail(Error::New("unexpected_repeat_lone_symbol_in_name").build(0, 10)),
             ),
             Test::tags::<Self>(
                 &["Numeric", "Error"],
                 "123",
-                Parsed::Fail(Error::New("unexpected-pure-numeric-key-in-name").build(0, 2)),
+                Parsed::Fail(Error::New("unexpected_pure_numeric_key_in_name").build(0, 2)),
             ),
             Test::tags::<Self>(
                 &["Numeric Start", "Numeric End", "Underscore", "Error"],
                 "123_123",
-                Parsed::Fail(Error::New("unexpected-pure-numeric-key-in-name").build(0, 6)),
+                Parsed::Fail(Error::New("unexpected_pure_numeric_key_in_name").build(0, 6)),
             ),
             Test::tags::<Self>(
                 &["Numeric", "Underscore End", "Error"],
                 "123_",
-                Parsed::Fail(Error::New("unexpected-pure-numeric-key-in-name").build(0, 3)),
+                Parsed::Fail(Error::New("unexpected_pure_numeric_key_in_name").build(0, 3)),
             ),
             Test::tags::<Self>(
                 &["Alphabetic", "Underscore End", "Error"],
                 "abc_",
-                Parsed::Fail(Error::New("unexpected-last-letter-in-name").build(0, 3)),
+                Parsed::Fail(Error::New("unexpected_last_letter_in_name").build(0, 3)),
             ),
             Test::tags::<Self>(
                 &["Alphabetic", "Underscore Start", "Error"],
                 "_abc",
-                Parsed::Fail(Error::New("unexpected-first-letter-in-name").build(0, 0)),
+                Parsed::Fail(Error::New("unexpected_first_letter_in_name").build(0, 0)),
             ),
             Test::tags::<Self>(
                 &["Dash Start", "Error"],
                 "-abc",
-                Parsed::Fail(Error::New("unexpected-first-letter-in-name").build(0, 0)),
+                Parsed::Fail(Error::New("unexpected_first_letter_in_name").build(0, 0)),
             ),
             Test::tags::<Self>(
                 &["Dash End", "Error"],
                 "abc-",
-                Parsed::Fail(Error::New("unexpected-last-letter-in-name").build(0, 3)),
+                Parsed::Fail(Error::New("unexpected_last_letter_in_name").build(0, 3)),
             ),
         ];
     }

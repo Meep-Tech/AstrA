@@ -13,7 +13,7 @@ pub struct ErrorBuilder {
 
 impl ErrorBuilder {
     pub fn new(name: &str) -> ErrorBuilder {
-        log::info!(&["ERROR", ":NEW"], name);
+        log::vv!(&["ERROR", ":NEW"], name);
         ErrorBuilder {
             name: name.to_string(),
             text: None,
@@ -24,7 +24,16 @@ impl ErrorBuilder {
     }
 
     pub fn text(mut self, text: &str) -> ErrorBuilder {
-        log::info!(
+        log::vvv!(
+            &["ERROR", "-", "TEXT"],
+            &format!("{} : {}", self.name, text)
+        );
+        self.text = Some(text.to_string());
+        self
+    }
+
+    pub fn set_text(&mut self, text: &str) -> &mut ErrorBuilder {
+        log::vvv!(
             &["ERROR", "-", "TEXT"],
             &format!("{} : {}", self.name, text)
         );
@@ -34,7 +43,17 @@ impl ErrorBuilder {
     }
 
     pub fn name(mut self, name: &str) -> ErrorBuilder {
-        log::info!(
+        log::vvv!(
+            &["ERROR", "-", "NAME"],
+            &format!("{} : {}", self.name, name)
+        );
+
+        self.name = name.to_string();
+        self
+    }
+
+    pub fn set_name(&mut self, name: &str) -> &mut ErrorBuilder {
+        log::vvv!(
             &["ERROR", "-", "NAME"],
             &format!("{} : {}", self.name, name)
         );
@@ -53,7 +72,7 @@ impl ErrorBuilder {
     }
 
     pub fn tag(mut self, tag: &str) -> ErrorBuilder {
-        log::info!(&["ERROR", "-", "TAG"], &format!("{} : {}", self.name, tag));
+        log::vvv!(&["ERROR", "-", "TAG"], &format!("{} : {}", self.name, tag));
         match self.tags {
             Some(mut types) => {
                 types.insert(tag.to_string());
@@ -66,8 +85,21 @@ impl ErrorBuilder {
         self
     }
 
+    pub fn add_tag(&mut self, tag: &str) -> &mut ErrorBuilder {
+        log::vvv!(&["ERROR", "-", "TAG"], &format!("{} : {}", self.name, tag));
+        match &mut self.tags {
+            Some(ref mut types) => {
+                types.insert(tag.to_string());
+            }
+            None => {
+                self.tags = Some(vec![tag.to_string()].into_iter().collect());
+            }
+        }
+        self
+    }
+
     pub fn child(mut self, child: Parsed) -> ErrorBuilder {
-        log::info!(
+        log::vv!(
             &["ERROR", "-", "CHILD"],
             &format!(
                 "{} : {:?}",
@@ -94,8 +126,35 @@ impl ErrorBuilder {
         self
     }
 
+    pub fn add_child(&mut self, child: Parsed) -> &mut ErrorBuilder {
+        log::vv!(
+            &["ERROR", "-", "CHILD"],
+            &format!(
+                "{} : {:?}",
+                self.name,
+                match &child {
+                    Parsed::Pass(token) => token.name.clone(),
+                    Parsed::Fail(error) => match error {
+                        Some(err) => err.name.clone(),
+                        None => "-none-".to_string(),
+                    },
+                }
+            )
+        );
+
+        match self.children {
+            Some(ref mut els) => {
+                els.push(child);
+            }
+            None => {
+                self.children = Some(vec![child]);
+            }
+        }
+        self
+    }
+
     pub fn prop(mut self, key: &str, value: Parsed) -> ErrorBuilder {
-        log::info!(
+        log::vv!(
             &["ERROR", "-", "PROP"],
             &format!(
                 "{} : {} = {:?}",
@@ -111,7 +170,7 @@ impl ErrorBuilder {
             )
         );
 
-        self = self.child(value);
+        self.add_child(value);
         let index = match &self.children {
             Some(els) => els.len() - 1,
             None => 0,
@@ -130,11 +189,47 @@ impl ErrorBuilder {
         }
         self
     }
+
+    pub fn set_prop(&mut self, key: &str, value: Parsed) -> &mut ErrorBuilder {
+        log::vv!(
+            &["ERROR", "-", "PROP"],
+            &format!(
+                "{} : {} = {:?}",
+                self.name,
+                key,
+                match &value {
+                    Parsed::Pass(token) => token.name.clone(),
+                    Parsed::Fail(error) => match error {
+                        Some(err) => err.name.clone(),
+                        None => "-none-".to_string(),
+                    },
+                }
+            )
+        );
+
+        self.add_child(value);
+        let index = match &self.children {
+            Some(els) => els.len() - 1,
+            None => 0,
+        };
+
+        match self.keys {
+            Some(ref mut props) => {
+                props.insert(key.to_string(), index);
+            }
+            None => {
+                let mut props = HashMap::new();
+                props.insert(key.to_string(), index);
+                self.keys = Some(props);
+            }
+        }
+        self
+    }
 }
 
 impl Builder<Option<Error>> for ErrorBuilder {
     fn build(self, start: usize, end: usize) -> Option<Error> {
-        log::info!(
+        log::vvv!(
             &["ERROR", ":BUILD"],
             &format!("{} : ({}, {})", self.name, start, end)
         );

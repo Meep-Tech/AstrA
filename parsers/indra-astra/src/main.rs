@@ -4,15 +4,16 @@
 #![feature(type_name_of_val)]
 #![feature(unsized_locals)]
 #![feature(iter_intersperse)]
+#![feature(stmt_expr_attributes)]
 
 pub mod colors;
 pub mod lexer;
-pub mod node;
 //pub mod runtime;
 pub mod tests;
 pub mod utils;
 
 use lexer::parsers;
+use lexer::parsers::attribute::tag;
 use lexer::parsers::statement::assignment::entry::named_entry;
 use lexer::parsers::statement::expression::invocation::identifier::key::name;
 use lexer::parsers::statement::expression::literal::structure::tree;
@@ -32,5 +33,6 @@ fn main() {
         named_entry::Parser::Tests(),
         name::Parser::Tests(),
         tree::Parser::Tests(),
+        tag::Parser::Tests(),
     ]);
 }

@@ -1,5 +1,5 @@
-use crate::lexer::parsers::splayed;
+use crate::lexer::parsers::splay;
 
-splayed! {
+splay! {
     closure: []
 }

@@ -8,7 +8,7 @@ parser! {
     match cursor.curr() {
       '#' => {
         cursor.read();
-        End::Child::<parsers::statement::expression::Parser>(&KEY, cursor)
+        End::Child::<parsers::statement::expression::attribute_expression::Parser>(&KEY, cursor)
       },
       '>' => match cursor.next() {
         '#' => End::TODO(),
@@ -30,6 +30,6 @@ tests! {
       .name(&KEY)
       .child(Token::New()
         .name(name::KEY)
-        .build(1,3)
-      ).build(0, 4))
+        .build(1, 3)
+      ).build(0, 3))
 }

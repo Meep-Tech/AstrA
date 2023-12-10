@@ -1,6 +1,6 @@
-use crate::lexer::parsers::splayed;
+use crate::lexer::parsers::splay_mods;
 
-splayed! {
+splay_mods! {
     escape: [
         backtick_escape,
         newline_escape,

@@ -1,8 +1,11 @@
+use std::collections::HashSet;
+
 use crate::lexer::{
     parsers::{
         statement::assignment::entry::named_entry,
-        statement::expression::{
-            invocation::identifier::key::name, literal::markup::element::text,
+        statement::{
+            assignment::entry,
+            expression::{invocation::identifier::key::name, literal::markup::element::text},
         },
         symbol::operator::assigner::mutable_field_assigner,
         whitespace::indent,
@@ -13,6 +16,13 @@ use crate::lexer::{
 use super::test::{Test, Testable, TokenMocks};
 
 impl Testable for named_entry::Parser {
+    fn assure_tags(&self) -> Option<HashSet<String>> {
+        let mut tags = HashSet::new();
+        tags.insert(entry::KEY.to_string());
+
+        return Some(tags);
+    }
+
     fn get_tests(&self) -> Vec<Test> {
         return vec![
             Test::tags::<Self>(
@@ -29,8 +39,8 @@ impl Testable for named_entry::Parser {
                             .build(4, 4))
                         .prop("value", Token::New()
                             .name(text::KEY)
-                            .build(6, 9))
-                        .build(0, 9),
+                            .build(6, 10))
+                        .build(0, 10),
                 ),
             ),
             Test::tags::<Self>(
@@ -50,21 +60,21 @@ impl Testable for named_entry::Parser {
                         .prop("value",
                             Token::New()
                                 .name(text::KEY)
-                                .build(7, 10))
-                        .build(0, 10),
+                                .build(7, 11))
+                        .build(0, 11),
                 ),
             ),
             Test::tags::<Self>(
                 &["One Line", "Not-Spaced", "Error"],
                 "name:value",
                 Parsed::Fail(
-                    Error::New("incomplete-named-entry")
+                    Error::New("incomplete_named_entry")
                         .prop("key", Parsed::Pass(Token::Mock::<name::Parser>()))
                         .prop(
                             "operator",
                             Parsed::Fail(
                                 Error::New(
-                                    "missing-expected-trailing-whitespace-in-mutable-field-assigner"
+                             "missing_expected_trailing_whitespace_in_mutable_field_assigner"
                                 ).build(4, 4),
                             ),
                         )
@@ -92,15 +102,15 @@ impl Testable for named_entry::Parser {
                         .prop("value",
                             Token::New()
                                 .name(text::KEY)
-                                .build(8, 11))
-                        .build(0, 11),
+                                .build(8, 12))
+                        .build(0, 12),
                 )
             ),
             Test::tags::<Self>(
                 &["Two Lines", "Spaced Indent Increase", "Operator on Newline", "Not Spaced", "Error"],
                 "name\n  :value",
                 Parsed::Fail(
-                    Error::New("incomplete-named-entry")
+                    Error::New("incomplete_named_entry")
                         .prop("key",
                             Parsed::Pass(
                                 Token::New()
@@ -116,7 +126,7 @@ impl Testable for named_entry::Parser {
                         .prop("operator",
                             Parsed::Fail(
                                 Error::New(
-                                    "missing-expected-trailing-whitespace-in-mutable-field-assigner"
+                             "missing_expected_trailing_whitespace_in_mutable_field_assigner"
                                 ).build(7, 7),
                             ))
                         .build(0, 7),
@@ -143,8 +153,8 @@ impl Testable for named_entry::Parser {
                         .prop("value",
                             Token::New()
                                 .name(text::KEY)
-                                .build(9, 12))
-                        .build(0, 12),
+                                .build(9, 13))
+                        .build(0, 13),
                 )
             ),
             Test::tags::<Self>(
@@ -172,8 +182,8 @@ impl Testable for named_entry::Parser {
                         .prop("value",
                             Token::New()
                                 .name(text::KEY)
-                                .build(11, 14))
-                        .build(0, 14),
+                                .build(11, 15))
+                        .build(0, 15),
                 )
             ),
             Test::tags::<Self>(
@@ -201,8 +211,8 @@ impl Testable for named_entry::Parser {
                         .prop("value",
                             Token::New()
                                 .name(text::KEY)
-                                .build(13, 16))
-                        .build(0, 16),
+                                .build(13, 17))
+                        .build(0, 17),
                 )
             ),
             Test::tags::<Self>(

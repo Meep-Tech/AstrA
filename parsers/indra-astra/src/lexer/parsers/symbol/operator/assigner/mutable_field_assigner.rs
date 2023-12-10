@@ -8,7 +8,7 @@ parser! {
                     if cursor.curr().is_whitespace() {
                         return End::Token();
                     } else {
-                        End::Missing("trailing-whitespace", "\\s", &cursor.curr_str())
+                        End::Missing("trailing_whitespace", "\\s", &cursor.curr_str())
                     }
                 } else {
                     End::Missing("prefix", ":", &cursor.curr_str())

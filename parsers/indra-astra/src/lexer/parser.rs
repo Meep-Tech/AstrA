@@ -172,7 +172,7 @@ pub trait Parser: Sync {
                 Parsed::Pass(token)
             }
             End::Fail(error) => {
-                let err = error
+                let error = error
                     .tag(self.name())
                     .assure_name(self.name())
                     .build(start, cursor.prev_pos());
@@ -182,17 +182,29 @@ pub trait Parser: Sync {
                 }
 
                 if ignored {
-                    log::info!(
-                        &[
-                            ":END",
-                            &"IGNORED"
+                    if log::IS_VV {
+                        log::info!(
+                            &[
+                                ":END",
+                                &"IGNORED"
+                                    .effect(log::Effect::Strikethrough)
+                                    .color(log::Color::BrightBlack)
+                            ],
+                            &format!("@ {} = {:#?}", cursor.prev_pos(), err)
                                 .effect(log::Effect::Strikethrough)
-                                .color(log::Color::BrightBlack)
-                        ],
-                        &format!("@ {} = {:#?}", cursor.prev_pos(), err)
-                            .effect(log::Effect::Strikethrough)
-                            .color(log::Color::BrightBlack),
-                    );
+                                .color(log::Color::BrightBlack),
+                        );
+                    } else {
+                        log::info!(
+                            &[
+                                ":END",
+                                &"IGNORED"
+                                    .color(log::Color::BrightBlack)
+                                    .effect(log::Effect::Strikethrough)
+                            ],
+                            &format!("@ {}", cursor.prev_pos()).color(log::Color::BrightBlack),
+                        );
+                    }
                 } else {
                     log::info!(
                         &[":END", "FAIL"],
@@ -202,14 +214,17 @@ pub trait Parser: Sync {
                     );
                 }
 
-                Parsed::Fail(err)
+                Parsed::Fail(error)
             }
             End::None => {
                 if optional {
                     cursor.restore();
                 }
 
-                log::info!(&[":END", "NONE"], &format!("@ {}", cursor.prev_pos()));
+                log::info!(
+                    &[":END", &"NONE".color(log::Color::BrightBlack)],
+                    &format!("@ {}", cursor.prev_pos())
+                );
                 Parsed::Fail(None)
             }
         };

@@ -4,7 +4,7 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
-use crate::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
+use crate::lexer::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 
 use super::span::Span;
 
@@ -32,11 +32,11 @@ impl Error {
 
     #[allow(non_snake_case)]
     pub fn None() -> End {
-        End::Fail(
-            ErrorBuilder::new("no-match-for-{}")
-                .text("No match found.")
-                .tag("none"),
-        )
+        End::Fail({
+            let mut err = ErrorBuilder::new("no_match_for_{}");
+            err.set_text("No match found.").add_tag("none");
+            err
+        })
     }
 
     pub fn to_builder(self) -> ErrorBuilder {
@@ -54,38 +54,35 @@ impl Error {
     }
 
     pub fn unexpected(key: &str, value: &str) -> End {
-        End::Fail(
-            Error::New(&["unexpected-", key, "-in-{}"].concat())
-                .text(&format!("Unexpected: `{}`.", value))
-                .tag("unexpected"),
-        )
+        let mut err = Error::New(&["unexpected_", key, "_in_{}"].concat());
+        err.set_text(&format!("Unexpected: `{}`.", value))
+            .add_tag("unexpected");
+        End::Fail(err)
     }
 
     pub fn mismatch(key: &str, expected: &str, found: &str) -> End {
-        End::Fail(
-            Error::New(&["unexpected-", key, "-in-{}"].concat())
-                .text(&format!(
-                    "Expected: `{}`, but found: `{}`.",
-                    expected, found
-                ))
-                .tag("missing"),
-        )
+        let mut err = Error::New(&["unexpected_", key, "_in_{}"].concat());
+        err.set_text(&format!(
+            "Expected: `{}`, but found: `{}`.",
+            expected, found
+        ))
+        .add_tag("missing");
+        End::Fail(err)
     }
 
     pub fn missing(key: &str, expected: &str, found: &str) -> End {
-        End::Fail(
-            Error::New(&["missing-expected-", key, "-in-{}"].concat())
-                .text(&format!(
-                    "Expected: `{}`, but found: `{}`.",
-                    expected, found
-                ))
-                .tag("missing"),
-        )
+        let mut err = Error::New(&["missing_expected_", key, "_in_{}"].concat());
+        err.set_text(&format!(
+            "Expected: `{}`, but found: `{}`.",
+            expected, found
+        ))
+        .add_tag("missing");
+        End::Fail(err)
     }
 
     pub fn in_child(parent: TokenBuilder, err: Option<Error>) -> End {
         let mut parent_err = ErrorBuilder {
-            name: "incomplete-{}".to_string(),
+            name: "incomplete_{}".to_string(),
             text: None,
             tags: parent.tags,
             children: Some(
@@ -99,15 +96,15 @@ impl Error {
             keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
-        parent_err = parent_err.tag("incomplete");
-        parent_err = parent_err.child(Parsed::Fail(err));
+        parent_err.add_tag("incomplete");
+        parent_err.add_child(Parsed::Fail(err));
 
         return End::Fail(parent_err);
     }
 
     pub fn in_prop(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
         let mut parent_err = ErrorBuilder {
-            name: "incomplete-{}".to_string(),
+            name: "incomplete_{}".to_string(),
             text: None,
             tags: parent.tags,
             children: Some(
@@ -121,8 +118,8 @@ impl Error {
             keys: Some(parent.keys.unwrap_or(HashMap::new())),
         };
 
-        parent_err = parent_err.tag("incomplete");
-        parent_err = parent_err.prop(key, Parsed::Fail(err));
+        parent_err.add_tag("incomplete");
+        parent_err.set_prop(key, Parsed::Fail(err));
 
         return End::Fail(parent_err);
     }

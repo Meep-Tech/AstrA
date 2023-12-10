@@ -10,10 +10,10 @@ parser! {
         let mut result = Token::New();
         match indent::Parse_At(cursor) {
             Indents::Increase(token) => {
-                result = result.child(token);
+                result.add_child(token);
             }
             Indents::Current(token) => {
-                result = result.child(token);
+                result.add_child(token);
             }
             Indents::Decrease(_) => {
                 return End::Unexpected("initial-indent-decrease", &cursor.curr_str())
@@ -24,10 +24,10 @@ parser! {
         loop {
             match branch::Parser::Parse_At(cursor) {
                 Parsed::Pass(token) => {
-                    result = result.child(token);
+                    result.add_child(token);
                     match indent::Parse_Opt_At(cursor) {
                         Indents::Current(token) => {
-                            result = result.child(token);
+                            result.add_child(token);
                         }
                         _ => {
                             return result.end();

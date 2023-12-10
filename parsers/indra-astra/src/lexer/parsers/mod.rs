@@ -3,7 +3,7 @@ use std::{any::TypeId, collections::HashMap, rc::Rc};
 
 use crate::{
     tests::lexer::parsers::test::Testable,
-    utils::log::{self},
+    utils::log::{self, Styleable},
 };
 
 #[cfg(feature = "log")]
@@ -16,6 +16,7 @@ use self::{
 
 use super::parser::Parser;
 
+pub mod attribute;
 pub mod source;
 pub mod statement;
 pub mod symbol;
@@ -24,33 +25,8 @@ pub mod whitespace;
 pub type ParserType = dyn Parser + Sync + 'static;
 pub type Instance<TParser = ParserType> = TParser;
 
-macro_rules! parser {
-    ($key:ident => $rule:expr) => {
-        use crate::lexer::{
-            context::{self, Context, Language},
-            cursor::Cursor,
-            fs,
-            parser::Parser as _,
-            parsers::{self, source, statement, symbol, whitespace},
-            results::{builder::Builder, end::End, error::Error, parsed::Parsed, token::Token},
-        };
-
-        pub const KEY: &str = stringify!($key);
-
-        pub struct Parser;
-        impl crate::lexer::parser::Parser for Parser {
-            fn name(&self) -> &'static str {
-                &KEY
-            }
-
-            fn rule(&self, cursor: &mut Cursor) -> End {
-                let rule = |cursor: &mut Cursor| -> End { $rule(cursor) };
-                rule(cursor)
-            }
-        }
-    };
-
-    (#testable, $key:ident => $rule:expr) => {
+macro_rules! imports {
+    () => {
         use crate::{
             lexer::{
                 context::{self, Context, Language},
@@ -58,24 +34,58 @@ macro_rules! parser {
                 fs,
                 parser::Parser as _,
                 parsers::{self, source, statement, symbol, whitespace},
-                results::{builder::Builder, end::End, error::Error, parsed::Parsed, token::Token},
+                results::{
+                    builder::Builder, end::End, error::Error, node::Node, parsed::Parsed,
+                    token::Token,
+                },
             },
             tests::lexer::parsers::test::Testable,
         };
+    };
+}
+pub(crate) use imports;
 
+macro_rules! parser {
+    ($key:ident => $rule:expr) => {
         pub const KEY: &str = stringify!($key);
 
         pub struct Parser;
         impl crate::lexer::parser::Parser for Parser {
             fn name(&self) -> &'static str {
+                crate::lexer::parsers::imports!();
                 &KEY
             }
 
-            fn as_tests(&self) -> Option<&dyn Testable> {
+            fn rule(
+                &self,
+                cursor: &mut crate::lexer::cursor::Cursor,
+            ) -> crate::lexer::results::end::End {
+                crate::lexer::parsers::imports!();
+                let rule = |cursor: &mut Cursor| -> End { $rule(cursor) };
+                rule(cursor)
+            }
+        }
+    };
+
+    (#testable, $key:ident => $rule:expr) => {
+        pub const KEY: &str = stringify!($key);
+
+        pub struct Parser;
+        impl crate::lexer::parser::Parser for Parser {
+            fn as_tests(&self) -> Option<&dyn crate::tests::lexer::parsers::test::Testable> {
                 Some(self)
             }
 
-            fn rule(&self, cursor: &mut Cursor) -> End {
+            fn name(&self) -> &'static str {
+                crate::lexer::parsers::imports!();
+                &KEY
+            }
+
+            fn rule(
+                &self,
+                cursor: &mut crate::lexer::cursor::Cursor,
+            ) -> crate::lexer::results::end::End {
+                crate::lexer::parsers::imports!();
                 let rule = |cursor: &mut Cursor| -> End { $rule(cursor) };
                 rule(cursor)
             }
@@ -84,10 +94,27 @@ macro_rules! parser {
 }
 pub(crate) use parser;
 
-macro_rules! splayed {
+macro_rules! splay_mods {
     ($key:ident: [$($parsers:ident $(,)?)*]) => {
         $(pub mod $parsers;)*
 
+        crate::lexer::parsers::splay! {
+            $key: [$($parsers,)*]
+        }
+    };
+
+    (#testable, $key:ident: [$($parsers:ident $(,)?)*]) => {
+
+        crate::lexer::parsers::splay! {
+            #testable,
+            $key: [$($parsers,)*]
+        }
+    };
+}
+pub(crate) use splay_mods;
+
+macro_rules! splay {
+    ($key:ident: [$($parsers:ident $(,)?)*]) => {
         crate::lexer::parsers::parser! {
             $key => |cursor: &mut Cursor| {
                 End::Splay(
@@ -104,8 +131,6 @@ macro_rules! splayed {
     };
 
     (#testable, $key:ident: [$($parsers:ident $(,)?)*]) => {
-        $(pub mod $parsers;)*
-
         crate::lexer::parsers::parser! {
             #testable,
             $key => |cursor: &mut Cursor| {
@@ -122,7 +147,7 @@ macro_rules! splayed {
         }
     };
 }
-pub(crate) use splayed;
+pub(crate) use splay;
 
 macro_rules! tests {
     ($(
@@ -130,15 +155,16 @@ macro_rules! tests {
             $tag:literal $(&)?
         )*]: $input:literal => $expected:expr
     )*) => {
-        use crate::{
-            tests::lexer::parsers::test::{Test, Mockable}
-        };
 
         impl crate::tests::lexer::parsers::test::Testable for Parser {
-            fn get_tests(&self) -> Vec<Test>
+            fn get_tests(&self) -> Vec<crate::tests::lexer::parsers::test::Test>
             where
                 Self: 'static + Sized + crate::lexer::parser::Parser,
             {
+                crate::lexer::parsers::imports!();
+                use crate::{
+                    tests::lexer::parsers::test::{Test, Mockable}
+                };
                 vec![
                     $(
                         Test::tags::<Self>(
@@ -160,7 +186,7 @@ where
 {
     let result: &Rc<TType>;
     log::push_unique!("PARSERS");
-    log::info!(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
+    log::vvv!(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
 
     unsafe {
         let parser = _BY_KEY.as_ref().unwrap().get(key).unwrap();
@@ -175,7 +201,7 @@ where
 pub fn get_for_key(key: &str) -> &'static Rc<dyn Parser> {
     let result: &'static Rc<dyn Parser>;
     log::push_unique!("PARSERS");
-    log::info!(&["GET", "FOR-KEY"], &format!("for key: {:?}", key));
+    log::vvv!(&["GET", "FOR-KEY"], &format!("for key: {:?}", key));
 
     unsafe {
         result = _BY_KEY.as_ref().unwrap().get(key).unwrap();
@@ -193,18 +219,29 @@ where
     log::push_unique!("PARSERS");
 
     let result: &'static Rc<TType>;
-    log::info!(
+    log::vvv!(
         &["GET", "BY-TYPE"],
         &format!("by type: {:?}", std::any::type_name::<TType>()),
     );
     let type_id = TypeId::of::<TType>();
-    log::info!(
+    log::vvv!(
         &["GET", "BY-TYPE-ID"],
         &format!("with type id: {:?}", type_id),
     );
 
     unsafe {
-        let key = _BY_TYPE.as_ref().unwrap().get(&type_id).unwrap();
+        let key = _BY_TYPE
+            .as_ref()
+            .unwrap_or_else(|| panic!("Parsers not initialized"))
+            .get(&type_id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Parser key not found for type: {:?} with id: {:?}.\n\t {}?",
+                    std::any::type_name::<TType>(),
+                    type_id,
+                    &"...Did you add it to the all parsers list".color(log::Color::Yellow)
+                )
+            });
         result = get_by_key::<TType>(key);
     }
 
@@ -220,11 +257,11 @@ where
     log::push_unique!("PARSERS");
 
     let result: &'static Rc<dyn Parser>;
-    log::info!(
+    log::vvv!(
         &["GET", "FOR-TYPE"],
         &format!("for type: {:?}", std::any::type_name::<TType>()),
     );
-    log::info!(
+    log::vvv!(
         &["GET", "FOR-TYPE-ID"],
         &format!("with type id: {:?}", TypeId::of::<TType>()),
     );
@@ -232,9 +269,16 @@ where
     unsafe {
         let key = _BY_TYPE
             .as_ref()
-            .unwrap()
+            .unwrap_or_else(|| panic!("Parsers not initialized"))
             .get(&TypeId::of::<TType>())
-            .unwrap();
+            .unwrap_or_else(|| {
+                panic!(
+                    "Parser key not found for type: {:?} with id: {:?}.\n\t {}?",
+                    std::any::type_name::<TType>(),
+                    TypeId::of::<TType>(),
+                    &"...Did you add it to the all parsers list".color(log::Color::Yellow)
+                )
+            });
         result = get_for_key(key);
     }
 
@@ -246,7 +290,7 @@ where
 pub fn get_tests_for(key: &str) -> &'static dyn Testable {
     let result: &'static dyn Testable;
     log::push_unique!("PARSERS");
-    log::info!(&["GET", "TESTS"], &format!("for key: {:?}", key));
+    log::vvv!(&["GET", "TESTS"], &format!("for key: {:?}", key));
     let parser = get_for_key(key);
     result = parser.as_tests().unwrap();
 
@@ -257,11 +301,22 @@ pub fn get_tests_for(key: &str) -> &'static dyn Testable {
 
 pub(crate) fn init_all() {
     let all: Vec<Rc<dyn Parser>> = vec![
+        Rc::new(source::Parser {}),
+        Rc::new(source::file::Parser {}),
+        Rc::new(source::file::data::Parser {}),
+        Rc::new(source::file::markup::Parser {}),
+        Rc::new(source::file::mote::Parser {}),
+        Rc::new(source::file::prox::Parser {}),
+        Rc::new(source::file::r#trait::Parser {}),
+        Rc::new(attribute::Parser {}),
+        Rc::new(attribute::tag::Parser {}),
         Rc::new(statement::Parser {}),
         Rc::new(statement::assignment::Parser {}),
         Rc::new(statement::assignment::entry::Parser {}),
         Rc::new(statement::assignment::entry::named_entry::Parser {}),
         Rc::new(statement::expression::Parser {}),
+        Rc::new(statement::expression::attribute_expression::Parser {}),
+        Rc::new(statement::expression::entry_expression::Parser {}),
         Rc::new(statement::expression::invocation::Parser {}),
         Rc::new(statement::expression::invocation::identifier::Parser {}),
         Rc::new(statement::expression::invocation::identifier::key::Parser {}),
@@ -286,6 +341,7 @@ pub(crate) fn init_all() {
         Rc::new(statement::expression::literal::primitive::string::simple_string::Parser {}),
         Rc::new(statement::expression::literal::structure::Parser {}),
         Rc::new(statement::expression::literal::structure::tree::Parser {}),
+        Rc::new(statement::expression::literal::structure::closure::Parser {}),
         Rc::new(statement::branch::Parser {}),
         Rc::new(symbol::Parser {}),
         Rc::new(symbol::operator::Parser {}),
@@ -333,8 +389,8 @@ pub(crate) fn init(parsers: Vec<Rc<dyn Parser>>) {
                     log::info!(&[":START"], "Initializing parser");
                     log::push_div!("-", Color::Green);
 
-                    log::info!(&["KEY"], key);
-                    log::info!(&["TYPE"], &format!("{:?}: {:?}", p.type_name(), type_id));
+                    log::vv!(&["KEY"], key);
+                    log::vv!(&["TYPE"], &format!("{:?}: {:?}", p.type_name(), type_id));
 
                     _BY_KEY.as_mut().unwrap().insert(key, p);
 

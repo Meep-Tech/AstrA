@@ -5,11 +5,10 @@ use crate::{
         parser::Parser,
         parsers,
         results::{
-            builder::Builder, error::Error, error_builder::ErrorBuilder, parsed::Parsed,
-            token::Token, token_builder::TokenBuilder,
+            builder::Builder, error::Error, error_builder::ErrorBuilder, node::Node,
+            parsed::Parsed, token::Token, token_builder::TokenBuilder,
         },
     },
-    node::Node,
     utils::log::{self, Color, Styleable},
 };
 
@@ -37,7 +36,7 @@ pub struct Test {
     pub input: String,
     pub expected: Parsed,
     pub enabled: bool,
-    pub subs: Option<Vec<String>>,
+    pub(crate) subs: Option<Vec<String>>,
 }
 
 impl Test {
@@ -223,16 +222,16 @@ impl Mockable<Token> for TokenBuilder {
         let end_val: usize;
 
         let mut builder = self.tag(_TEST_MOCK_TAG);
-        builder = builder.tag(_TEST_PARTIAL_CHILDREN_TAG);
-        builder = builder.tag(_TEST_PARTIAL_PROPS_TAG);
-        builder = builder.tag(_TEST_PARTIAL_TAGS_TAG);
+        builder.add_tag(_TEST_PARTIAL_CHILDREN_TAG);
+        builder.add_tag(_TEST_PARTIAL_PROPS_TAG);
+        builder.add_tag(_TEST_PARTIAL_TAGS_TAG);
         match start {
             Some(val) => {
                 start_val = val;
             }
             None => {
                 start_val = 0;
-                builder = builder.tag(_TEST_IGNORE_START_TAG);
+                builder.add_tag(_TEST_IGNORE_START_TAG);
             }
         }
 
@@ -242,7 +241,7 @@ impl Mockable<Token> for TokenBuilder {
             }
             None => {
                 end_val = start_val + 1;
-                builder = builder.tag(_TEST_IGNORE_END_TAG);
+                builder.add_tag(_TEST_IGNORE_END_TAG);
             }
         }
 
@@ -275,7 +274,7 @@ impl Mockable<Error> for ErrorBuilder {
             }
             None => {
                 start_val = 0;
-                builder = builder.tag(_TEST_IGNORE_START_TAG);
+                builder.add_tag(_TEST_IGNORE_START_TAG);
             }
         }
 
@@ -285,7 +284,7 @@ impl Mockable<Error> for ErrorBuilder {
             }
             None => {
                 end_val = start_val + 1;
-                builder = builder.tag(_TEST_IGNORE_END_TAG);
+                builder.add_tag(_TEST_IGNORE_END_TAG);
             }
         }
 
@@ -325,6 +324,13 @@ pub trait Testable: Parser {
         Self: 'static + Sized + Parser,
     {
         Self::Instance().run_tests()
+    }
+
+    // Tags that should always be on this token, given it's produced by other tag types usually.
+    // These tags are added to the result before it's compared to the expected and colorized,
+    // TODO: check for when these tags for this type when it's used in a patterns to ensure consistency.
+    fn assure_tags(&self) -> Option<HashSet<String>> {
+        None
     }
 
     fn get_tests(&self) -> Vec<Test>;
@@ -405,9 +411,10 @@ pub trait Testable: Parser {
         log::pop!();
         log::pop!();
         log::info!(&[":END"], "Finished running tests.");
+        #[cfg(feature = "vv")]
         log::ln!();
 
-        #[cfg(feature = "verbose")]
+        #[cfg(feature = "vv")]
         log_results(&results);
 
         log::pop_unique!(&"TEST".color(Color::Yellow));
@@ -641,8 +648,8 @@ const _TEST_PARTIAL_TAGS_TAG: &str = "__test__partial_tags__";
 const _TEST_PARTIAL_CHILDREN_TAG: &str = "__test__partial_children__";
 const _TEST_PARTIAL_PROPS_TAG: &str = "__test__partial_props__";
 
-fn _verify_outcome(test: Test, result: Parsed) -> Outcome {
-    match _compare_token_or_error(&result, &test.expected) {
+fn _verify_outcome(test: Test, mut result: Parsed) -> Outcome {
+    match _compare_token_or_error(&mut result, &test.expected, &test) {
         Comparison::AreEqual => Outcome::Pass { test, result },
         Comparison::NotEqual(reason) => {
             log::warning!(&["!", "COMPARE", "FAIL"], &reason);
@@ -655,10 +662,10 @@ fn _verify_outcome(test: Test, result: Parsed) -> Outcome {
     }
 }
 
-fn _compare_token_or_error(result: &Parsed, expected: &Parsed) -> Comparison {
+fn _compare_token_or_error(result: &mut Parsed, expected: &Parsed, test: &Test) -> Comparison {
     match expected {
         Parsed::Pass(expected) => match result {
-            Parsed::Pass(result) => _compare_token_result(&result, &expected),
+            Parsed::Pass(result) => _compare_token_result(result, &expected, test),
             Parsed::Fail(result) => Comparison::NotEqual(_mismatch(
                 "error (Expected a token)",
                 &format!("{:#?}", expected),
@@ -671,14 +678,27 @@ fn _compare_token_or_error(result: &Parsed, expected: &Parsed) -> Comparison {
                 &format!("{:#?}", expected),
                 &format!("{:#?}", result),
             )),
-            Parsed::Fail(result) => _compare_error_result(&result, &expected),
+            Parsed::Fail(result) => _compare_error_result(result, &expected, test),
         },
     }
 }
 
-fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
+fn _compare_token_result(result: &mut Token, expected: &Token, test: &Test) -> Comparison {
     if result.name != expected.name {
         return Comparison::NotEqual(_mismatch("name", &expected.name, &result.name));
+    }
+
+    let default_tags = test.parser.as_tests().unwrap().assure_tags();
+    match default_tags {
+        Some(assured_tags) => match &mut result.tags {
+            Some(ref mut result_tags) => {
+                result_tags.extend(assured_tags.clone());
+            }
+            None => {
+                result.tags = Some(assured_tags.clone());
+            }
+        },
+        None => {}
     }
 
     if let Some(value) = _compare_tags(&expected.tags, &result.tags) {
@@ -722,9 +742,9 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
             }
 
             let expected_child = &expected.children[i];
-            let result_child = &result.children[i];
+            let result_child = &mut result.children[i];
 
-            match _compare_token_result(result_child, expected_child) {
+            match _compare_token_result(result_child, expected_child, test) {
                 Comparison::AreEqual => {}
                 Comparison::NotEqual(msg) => {
                     return Comparison::NotEqual(_mismatch(
@@ -744,7 +764,7 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
     }
 
     if let Some(expected_props) = &expected.keys {
-        if let Some(result_props) = &result.keys {
+        if let Some(result_props) = &mut result.keys {
             if !expected.tag(_TEST_PARTIAL_PROPS_TAG) && expected_props.len() != result_props.len()
             {
                 return Comparison::NotEqual(_mismatch(
@@ -756,10 +776,10 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
 
             for (key, index) in expected_props {
                 let expected_prop: &Token;
-                let result_prop: &Token;
+                let mut result_prop: Token;
 
                 if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
-                    if index >= &result.children.len() {
+                    if index >= &mut result.children.len() {
                         if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
                             return Comparison::NotEqual(format!(
                                 "Expected prop: {}, with type {} is missing.",
@@ -771,14 +791,14 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
                     }
 
                     expected_prop = &expected.children[*index];
-                    result_prop = &result.children[*index];
+                    result_prop = result.children[*index].clone();
                 } else {
                     expected_prop = &expected.children[0];
-                    result_prop = &result.prop(key).unwrap();
+                    result_prop = result.prop(key).unwrap().clone();
                 }
 
                 let expected_prop_name = &expected_prop.name;
-                match _compare_token_result(result_prop, expected_prop) {
+                match _compare_token_result(&mut result_prop, expected_prop, test) {
                     Comparison::AreEqual => {}
                     Comparison::NotEqual(msg) => {
                         return Comparison::NotEqual(_mismatch(
@@ -807,7 +827,11 @@ fn _compare_token_result(result: &Token, expected: &Token) -> Comparison {
     return Comparison::AreEqual;
 }
 
-fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Comparison {
+fn _compare_error_result(
+    result: &mut Option<Error>,
+    expected: &Option<Error>,
+    test: &Test,
+) -> Comparison {
     match result {
         Some(result) => match expected {
             Some(expected) => {
@@ -848,8 +872,8 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
 
                     for i in 0..expected.children.len() {
                         let expected_child = &expected.children[i];
-                        let result_child = &result.children[i];
-                        match _compare_token_or_error(result_child, expected_child) {
+                        let result_child = &mut result.children[i];
+                        match _compare_token_or_error(result_child, expected_child, test) {
                             Comparison::AreEqual => {}
                             Comparison::NotEqual(msg) => {
                                 return Comparison::NotEqual(_mismatch(
@@ -869,7 +893,7 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                 }
 
                 if let Some(expected_props) = &expected.keys {
-                    if let Some(result_props) = &result.keys {
+                    if let Some(result_props) = &mut result.keys {
                         if !expected.tag(_TEST_PARTIAL_PROPS_TAG)
                             && expected_props.len() != result_props.len()
                         {
@@ -882,9 +906,9 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
 
                         for (key, index) in expected_props {
                             let expected_prop: &Parsed;
-                            let result_prop: &Parsed;
+                            let mut result_prop: Parsed;
                             if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
-                                if index >= &result.children.len() {
+                                if index >= &mut result.children.len() {
                                     return Comparison::NotEqual(format!(
                                         "Expected prop: {}, with type {} is missing.",
                                         key,
@@ -899,10 +923,10 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                                 }
 
                                 expected_prop = &expected.children[*index];
-                                result_prop = &result.children[*index];
+                                result_prop = result.children[*index].clone();
                             } else {
                                 expected_prop = &expected.children[0];
-                                result_prop = &result.prop(key).unwrap();
+                                result_prop = result.prop(key).unwrap().clone();
                             }
 
                             let expected_prop_name = match expected_prop {
@@ -914,9 +938,9 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                             };
 
                             match result_prop {
-                                Parsed::Pass(result) => match expected_prop {
+                                Parsed::Pass(ref mut result) => match expected_prop {
                                     Parsed::Pass(expected) => {
-                                        match _compare_token_result(&result, &expected) {
+                                        match _compare_token_result(result, &expected, test) {
                                             Comparison::AreEqual => {}
                                             Comparison::NotEqual(msg) => {
                                                 return Comparison::NotEqual(_mismatch(
@@ -945,7 +969,7 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                                         ));
                                     }
                                 },
-                                Parsed::Fail(result) => match expected_prop {
+                                Parsed::Fail(ref mut result) => match expected_prop {
                                     Parsed::Pass(expected) => {
                                         return Comparison::NotEqual(_mismatch(
                                             &format!(
@@ -957,7 +981,7 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                                         ));
                                     }
                                     Parsed::Fail(expected) => {
-                                        match _compare_error_result(&result, &expected) {
+                                        match _compare_error_result(result, &expected, test) {
                                             Comparison::AreEqual => {}
                                             Comparison::NotEqual(msg) => {
                                                 return Comparison::NotEqual(_mismatch(
@@ -973,6 +997,9 @@ fn _compare_error_result(result: &Option<Error>, expected: &Option<Error>) -> Co
                                     }
                                 },
                             }
+
+                            // add the potentially modified result prop back to the result
+                            result.children[*index] = result_prop;
                         }
                     } else {
                         return Comparison::NotEqual(_mismatch(

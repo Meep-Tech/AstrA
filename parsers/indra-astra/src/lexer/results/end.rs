@@ -20,7 +20,7 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Fail(key: &str) -> ErrorBuilder {
+    pub fn Fail_As(key: &str) -> ErrorBuilder {
         Error::New(key)
     }
 
@@ -30,7 +30,7 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Variant(parent: &str, result: Parsed) -> End {
+    pub fn As_Variant(parent: &str, result: Parsed) -> End {
         match result {
             Parsed::Pass(token) => End::Token_Variant(parent, token),
             Parsed::Fail(error) => End::Unexpected_Variant_Of(parent, error),
@@ -38,11 +38,22 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn As_Variant<TVariant>(parent: &str, cursor: &mut Cursor) -> End
+    pub fn New_Variant<TVariant>(parent: &str) -> End
     where
         TVariant: parser::Parser + 'static,
     {
-        End::Variant(parent, TVariant::Parse_At(cursor))
+        let mut variant = Token::Of_Type::<TVariant>();
+        variant.add_tag(parent);
+
+        return End::Match(variant);
+    }
+
+    #[allow(non_snake_case)]
+    pub fn As<TVariant>(parent: &str, cursor: &mut Cursor) -> End
+    where
+        TVariant: parser::Parser + 'static,
+    {
+        End::As_Variant(parent, TVariant::Parse_At(cursor))
     }
 
     #[allow(non_snake_case)]
@@ -132,7 +143,7 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Token_Variant(parent: &str, token: Token) -> End {
         let mut variant = token.to_builder();
-        variant = variant.tag(parent);
+        variant.add_tag(&parent);
 
         return End::Match(variant);
     }
@@ -140,7 +151,7 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Build_Token_For_Variant(parent: &str, builder: TokenBuilder) -> End {
         let mut variant = builder;
-        variant = variant.tag(parent);
+        variant.add_tag(parent);
 
         return End::Match(variant);
     }
@@ -148,7 +159,7 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Build_Error_For_Variant(parent: &str, builder: ErrorBuilder) -> End {
         let mut error = builder;
-        error = error.tag(parent);
+        error.add_tag(parent);
 
         return End::Fail(error);
     }
@@ -159,26 +170,14 @@ impl End {
         T: parser::Parser + 'static,
     {
         let mut variant = Token::Of_Type::<T>();
-        variant = variant.tag(parent);
+        variant.add_tag(parent);
 
         return End::Match(variant);
     }
 
     #[allow(non_snake_case)]
-    pub fn Build_Error_For_Variant_Of_Type<T>(parent: &str) -> End
-    where
-        T: parser::Parser + 'static,
-    {
-        let mut error = Error::New("unexpected-{}");
-        error = error.text(&format!("Unexpected token in {}", parent));
-        error = error.tag(parent);
-
-        return End::Fail(error);
-    }
-
-    #[allow(non_snake_case)]
     pub fn TODO() -> End {
-        Error::New("not-implemented-{}").tag("TODO").end()
+        Error::New("not_implemented_{}").tag("TODO").end()
     }
 
     #[allow(non_snake_case)]
@@ -203,8 +202,8 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Missing_Choice(parent: &str, options: Vec<&str>, failures: Vec<Option<Error>>) -> End {
-        let mut error = Error::New("missing-choice-in-{}");
-        error = error.text(&format!(
+        let mut error = Error::New(format!("missing_choice_in_{}", parent).as_str());
+        error.set_text(&format!(
             "Required one of the following choices in '{}': \n{}",
             parent,
             options
@@ -214,7 +213,7 @@ impl End {
                 .join("\n")
         ));
         for failure in failures {
-            error = error.child(Parsed::Fail(failure));
+            error.add_child(Parsed::Fail(failure));
         }
 
         return End::Fail(error);
@@ -222,8 +221,8 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Missing_Variant(parent: &str, options: Vec<&str>, failures: Vec<Option<Error>>) -> End {
-        let mut error = Error::New("missing-variant-of-{}");
-        error = error.text(&format!(
+        let mut error = Error::New(format!("missing_variant_of_{}", parent).as_str());
+        error.set_text(&format!(
             "Required one of the following tokens as a variant of '{}': \n{}",
             parent,
             options
@@ -233,7 +232,7 @@ impl End {
                 .join("\n")
         ));
         for failure in failures {
-            error = error.child(Parsed::Fail(failure));
+            error.add_child(Parsed::Fail(failure));
         }
 
         return End::Fail(error);
@@ -284,7 +283,7 @@ impl End {
         match err {
             Some(err) => {
                 let mut error = err.to_builder();
-                error = error.tag(parent);
+                error.add_tag(parent);
 
                 return End::Fail(error);
             }
@@ -297,7 +296,7 @@ impl End {
         match err {
             Some(err) => {
                 let mut error = err.to_builder();
-                error = error.tag(parent);
+                error.add_tag(parent);
 
                 return End::Fail(error);
             }

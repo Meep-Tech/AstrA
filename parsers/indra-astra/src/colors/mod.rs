@@ -1,8 +1,40 @@
-use crate::utils::log::{Color, Effect};
+use crate::{
+    lexer::{
+        parsers::statement::{assignment::entry, expression::literal::structure},
+        results::{node::Node, token::Token},
+    },
+    utils::log::{Color, Effect},
+};
+
+pub fn ascii(src: &str, lexed: &Token) -> String {
+    let mut result = String::new();
+    let start = lexed.start;
+    let end = lexed.end;
+    let cat = Category::For(&lexed);
+    let color = cat.color();
+    let bg = cat.bg();
+    let effect = cat.effect();
+
+    let opening_tags = format!("{}{}{}", color.escape(), bg.escape(), effect.escape());
+
+    for child in &lexed.children {
+        result.push_str(&ascii(src, child));
+    }
+
+    let end_tags = format!(
+        "{}{}{}",
+        Color::Reset.escape(),
+        Color::Reset.escape(),
+        Effect::Reset.escape()
+    );
+
+    result.push_str(&format!("{}{}{}", &src[start..end], end_tags, opening_tags));
+    result
+}
 
 pub enum Category {
     FieldDeclaration,
-    ProdDeclaration,
+    ProcDeclaration,
     FieldIdentifier,
     ProcIdentifier,
     StringLiteral,
@@ -11,17 +43,28 @@ pub enum Category {
     NakedLiteral,
     LogicalOperator,
     AssignmentOperator,
-    StructuralDelimiter,
+    StructureLiteral,
     EntryModifier,
     TagAttribute,
     AliasAttribute,
 }
 
 impl Category {
+    #[allow(non_snake_case)]
+    pub fn For(token: &Token) -> Category {
+        if token.tag(entry::KEY) {
+            return Category::FieldDeclaration;
+        } else if token.tag(structure::KEY) {
+            return Category::StringLiteral;
+        } else {
+            panic!("Unknown category for token: {:?}", token);
+        }
+    }
+
     pub fn color(&self) -> Color {
         match self {
             Category::FieldDeclaration => Color::BrightCyan,
-            Category::ProdDeclaration => Color::BrightYellow,
+            Category::ProcDeclaration => Color::BrightYellow,
             Category::FieldIdentifier => Color::Cyan,
             Category::ProcIdentifier => Color::Yellow,
             Category::StringLiteral => Color::Green,
@@ -30,7 +73,7 @@ impl Category {
             Category::NakedLiteral => Color::BrightWhite,
             Category::LogicalOperator => Color::Red,
             Category::AssignmentOperator => Color::BrightRed,
-            Category::StructuralDelimiter => Color::BrightGreen,
+            Category::StructureLiteral => Color::BrightGreen,
             Category::EntryModifier => Color::Magenta,
             Category::TagAttribute => Color::BrightMagenta,
             Category::AliasAttribute => Color::White,
@@ -46,7 +89,7 @@ impl Category {
     pub fn effect(&self) -> Effect {
         match self {
             Category::FieldDeclaration => Effect::Underline,
-            Category::ProdDeclaration => Effect::Underline,
+            Category::ProcDeclaration => Effect::Underline,
             _ => Effect::Reset,
         }
     }

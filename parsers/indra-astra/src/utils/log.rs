@@ -6,6 +6,21 @@ use std::{
 
 // #region Loggers
 
+#[cfg(feature = "v")]
+pub const IS_V: bool = true;
+#[cfg(not(feature = "v"))]
+pub const IS_V: bool = false;
+
+#[cfg(feature = "vv")]
+pub const IS_VV: bool = true;
+#[cfg(not(feature = "vv"))]
+pub const IS_VV: bool = false;
+
+#[cfg(feature = "vvv")]
+pub const IS_VVV: bool = true;
+#[cfg(not(feature = "vvv"))]
+pub const IS_VVV: bool = false;
+
 // #region Macros
 
 #[cfg(feature = "log")]
@@ -25,6 +40,22 @@ macro_rules! info {
     };
 }
 pub(crate) use info;
+
+macro_rules! vv {
+    ($($rest:tt)*) => {
+        #[cfg(feature = "vv")]
+        log::log_info($($rest)*);
+    };
+}
+pub(crate) use vv;
+
+macro_rules! vvv {
+    ($($rest:tt)*) => {
+        #[cfg(feature = "vvv")]
+        log::log_info($($rest)*);
+    };
+}
+pub(crate) use vvv;
 
 #[cfg(feature = "log")]
 macro_rules! plain {
@@ -465,6 +496,36 @@ impl Color {
             "bright-white" => Color::BrightWhite,
             "reset" => Color::Reset,
             _ => panic!("Unknown color: {}", color),
+        }
+    }
+}
+
+impl Effect {
+    pub fn code(self) -> u8 {
+        return _get_escape_code_for_effect(self);
+    }
+
+    pub fn escape(self) -> String {
+        return _escape_effect(self);
+    }
+
+    pub fn from_str(effect: &str) -> Effect {
+        match effect {
+            "bold" => Effect::Bold,
+            "dim" => Effect::Dim,
+            "italic" => Effect::Italic,
+            "underline" => Effect::Underline,
+            "slow-blink" => Effect::SlowBlink,
+            "rapid-blink" => Effect::RapidBlink,
+            "invert" => Effect::Invert,
+            "hidden" => Effect::Hidden,
+            "strikethrough" => Effect::Strikethrough,
+            "font" => Effect::Font(0),
+            "framed" => Effect::Framed,
+            "encircled" => Effect::Encircled,
+            "overlined" => Effect::Overlined,
+            "reset" => Effect::Reset,
+            _ => panic!("Unknown effect: {}", effect),
         }
     }
 }

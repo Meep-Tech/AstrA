@@ -1,7 +1,7 @@
-use super::splayed;
+use super::splay_mods;
 
 pub mod branch;
 
-splayed! {
+splay_mods! {
     statement: [assignment, expression]
 }

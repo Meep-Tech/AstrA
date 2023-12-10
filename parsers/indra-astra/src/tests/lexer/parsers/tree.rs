@@ -5,7 +5,10 @@ use crate::{
                 assignment::entry::named_entry,
                 expression::{
                     invocation::identifier::key::name,
-                    literal::{markup::element::text, structure::tree},
+                    literal::{
+                        markup::element::text,
+                        structure::{self, tree},
+                    },
                 },
             },
             symbol::operator::assigner::mutable_field_assigner,
@@ -19,6 +22,13 @@ use crate::{
 use super::test::Testable;
 
 impl Testable for tree::Parser {
+    fn assure_tags(&self) -> Option<std::collections::HashSet<String>> {
+        let mut tags = std::collections::HashSet::new();
+        tags.insert(structure::KEY.to_string());
+
+        return Some(tags);
+    }
+
     fn get_tests(&self) -> Vec<super::test::Test>
     where
         Self: 'static + Sized + crate::lexer::parser::Parser,
@@ -39,10 +49,10 @@ impl Testable for tree::Parser {
                                     "operator",
                                     Token::New().name(mutable_field_assigner::KEY).build(4, 4),
                                 )
-                                .prop("value", Token::New().name(text::KEY).build(6, 9))
-                                .build(0, 9),
+                                .prop("value", Token::New().name(text::KEY).build(6, 10))
+                                .build(0, 10),
                         )
-                        .build(0, 9),
+                        .build(0, 10),
                 ),
             ),
             Test::pattern_with_tags::<Self>(

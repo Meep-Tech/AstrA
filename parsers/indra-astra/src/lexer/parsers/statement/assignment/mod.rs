@@ -1,5 +1,5 @@
-use crate::lexer::parsers::splayed;
+use crate::lexer::parsers::splay_mods;
 
-splayed! {
-    source: [attribute, entry]
+splay_mods! {
+    source: [entry]
 }

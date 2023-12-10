@@ -1,4 +1,4 @@
-use crate::node::Node;
+use crate::lexer::results::node::Node;
 
 pub trait Span<TNode>: Node<TNode> {
     fn start(&self) -> usize;
