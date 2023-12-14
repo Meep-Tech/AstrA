@@ -6,10 +6,7 @@ use std::{
 
 // #region Loggers
 
-#[cfg(feature = "v")]
-pub const IS_V: bool = true;
-#[cfg(not(feature = "v"))]
-pub const IS_V: bool = false;
+pub const IS_V: bool = cfg!(feature = "v");
 
 #[cfg(feature = "vv")]
 pub const IS_VV: bool = true;
@@ -67,29 +64,29 @@ macro_rules! plain {
 #[cfg(feature = "log")]
 pub(crate) use plain;
 
-macro_rules! warning {
-    ($($rest:tt)*) => {
-        #[cfg(feature = "log")]
-        log::log_warn($($rest)*);
-    }
-}
-pub(crate) use warning;
+// macro_rules! warning {
+//     ($($rest:tt)*) => {
+//         #[cfg(feature = "log")]
+//         log::log_warn($($rest)*);
+//     }
+// }
+// pub(crate) use warning;
 
-macro_rules! error {
-    ($($rest:tt)*) => {
-        #[cfg(feature = "log")]
-        log::log_error($($rest)*);
-    }
-}
-pub(crate) use error;
+// macro_rules! error {
+//     ($($rest:tt)*) => {
+//         #[cfg(feature = "log")]
+//         log::log_error($($rest)*);
+//     }
+// }
+// pub(crate) use error;
 
-macro_rules! ln {
-    () => {
-        #[cfg(feature = "verbose")]
-        log::log_ln();
-    };
-}
-pub(crate) use ln;
+// macro_rules! ln {
+//     () => {
+//         #[cfg(feature = "verbose")]
+//         log::log_ln();
+//     };
+// }
+// pub(crate) use ln;
 
 // #endregion
 

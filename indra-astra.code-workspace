@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "parsers/indra-astra"
+		},
+		{
+			"path": "docs"
+		},
+		{
+			"path": "core"
+		},
+		{
+			"path": "../../libs/utils/rust/meep-tech-log"
+		}
+	],
+	"settings": {
+		"rust-analyzer.showUnlinkedFileNotification": false
+	}
+}

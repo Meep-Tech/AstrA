@@ -1,27 +1,15 @@
-#![allow(incomplete_features)]
-#![feature(lazy_cell)]
-#![feature(const_hash)]
-#![feature(type_name_of_val)]
-#![feature(unsized_locals)]
-#![feature(iter_intersperse)]
-#![feature(stmt_expr_attributes)]
-
-pub mod colors;
-pub mod lexer;
-//pub mod runtime;
-pub mod tests;
-pub mod utils;
-
-use lexer::parsers;
-use lexer::parsers::attribute::tag;
-use lexer::parsers::statement::assignment::entry::named_entry;
-use lexer::parsers::statement::expression::invocation::identifier::key::name;
-use lexer::parsers::statement::expression::literal::structure::tree;
-use lexer::results::end::End;
-use lexer::results::parsed::Parsed;
-use lexer::results::token::Token;
-
-use tests::lexer::parsers::test::{test_parsers, Testable};
+use super::lib::parser::{
+    parsers::{
+        self,
+        attribute::tag,
+        statement::{
+            assignment::entry::named_entry,
+            expression::{invocation::identifier::key::name, literal::structure::tree},
+        },
+    },
+    results::{end::End, parsed::Parsed, token::Token},
+};
+use tests::parser::parsers::test::{test_parsers, Testable};
 
 fn init() {
     parsers::init_all();
@@ -29,10 +17,10 @@ fn init() {
 
 fn main() {
     init();
-    test_parsers(&[
-        named_entry::Parser::Tests(),
-        name::Parser::Tests(),
-        tree::Parser::Tests(),
-        tag::Parser::Tests(),
-    ]);
+    // test_parsers(&[
+    //     named_entry::Parser::Tests(),
+    //     name::Parser::Tests(),
+    //     tree::Parser::Tests(),
+    //     tag::Parser::Tests(),
+    // ]);
 }

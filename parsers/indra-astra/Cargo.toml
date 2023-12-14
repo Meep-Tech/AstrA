@@ -7,7 +7,7 @@ vv = ["log", "verbose", "v"]
 vvv = ["log", "verbose", "v", "vv"]
 
 [package]
-name = "astra-parser"
+name = "indra-astra"
 version = "0.1.0"
 edition = "2021"
 
@@ -16,3 +16,5 @@ edition = "2021"
 [dependencies]
 indexmap = "2.1.0"
 lazy_static = "1.4.0"
+regex = "1.10.2"
+meep-tech-log = { path = "../../../../libs/utils/rust/meep-tech-log" }
