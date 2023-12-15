@@ -4,17 +4,19 @@ use super::{end::End, span::Span};
 use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use std::collections::{HashMap, HashSet};
 
+pub type Token = Match;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Token {
+pub struct Match {
     pub name: String,
     pub tags: Option<HashSet<String>>,
     pub start: usize,
     pub end: usize,
-    pub children: Vec<Token>,
+    pub children: Vec<Match>,
     pub keys: Option<HashMap<String, usize>>,
 }
 
-impl Token {
+impl Match {
     #[allow(non_snake_case)]
     pub fn New() -> TokenBuilder {
         return TokenBuilder::new();
@@ -29,7 +31,7 @@ impl Token {
     }
 
     #[allow(non_snake_case)]
-    pub fn Of_Type<T: parser::Parser + 'static>() -> TokenBuilder {
+    pub fn Of_Type<T: parser::Type + 'static>() -> TokenBuilder {
         let name = T::Instance().name();
         let mut token = TokenBuilder::new();
         token.set_name(name).add_tag(name);
@@ -39,7 +41,7 @@ impl Token {
 
     #[allow(non_snake_case)]
     pub fn End() -> End {
-        return End::Match(Token::New());
+        return End::Match(Match::New());
     }
 
     pub fn to_builder(self) -> TokenBuilder {
@@ -56,7 +58,7 @@ impl Token {
     }
 }
 
-impl Node<Token> for Token {
+impl Node<Match> for Match {
     fn name(&self) -> &str {
         return &self.name;
     }
@@ -66,7 +68,7 @@ impl Node<Token> for Token {
         hash_set.unwrap_or(&_EMPTY_TAGS)
     }
 
-    fn children(&self) -> Vec<&Token> {
+    fn children(&self) -> Vec<&Match> {
         return self.children.iter().collect();
     }
 
@@ -76,7 +78,7 @@ impl Node<Token> for Token {
     }
 }
 
-impl Span<Token> for Token {
+impl Span for Match {
     fn start(&self) -> usize {
         return self.start;
     }

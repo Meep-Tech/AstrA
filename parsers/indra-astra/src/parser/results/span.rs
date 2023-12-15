@@ -1,6 +1,4 @@
-use crate::parser::results::node::Node;
-
-pub trait Span<TNode>: Node<TNode> {
+pub trait Span {
     fn start(&self) -> usize;
     fn end(&self) -> usize;
     fn range(&self) -> std::ops::Range<usize> {

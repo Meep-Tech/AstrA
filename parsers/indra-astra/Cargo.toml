@@ -7,9 +7,17 @@ vv = ["log", "verbose", "v"]
 vvv = ["log", "verbose", "v", "vv"]
 
 [package]
-name = "indra-astra"
+name = "indra_astra"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "indra_astra"
+path = "src/bin.rs"
+
+[lib]
+name = "indra_astra"
+path = "src/lib.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,3 +26,4 @@ indexmap = "2.1.0"
 lazy_static = "1.4.0"
 regex = "1.10.2"
 meep-tech-log = { path = "../../../../libs/utils/rust/meep-tech-log" }
+

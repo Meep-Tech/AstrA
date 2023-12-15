@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::parser::{self, cursor::Cursor};
 
 use super::{
-    builder::Builder, error::Error, error_builder::ErrorBuilder, parsed::Parsed, token::Token,
+    builder::Builder, error::Error, error_builder::ErrorBuilder, parsed::Parsed, r#match::Match,
     token_builder::TokenBuilder,
 };
 
@@ -16,7 +16,7 @@ pub enum End {
 impl End {
     #[allow(non_snake_case)]
     pub fn New() -> TokenBuilder {
-        Token::New()
+        Match::New()
     }
 
     #[allow(non_snake_case)]
@@ -26,7 +26,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Token() -> End {
-        Token::End()
+        Match::End()
     }
 
     #[allow(non_snake_case)]
@@ -40,9 +40,9 @@ impl End {
     #[allow(non_snake_case)]
     pub fn New_Variant<TVariant>(parent: &str) -> End
     where
-        TVariant: parser::Parser + 'static,
+        TVariant: parser::Type + 'static,
     {
-        let mut variant = Token::Of_Type::<TVariant>();
+        let mut variant = Match::Of_Type::<TVariant>();
         variant.add_tag(parent);
 
         return End::Match(variant);
@@ -51,7 +51,7 @@ impl End {
     #[allow(non_snake_case)]
     pub fn As<TVariant>(parent: &str, cursor: &mut Cursor) -> End
     where
-        TVariant: parser::Parser + 'static,
+        TVariant: parser::Type + 'static,
     {
         End::As_Variant(parent, TVariant::Parse_At(cursor))
     }
@@ -60,7 +60,7 @@ impl End {
     pub fn Splay(
         parent: &str,
         cursor: &mut Cursor,
-        variants: &[&'static Rc<dyn parser::Parser>],
+        variants: &[&'static Rc<dyn parser::Type>],
     ) -> End {
         let mut errors = Vec::new();
         for option in variants {
@@ -83,12 +83,12 @@ impl End {
     pub fn Choice(
         parent: &str,
         cursor: &mut Cursor,
-        options: &[&'static Rc<dyn parser::Parser>],
+        options: &[&'static Rc<dyn parser::Type>],
     ) -> End {
         let mut errors = Vec::new();
         for option in options {
             match option.parse_opt_at(cursor) {
-                Parsed::Pass(token) => return Token::New().name(parent).child(token).end(),
+                Parsed::Pass(token) => return Match::New().name(parent).child(token).end(),
                 Parsed::Fail(err) => {
                     errors.push(err);
                 }
@@ -105,15 +105,15 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Child<TChild>(parent: &str, cursor: &mut Cursor) -> End
     where
-        TChild: parser::Parser + 'static,
+        TChild: parser::Type + 'static,
     {
-        End::Child_Of::<TChild>(Token::With_Name(parent), cursor)
+        End::Child_Of::<TChild>(Match::With_Name(parent), cursor)
     }
 
     #[allow(non_snake_case)]
     pub fn Child_Of<TChild>(parent: TokenBuilder, cursor: &mut Cursor) -> End
     where
-        TChild: parser::Parser + 'static,
+        TChild: parser::Type + 'static,
     {
         match TChild::Parse_At(cursor) {
             Parsed::Pass(token) => parent.child(token).end(),
@@ -124,15 +124,15 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Prop<TProp>(parent: &str, key: &str, cursor: &mut Cursor) -> End
     where
-        TProp: parser::Parser + 'static,
+        TProp: parser::Type + 'static,
     {
-        End::Prop_Of::<TProp>(Token::With_Name(parent), key, cursor)
+        End::Prop_Of::<TProp>(Match::With_Name(parent), key, cursor)
     }
 
     #[allow(non_snake_case)]
     pub fn Prop_Of<TProp>(parent: TokenBuilder, key: &str, cursor: &mut Cursor) -> End
     where
-        TProp: parser::Parser + 'static,
+        TProp: parser::Type + 'static,
     {
         match TProp::Parse_At(cursor) {
             Parsed::Pass(token) => parent.prop(key, token).end(),
@@ -141,7 +141,7 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Token_Variant(parent: &str, token: Token) -> End {
+    pub fn Token_Variant(parent: &str, token: Match) -> End {
         let mut variant = token.to_builder();
         variant.add_tag(&parent);
 
@@ -167,9 +167,9 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Build_Token_For_Variant_Of_Type<T>(parent: &str) -> End
     where
-        T: parser::Parser + 'static,
+        T: parser::Type + 'static,
     {
-        let mut variant = Token::Of_Type::<T>();
+        let mut variant = Match::Of_Type::<T>();
         variant.add_tag(parent);
 
         return End::Match(variant);
@@ -245,7 +245,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Unexpected_Child(parent: &str, err: Option<Error>) -> End {
-        Error::in_child(Token::With_Name(parent), err)
+        Error::in_child(Match::With_Name(parent), err)
     }
 
     #[allow(non_snake_case)]
@@ -255,7 +255,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Error_In_Child(parent: &str, err: Error) -> End {
-        Error::in_child(Token::With_Name(parent), Some(err))
+        Error::in_child(Match::With_Name(parent), Some(err))
     }
 
     #[allow(non_snake_case)]
@@ -265,7 +265,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Missing_Child(parent: &str) -> End {
-        Error::in_child(Token::With_Name(parent), None)
+        Error::in_child(Match::With_Name(parent), None)
     }
 
     #[allow(non_snake_case)]
@@ -275,7 +275,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Error_In_Prop(parent: &str, key: &str, err: Option<Error>) -> End {
-        Error::in_prop(Token::With_Name(parent), key, err)
+        Error::in_prop(Match::With_Name(parent), key, err)
     }
 
     #[allow(non_snake_case)]

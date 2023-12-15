@@ -6,7 +6,7 @@ use crate::parser::tokens::{
 
 token! {
     tree => |cursor: &mut Cursor| {
-        let mut result = Token::New();
+        let mut result = Match::New();
         match indent::Parse_At(cursor) {
             Indents::Increase(token) => {
                 result.add_child(token);
@@ -21,7 +21,7 @@ token! {
         };
 
         loop {
-            match branch::Parser::Parse_At(cursor) {
+            match branch::Token::Parse_At(cursor) {
                 Parsed::Pass(token) => {
                     result.add_child(token);
                     match indent::Parse_Opt_At(cursor) {

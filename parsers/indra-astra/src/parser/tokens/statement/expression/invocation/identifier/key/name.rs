@@ -78,7 +78,11 @@ token! {
             last_lone_char = None;
             cursor.read();
         }
-    }
+    },
+    tests:
+        unit!(["Alphabetic"]
+            : "abc"
+            => Parsed::Pass(Token::Of_Type::<Self>().build(0, 2)))
 }
 
 fn _check_end(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {

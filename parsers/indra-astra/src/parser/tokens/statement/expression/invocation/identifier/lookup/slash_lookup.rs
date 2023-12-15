@@ -3,7 +3,7 @@ use crate::parser::tokens::token;
 token! {
     slash_lookup => |cursor: &mut Cursor| {
         if cursor.try_read('/') {
-            match crate::parser::tokens::name::Parser::Parse_At(cursor) {
+            match crate::parser::tokens::name::Token::Parse_At(cursor) {
                 Parsed::Pass(name) => {
                     return End::New().prop("key", name).end();
                 }

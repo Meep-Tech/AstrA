@@ -1,5 +1,5 @@
 use crate::{
-    parser::results::{builder::Builder, end::End, token::Token},
+    parser::results::{builder::Builder, end::End, r#match::Match},
     utils::log,
 };
 use std::collections::{HashMap, HashSet};
@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub struct TokenBuilder {
     pub name: Option<String>,
     pub tags: Option<HashSet<String>>,
-    pub children: Option<Vec<Token>>,
+    pub children: Option<Vec<Match>>,
     pub keys: Option<HashMap<String, usize>>,
 }
 
@@ -84,7 +84,7 @@ impl TokenBuilder {
         self
     }
 
-    pub fn child(mut self, child: Token) -> TokenBuilder {
+    pub fn child(mut self, child: Match) -> TokenBuilder {
         log::info!(
             &["TOKEN", "-", "CHILD"],
             &format!(
@@ -106,7 +106,7 @@ impl TokenBuilder {
         self
     }
 
-    pub fn add_child(&mut self, child: Token) -> &mut TokenBuilder {
+    pub fn add_child(&mut self, child: Match) -> &mut TokenBuilder {
         log::info!(
             &["TOKEN", "-", "CHILD"],
             &format!(
@@ -127,7 +127,7 @@ impl TokenBuilder {
         self
     }
 
-    pub fn prop(mut self, key: &str, value: Token) -> TokenBuilder {
+    pub fn prop(mut self, key: &str, value: Match) -> TokenBuilder {
         log::info!(
             &["TOKEN", "-", "PROP"],
             &format!(
@@ -154,7 +154,7 @@ impl TokenBuilder {
         self
     }
 
-    pub fn set_prop(&mut self, key: &str, value: Token) -> &mut TokenBuilder {
+    pub fn set_prop(&mut self, key: &str, value: Match) -> &mut TokenBuilder {
         log::info!(
             &["TOKEN", "-", "PROP"],
             &format!(
@@ -181,8 +181,8 @@ impl TokenBuilder {
     }
 }
 
-impl Builder<Token> for TokenBuilder {
-    fn build(self, start: usize, end: usize) -> Token {
+impl Builder<Match> for TokenBuilder {
+    fn build(self, start: usize, end: usize) -> Match {
         log::vvv!(
             &["TOKEN", ":BUILD"],
             &format!(
@@ -193,7 +193,7 @@ impl Builder<Token> for TokenBuilder {
             )
         );
 
-        return Token {
+        return Match {
             name: self.name.unwrap(),
             tags: self.tags,
             children: self.children.unwrap_or(Vec::new()),

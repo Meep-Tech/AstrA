@@ -15,11 +15,11 @@ token! {
                 cursor.read();
                 break;
             }
-            if let Some(escape) = escape_sequence::Parser::Try_Parse_At(cursor) {
+            if let Some(escape) = escape_sequence::Token::Try_Parse_At(cursor) {
                 result.add_child(escape);
             } else {
                 match cursor.curr() {
-                    '\n' => match indent::increase::Parser::Try_Parse_At(cursor) {
+                    '\n' => match indent::increase::Token::Try_Parse_At(cursor) {
                         Some(token) => {
                             result.add_child(token);
                         }
@@ -29,7 +29,7 @@ token! {
                     },
                     '.' => {
                         if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
-                            match dot_lookup::Parser::Parse_At(cursor) {
+                            match dot_lookup::Token::Parse_At(cursor) {
                                 Parsed::Pass(child) => {
                                     result.add_child(child);
                                 }
@@ -41,7 +41,7 @@ token! {
                     }
                     '/' => {
                         if cursor.curr().is_whitespace() && !cursor.next().is_whitespace() {
-                            match slash_lookup::Parser::Parse_At(cursor) {
+                            match slash_lookup::Token::Parse_At(cursor) {
                                 Parsed::Pass(child) => {
                                     result.add_child(child);
                                 }

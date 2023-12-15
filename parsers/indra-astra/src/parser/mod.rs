@@ -8,13 +8,14 @@ pub mod tokens;
 
 use crate::utils::log::{self};
 use cursor::Cursor;
-use results::{builder::Builder, end::End, parsed::Parsed, token::Token};
-use std::{any::TypeId, rc::Rc};
+use meep_tech_log::{self as Log, Styleable};
+use results::{builder::Builder, end::End, parsed::Parsed, r#match::Match};
+use std::{any::TypeId, collections::HashMap, rc::Rc};
 
 #[cfg(feature = "verbose")]
 use crate::utils::log::Styleable;
 
-pub trait Parser: Sync {
+pub trait Type: Sync {
     // #region Static
     // #region Get
     #[allow(non_snake_case)]
@@ -22,15 +23,15 @@ pub trait Parser: Sync {
     where
         Self: Sync + 'static + Sized,
     {
-        tokens::get_by_type::<Self>()
+        get_by_type::<Self>()
     }
 
     #[allow(non_snake_case)]
-    fn Get() -> &'static Rc<dyn Parser>
+    fn Get() -> &'static Rc<dyn Type>
     where
         Self: Sync + 'static + Sized,
     {
-        tokens::get_for_type::<Self>()
+        get_for_type::<Self>()
     }
 
     // #endregion
@@ -53,7 +54,7 @@ pub trait Parser: Sync {
     }
 
     #[allow(non_snake_case)]
-    fn Try_Parse(input: &str) -> Option<Token>
+    fn Try_Parse(input: &str) -> Option<Match>
     where
         Self: Sync + 'static + Sized,
     {
@@ -61,7 +62,7 @@ pub trait Parser: Sync {
     }
 
     #[allow(non_snake_case)]
-    fn Try_Parse_At(cursor: &mut Cursor) -> Option<Token>
+    fn Try_Parse_At(cursor: &mut Cursor) -> Option<Match>
     where
         Self: Sync + 'static + Sized,
     {
@@ -89,6 +90,8 @@ pub trait Parser: Sync {
     // #region Data
     fn name(&self) -> &'static str;
 
+    fn rule(&self, start: &mut Cursor) -> End;
+
     fn type_id(&self) -> TypeId
     where
         Self: 'static,
@@ -105,7 +108,6 @@ pub trait Parser: Sync {
     // #endregion
 
     // #region Parser Methods
-    fn rule(&self, start: &mut Cursor) -> End;
 
     fn parse(&self, input: &str) -> Parsed {
         let mut cursor = Cursor::new(input);
@@ -132,14 +134,14 @@ pub trait Parser: Sync {
         self.parse_with_options_at(cursor, true, true)
     }
 
-    fn try_parse_at(&self, cursor: &mut Cursor) -> Option<Token> {
+    fn try_parse_at(&self, cursor: &mut Cursor) -> Option<Match> {
         match self.parse_opt_at(cursor) {
             Parsed::Pass(token) => Some(token),
             _ => None,
         }
     }
 
-    fn try_parse(&self, input: &str) -> Option<Token> {
+    fn try_parse(&self, input: &str) -> Option<Match> {
         match self.parse_opt(input) {
             Parsed::Pass(token) => Some(token),
             _ => None,
@@ -246,3 +248,255 @@ pub trait Parser: Sync {
 
     // #endregion
 }
+
+// #region Get
+static mut _BY_KEY: Option<HashMap<&'static str, Rc<dyn Type>>> = None;
+static mut _BY_TYPE: Option<HashMap<TypeId, &'static str>> = None;
+
+pub fn get_by_key<TType>(key: &str) -> &'static Rc<TType>
+where
+    TType: Type + 'static,
+{
+    let result: &Rc<TType>;
+    log::push_unique!("PARSERS");
+    log::vvv!(&["GET", "BY-KEY"], &format!("by key: {:?}", key));
+
+    unsafe {
+        let parser = _BY_KEY.as_ref().unwrap().get(key).unwrap();
+        result = std::mem::transmute::<&Rc<dyn Type>, &Rc<TType>>(parser);
+    }
+
+    log::pop_unique!("PARSERS");
+
+    return result;
+}
+
+pub fn get_for_key(key: &str) -> &'static Rc<dyn Type> {
+    let result: &'static Rc<dyn Type>;
+    log::push_unique!("PARSERS");
+    log::vvv!(&["GET", "FOR-KEY"], &format!("for key: {:?}", key));
+
+    unsafe {
+        result = _BY_KEY.as_ref().unwrap().get(key).unwrap();
+    }
+
+    log::pop_unique!("PARSERS");
+
+    return result;
+}
+
+pub fn get_by_type<TType>() -> &'static Rc<TType>
+where
+    TType: Type + Sync + 'static,
+{
+    log::push_unique!("PARSERS");
+
+    let result: &'static Rc<TType>;
+    log::vvv!(
+        &["GET", "BY-TYPE"],
+        &format!("by type: {:?}", std::any::type_name::<TType>()),
+    );
+    let type_id = TypeId::of::<TType>();
+    log::vvv!(
+        &["GET", "BY-TYPE-ID"],
+        &format!("with type id: {:?}", type_id),
+    );
+
+    unsafe {
+        let key = _BY_TYPE
+            .as_ref()
+            .unwrap_or_else(|| panic!("Parsers not initialized"))
+            .get(&type_id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Parser key not found for type: {:?} with id: {:?}.\n\t {}?",
+                    std::any::type_name::<TType>(),
+                    type_id,
+                    &"...Did you add it to the all parsers list".color(Log::Color::Yellow)
+                )
+            });
+        result = get_by_key::<TType>(key);
+    }
+
+    log::pop_unique!("PARSERS");
+
+    return result;
+}
+
+pub fn get_for_type<TType>() -> &'static Rc<dyn Type>
+where
+    TType: Type + Sync + 'static,
+{
+    log::push_unique!("PARSERS");
+
+    let result: &'static Rc<dyn Type>;
+    log::vvv!(
+        &["GET", "FOR-TYPE"],
+        &format!("for type: {:?}", std::any::type_name::<TType>()),
+    );
+    log::vvv!(
+        &["GET", "FOR-TYPE-ID"],
+        &format!("with type id: {:?}", TypeId::of::<TType>()),
+    );
+
+    unsafe {
+        let key = _BY_TYPE
+            .as_ref()
+            .unwrap_or_else(|| panic!("Parsers not initialized"))
+            .get(&TypeId::of::<TType>())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Parser key not found for type: {:?} with id: {:?}.\n\t {}?",
+                    std::any::type_name::<TType>(),
+                    TypeId::of::<TType>(),
+                    &"...Did you add it to the all parsers list".color(Log::Color::Yellow)
+                )
+            });
+        result = get_for_key(key);
+    }
+
+    log::pop_unique!("PARSERS");
+
+    return result;
+}
+
+pub fn get_all() -> &'static HashMap<&'static str, Rc<dyn Type>> {
+    let result: &'static HashMap<&'static str, Rc<dyn Type>>;
+    log::push_unique!("PARSERS");
+    log::vvv!(&["GET", "ALL"], &format!("borrowing all parsers."));
+
+    unsafe {
+        result = _BY_KEY.as_ref().unwrap();
+    }
+
+    log::pop_unique!("PARSERS");
+
+    return result;
+}
+
+// #endregion
+
+// #region Init
+
+static mut _INITIALIZED: bool = false;
+pub fn init_all() {
+    if unsafe { _INITIALIZED } {
+        panic!("Global AstrA Token Parsers already initialized!");
+    }
+    let all: Vec<Rc<dyn Type>> = vec![
+        Rc::new(tokens::source::Token {}),
+        Rc::new(tokens::source::file::Token {}),
+        Rc::new(tokens::source::file::data::Token {}),
+        Rc::new(tokens::source::file::markup::Token {}),
+        Rc::new(tokens::source::file::mote::Token {}),
+        Rc::new(tokens::source::file::prox::Token {}),
+        Rc::new(tokens::source::file::r#trait::Token {}),
+        Rc::new(tokens::attribute::Token {}),
+        Rc::new(tokens::attribute::tag::Token {}),
+        Rc::new(tokens::statement::Token {}),
+        Rc::new(tokens::statement::assignment::Token {}),
+        Rc::new(tokens::statement::assignment::entry::Token {}),
+        Rc::new(tokens::statement::assignment::entry::named_entry::Token {}),
+        Rc::new(tokens::statement::expression::Token {}),
+        Rc::new(tokens::statement::expression::attribute_expression::Token {}),
+        Rc::new(tokens::statement::expression::entry_expression::Token {}),
+        Rc::new(tokens::statement::expression::invocation::Token {}),
+        Rc::new(tokens::statement::expression::invocation::identifier::Token {}),
+        Rc::new(tokens::statement::expression::invocation::identifier::key::Token {}),
+        Rc::new(tokens::statement::expression::invocation::identifier::key::name::Token {}),
+        Rc::new(tokens::statement::expression::invocation::identifier::lookup::Token {}),
+        Rc::new(
+            tokens::statement::expression::invocation::identifier::lookup::dot_lookup::Token {},
+        ),
+        Rc::new(
+            tokens::statement::expression::invocation::identifier::lookup::slash_lookup::Token {},
+        ),
+        Rc::new(tokens::statement::expression::literal::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::escape_sequence::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::newline_escape::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::tab_escape::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::backtick_escape::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::quote_escape::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::quote_escape::double::Token {}),
+        Rc::new(tokens::statement::expression::literal::escape::quote_escape::single::Token {}),
+        Rc::new(tokens::statement::expression::literal::markup::Token {}),
+        Rc::new(tokens::statement::expression::literal::markup::element::Token {}),
+        Rc::new(tokens::statement::expression::literal::markup::element::text::Token {}),
+        Rc::new(tokens::statement::expression::literal::primitive::Token {}),
+        Rc::new(tokens::statement::expression::literal::primitive::string::Token {}),
+        Rc::new(tokens::statement::expression::literal::primitive::string::simple_string::Token {}),
+        Rc::new(tokens::statement::expression::literal::structure::Token {}),
+        Rc::new(tokens::statement::expression::literal::structure::tree::Token {}),
+        Rc::new(tokens::statement::expression::literal::structure::closure::Token {}),
+        Rc::new(tokens::statement::branch::Token {}),
+        Rc::new(tokens::symbol::Token {}),
+        Rc::new(tokens::symbol::operator::Token {}),
+        Rc::new(tokens::symbol::operator::assigner::Token {}),
+        Rc::new(tokens::symbol::operator::assigner::mutable_field_assigner::Token {}),
+        Rc::new(tokens::whitespace::Token {}),
+        Rc::new(tokens::whitespace::indent::Token {}),
+        Rc::new(tokens::whitespace::indent::increase::Token {}),
+        Rc::new(tokens::whitespace::indent::decrease::Token {}),
+        Rc::new(tokens::whitespace::indent::current::Token {}),
+    ];
+
+    init(all);
+}
+
+pub(crate) fn init(parsers: Vec<Rc<dyn Type>>) {
+    log::color!("INIT", Color::Cyan);
+    log::color!("PARSERS", Color::Green);
+    log::color!(":START", Color::BrightMagenta);
+    log::color!(":END", Color::BrightMagenta);
+    log::color!(":NEW", Color::BrightMagenta);
+    log::color!(":EOF", Color::BrightMagenta);
+
+    log::push_unique!("INIT");
+    log::push_unique!("PARSERS");
+
+    unsafe {
+        match &mut _BY_KEY {
+            Some(_) => {
+                panic!("Parsers already initialized");
+            }
+            None => {
+                log::info!(&[":START"], "Initializing parsers");
+                log::push_div!("-", Color::Green);
+
+                _BY_KEY = Some(HashMap::new());
+                for p in parsers {
+                    //let parser = Box::new(p);
+                    let key: &'static str = p.name();
+                    let type_id: TypeId = p.type_id();
+
+                    log::push!(key);
+                    log::random_style!(key);
+                    log::push_div!("-", Color::Green);
+                    log::info!(&[":START"], "Initializing parser");
+                    log::push_div!("-", Color::Green);
+
+                    log::vv!(&["KEY"], key);
+                    log::vv!(&["TYPE"], &format!("{:?}: {:?}", p.type_name(), type_id));
+
+                    _BY_KEY.as_mut().unwrap().insert(key, p);
+
+                    _BY_TYPE.get_or_insert(HashMap::new()).insert(type_id, key);
+
+                    log::pop!();
+                    log::info!(&[":END"], "Initialized parser");
+                    log::pop!();
+                    log::pop!();
+                }
+
+                log::pop!();
+                log::info!(&[":END"], "Initialized parsers");
+            }
+        }
+    }
+
+    log::pop_unique!("PARSERS");
+    log::pop_unique!("INIT");
+}
+
+// #endregion

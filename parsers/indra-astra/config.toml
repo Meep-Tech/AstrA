@@ -1,10 +1,2 @@
 [env]
 RUST_BACKTRACE=1
-
-[lib]
-name = "indra-astra"
-path = "src/lib.rs"
-
-[bin]
-name = "indra-astra"
-path = "src/main.rs"

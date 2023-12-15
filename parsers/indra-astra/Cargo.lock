@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "indra-astra"
+name = "indra_astra"
 version = "0.1.0"
 dependencies = [
  "indexmap",

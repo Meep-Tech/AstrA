@@ -1,6 +1,6 @@
 use crate::parser::{
     cursor::Cursor,
-    results::{token::Token, token_builder::TokenBuilder},
+    results::{r#match::Match, token_builder::TokenBuilder},
     tokens::{
         attribute,
         statement::expression::{self, invocation::identifier::key::name},
@@ -12,7 +12,7 @@ use crate::parser::{
 
 token! {
     named_entry => |cursor: &mut Cursor | {
-        let mut result = Token::New();
+        let mut result = Match::New();
 
         // pre-key attributes
         let mut base_indent = cursor.indents.curr;
@@ -29,7 +29,7 @@ token! {
         }
 
         // key
-        let key = name::Parser::Parse_At(cursor);
+        let key = name::Token::Parse_At(cursor);
         let mut indent_increased = false;
         match key {
             Parsed::Pass(key) => {
@@ -80,7 +80,7 @@ token! {
 
 
                 // operator
-                let operator = mutable_field_assigner::Parser::Parse_At(cursor);
+                let operator = mutable_field_assigner::Token::Parse_At(cursor);
                 match operator {
                     Parsed::Pass(operator) => {
                         result.set_prop("operator", operator);
@@ -138,7 +138,7 @@ token! {
                         }
 
                         // value
-                        let value = expression::entry_expression::Parser::Parse_At(cursor);
+                        let value = expression::entry_expression::Token::Parse_At(cursor);
                         match value {
                             Parsed::Pass(value) => {
                                 result.set_prop("value", value);
@@ -165,46 +165,65 @@ token! {
             : "{%name%}{%assigner%}{%value%}"
             => Token::New()
                 .name(&KEY)
-                .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
-                .prop("value", Mock::Sub::<expression::entry_expression::Parser>()))
+                .prop("key", Mock::Sub::<name::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
         pattern!(["One Line" & "Attribute Before Key"]
             : "{%attribute%} {%name%}{%assigner%}{%value%}"
             => Token::New()
                 .name(&KEY)
-                .child(Mock::Sub::<attribute::Parser>())
-                .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
-                .prop("value", Mock::Sub::<expression::entry_expression::Parser>()))
+                .child(Mock::Sub::<attribute::Token>())
+                .prop("key", Mock::Sub::<name::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
         pattern!(["One Line" & "Attribute After Key"]
             : "{%name%} {%attribute%} {%assigner%}{%value%}"
             => Token::New()
                 .name(&KEY)
-                .prop("key", Mock::Sub::<name::Parser>())
-                .child(Mock::Sub::<attribute::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
-                .prop("value", Mock::Sub::<expression::entry_expression::Parser>()))
+                .prop("key", Mock::Sub::<name::Token>())
+                .child(Mock::Sub::<attribute::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
         pattern!(["One Line" & "Attribute Before Value"]
             : "{%name%}{%assigner%}{%attribute%} {%value%}"
             => Token::New()
                 .name(&KEY)
-                .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
-                .child(Mock::Sub::<attribute::Parser>())
-                .prop("value", Mock::Sub::<expression::entry_expression::Parser>()))
+                .prop("key", Mock::Sub::<name::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .child(Mock::Sub::<attribute::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
         pattern!(["Two Lines" & "Indent Increased After Assigner"]
             : "{%name%}{%assigner%}{%increase_indent%}{%value%}"
             => Token::New()
                 .name(&KEY)
-                .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
-                .child(Mock::Sub::<indent::increase::Parser>())
-                .prop("value", Mock::Sub::<expression::entry_expression::Parser>()))
+                .prop("key", Mock::Sub::<name::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .child(Mock::Sub::<indent::increase::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
+        pattern!(["Three Lines" & "Indent Increased Before Assigner"]
+            : "{%name%}{%increase_indent%}{%assigner%}{%current_indent%}{%value%}"
+            => Token::New()
+                .name(&KEY)
+                .prop("key", Mock::Sub::<name::Token>())
+                .child(Mock::Sub::<indent::increase::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .child(Mock::Sub::<indent::current::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
+        pattern!(["Three Lines" & "Indent Increased Before Assigner" & "Indent Increased After Assigner"]
+            : "{%name%}{%increase_indent%}{%assigner%}{%increase_indent%}{%value%}"
+            => Token::New()
+                .name(&KEY)
+                .prop("key", Mock::Sub::<name::Token>())
+                .child(Mock::Sub::<indent::increase::Token>())
+                .prop("operator", Mock::Sub::<mutable_field_assigner::Token>())
+                .child(Mock::Sub::<indent::increase::Token>())
+                .prop("value", Mock::Sub::<expression::entry_expression::Token>()))
+
 }
 
 fn check_for_attrs(result: &mut TokenBuilder, cursor: &mut Cursor) -> Option<bool> {
     use crate::{
-        parser::{cursor::Cursor, results::token::Token, tokens::indent::Indents, Parser},
+        parser::{cursor::Cursor, results::r#match::Match, tokens::indent::Indents, Type},
         parser::{
             results::{builder::Builder, node::Node, parsed::Parsed},
             tokens::{
@@ -215,7 +234,7 @@ fn check_for_attrs(result: &mut TokenBuilder, cursor: &mut Cursor) -> Option<boo
     let base_indent = cursor.indents.curr;
     let mut found = false;
 
-    while let Parsed::Pass(attribute) = attribute::Parser::Parse_Opt_At(cursor) {
+    while let Parsed::Pass(attribute) = attribute::Token::Parse_Opt_At(cursor) {
         found = true;
         result.add_child(attribute);
 

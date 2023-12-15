@@ -1,5 +1,5 @@
 use crate::parser::results::{
-    end::End, error_builder::ErrorBuilder, parsed::Parsed, token::Token,
+    end::End, error_builder::ErrorBuilder, parsed::Parsed, r#match::Match,
     token_builder::TokenBuilder,
 };
 use std::collections::{HashMap, HashSet};
@@ -9,7 +9,7 @@ use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use super::span::Span;
 
 pub struct ChildOrError {
-    pub child: Option<Token>,
+    pub child: Option<Match>,
     pub err: Option<Error>,
 }
 
@@ -145,7 +145,7 @@ impl Node<Parsed> for Error {
     }
 }
 
-impl Span<Parsed> for Error {
+impl Span for Error {
     fn start(&self) -> usize {
         return self.start;
     }
