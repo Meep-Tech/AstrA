@@ -10,18 +10,18 @@ token! {
   file => |cursor: &mut Cursor| {
         match cursor.file_type() {
             // ...dat
-            fs::Type::Data(_) => End::As::<data::Token>(&KEY, cursor),
+            fs::Type::Data(_) => End::As::<data::Parser>(&KEY, cursor),
             // ...mup
-            fs::Type::Markup(_) => End::As::<markup::Token>(&KEY, cursor),
+            fs::Type::Markup(_) => End::As::<markup::Parser>(&KEY, cursor),
             // ...mot
-            fs::Type::Mote => End::As::<mote::Token>(&KEY, cursor),
+            fs::Type::Mote => End::As::<mote::Parser>(&KEY, cursor),
             // ...trt
             fs::Type::Trait(trait_file_type) => {
                 match trait_file_type {
                     // .prx
-                    fs::Trait::ProX => End::As::<prox::Token>(&KEY, cursor),
+                    fs::Trait::ProX => End::As::<prox::Parser>(&KEY, cursor),
                     // ...trt
-                    _ => End::As::<r#trait::Token>(&KEY, cursor),
+                    _ => End::As::<r#trait::Parser>(&KEY, cursor),
                 }
             }
             // ...
@@ -29,10 +29,10 @@ token! {
                 &KEY,
                 cursor,
                 &[
-                    &r#trait::Token::Get(),
-                    &data::Token::Get(),
-                    &markup::Token::Get(),
-                    &mote::Token::Get(),
+                    &r#trait::Parser::Get(),
+                    &data::Parser::Get(),
+                    &markup::Parser::Get(),
+                    &mote::Parser::Get(),
                 ],
             ),
         }

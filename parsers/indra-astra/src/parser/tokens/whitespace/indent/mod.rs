@@ -25,48 +25,48 @@ token! {
         }
 
         if cursor.indents.curr > cursor.indents.prev() {
-            End::New_Variant::<increase::Token>(&KEY)
+            End::New_Variant::<increase::Parser>(&KEY)
         } else if cursor.indents.curr < cursor.indents.prev() {
-            End::New_Variant::<decrease::Token>(&KEY)
+            End::New_Variant::<decrease::Parser>(&KEY)
         } else {
-            End::New_Variant::<current::Token>(&KEY)
+            End::New_Variant::<current::Parser>(&KEY)
         }
     }
 }
 
 #[allow(non_snake_case)]
 pub fn Parse(input: &str) -> Indents {
-    Match(Token::Parse(input))
+    Match(Parser::Parse(input))
 }
 
 #[allow(non_snake_case)]
 pub fn Parse_At(cursor: &mut Cursor) -> Indents {
-    Match(Token::Parse_At(cursor))
+    Match(Parser::Parse_At(cursor))
 }
 
 #[allow(non_snake_case)]
 pub fn Parse_Opt(input: &str) -> Indents {
-    Match(Token::Parse_Opt(input))
+    Match(Parser::Parse_Opt(input))
 }
 
 #[allow(non_snake_case)]
 pub fn Parse_Opt_At(cursor: &mut Cursor) -> Indents {
-    Match(Token::Parse_Opt_At(cursor))
+    Match(Parser::Parse_Opt_At(cursor))
 }
 
 #[allow(non_snake_case)]
 pub fn Parse_Opt_Or_Skip(input: &str) -> Indents {
-    Match(Token::Instance().parse_opt_or_skip(input))
+    Match(Parser::Instance().parse_opt_or_skip(input))
 }
 
 #[allow(non_snake_case)]
 pub fn Parse_Opt_Or_Skip_At(cursor: &mut Cursor) -> Indents {
-    Match(Token::Instance().parse_opt_or_skip_at(cursor))
+    Match(Parser::Instance().parse_opt_or_skip_at(cursor))
 }
 
 #[allow(non_snake_case)]
 pub fn Try_Parse_At(cursor: &mut Cursor) -> Option<Indents> {
-    match Match(Token::Parse_At(cursor)) {
+    match Match(Parser::Parse_At(cursor)) {
         Indents::Current(token) => Some(Indents::Current(token)),
         Indents::Increase(token) => Some(Indents::Increase(token)),
         Indents::Decrease(token) => Some(Indents::Decrease(token)),
@@ -76,7 +76,7 @@ pub fn Try_Parse_At(cursor: &mut Cursor) -> Option<Indents> {
 
 #[allow(non_snake_case)]
 pub fn Try_Parse(input: &str) -> Option<Indents> {
-    match Match(Token::Parse(input)) {
+    match Match(Parser::Parse(input)) {
         Indents::Current(token) => Some(Indents::Current(token)),
         Indents::Increase(token) => Some(Indents::Increase(token)),
         Indents::Decrease(token) => Some(Indents::Decrease(token)),

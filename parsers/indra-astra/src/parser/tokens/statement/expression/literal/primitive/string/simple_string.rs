@@ -2,8 +2,8 @@ use crate::parser::{self, cursor::Cursor, results::end::End};
 
 pub const KEY: &str = "simple_string";
 
-pub struct Token;
-impl parser::Type for Token {
+pub struct Parser;
+impl parser::Type for Parser {
     fn name(&self) -> &'static str {
         &KEY
     }

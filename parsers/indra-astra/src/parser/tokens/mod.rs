@@ -11,23 +11,20 @@ use self::{
     symbol::operator::assigner::mutable_field_assigner, whitespace::indent,
 };
 
-use super::Type;
-
 pub mod attribute;
 pub mod source;
 pub mod statement;
 pub mod symbol;
 pub mod whitespace;
 
-pub type TokenType = dyn Type + Sync + 'static;
-pub type Instance<TParser = TokenType> = TParser;
+pub type Type = dyn super::Type;
 
 macro_rules! token {
     ($key:ident => $rule:expr) => {
         pub const KEY: &str = stringify!($key);
 
-        pub struct Token;
-        impl crate::parser::Type for Token {
+        pub struct Parser;
+        impl crate::parser::Type for Parser {
             fn name(&self) -> &'static str {
                 crate::parser::tokens::imports!();
                 &KEY
@@ -47,8 +44,8 @@ macro_rules! token {
     ($key:ident => $rule:expr, tests: $($tests:expr)*) => {
         pub const KEY: &str = stringify!($key);
 
-        pub struct Token;
-        impl crate::parser::Type for Token {
+        pub struct Parser;
+        impl crate::parser::Type for Parser {
             fn name(&self) -> &'static str {
                 crate::parser::tokens::imports!();
                 &KEY
@@ -103,7 +100,7 @@ macro_rules! splay {
                     cursor,
                     &[
                         $(
-                            &$parsers::Token::Get(),
+                            &$parsers::Parser::Get(),
                         )*
                     ]
                 )
@@ -120,7 +117,7 @@ macro_rules! splay {
                     cursor,
                     &[
                         $(
-                            &$parsers::Token::Get(),
+                            &$parsers::Parser::Get(),
                         )*
                     ]
                 )
@@ -139,7 +136,7 @@ macro_rules! imports {
             fs,
             results::{
                 builder::Builder, end::End, error::Error, node::Node, parsed::Parsed,
-                r#match::Match, r#match::Token,
+                r#match::Token,
             },
             tokens::{self, source, statement, symbol, whitespace},
             Type as _,

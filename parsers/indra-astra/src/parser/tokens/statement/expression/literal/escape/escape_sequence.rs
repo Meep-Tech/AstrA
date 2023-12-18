@@ -6,7 +6,7 @@ token! {
         if cursor.try_read('\\') {
             cursor.read();
             match cursor.prev() {
-                'n' => End::Build_Token_For_Variant_Of_Type::<newline_escape::Token>(&KEY),
+                'n' => End::Build_Token_For_Variant_Of_Type::<newline_escape::Parser>(&KEY),
                 _ => End::Token(),
             }
         } else {

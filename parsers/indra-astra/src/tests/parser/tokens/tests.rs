@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use meep_tech_log as log;
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
@@ -8,7 +10,7 @@ use crate::parser::{
     self,
     results::{
         builder::Builder, error::Error, error_builder::ErrorBuilder, node::Node, parsed::Parsed,
-        r#match::Match, span::Span, token_builder::TokenBuilder,
+        r#match::Token, span::Span, token_builder::TokenBuilder,
     },
 };
 
@@ -20,6 +22,10 @@ pub struct Test {
     is_partial: bool,
     sub_types: Vec<String>,
     is_disabled: bool,
+}
+
+lazy_static! {
+    static ref PATTERN_SUB_REGEX: Regex = Regex::new(r"{([a-z\-]+[\?\*\+]?)}").unwrap();
 }
 
 impl Test {
@@ -76,9 +82,8 @@ impl Test {
     where
         TParser: parser::Type + 'static,
     {
-        let replacement_pattern = Regex::new(r"\{%([a-z_]+)%}").unwrap();
         let mut sub_types: Vec<String> = Vec::new();
-        for capture in replacement_pattern.captures_iter(template) {
+        for capture in PATTERN_SUB_REGEX.captures_iter(template) {
             sub_types.push(capture[1].to_string());
         }
 
@@ -98,9 +103,8 @@ impl Test {
     where
         TParser: parser::Type + 'static,
     {
-        let replacement_pattern = Regex::new(r"\{%([a-z_]+)%}").unwrap();
         let mut sub_types: Vec<String> = Vec::new();
-        for capture in replacement_pattern.captures_iter(template) {
+        for capture in PATTERN_SUB_REGEX.captures_iter(template) {
             sub_types.push(capture[1].to_string());
         }
         Test {
@@ -119,9 +123,8 @@ impl Test {
     where
         TParser: parser::Type + 'static,
     {
-        let replacement_pattern = Regex::new(r"\{%([a-z_]+%)}").unwrap();
         let mut sub_types: Vec<String> = Vec::new();
-        for capture in replacement_pattern.captures_iter(template) {
+        for capture in PATTERN_SUB_REGEX.captures_iter(template) {
             sub_types.push(capture[1].to_string());
         }
         Test {
@@ -148,6 +151,222 @@ impl Test {
                     .map(|error| error.tags().contains(_DISABLED_TAG))
                     .unwrap_or(false),
             }
+    }
+
+    pub fn run(self) -> Vec<Outcome> {
+        let parsers = parser::get_all();
+        self.run_with_context(&parsers)
+    }
+
+    pub fn run_with_context(self, parsers: ParserMap) -> Vec<Outcome> {
+        let outcomes: Vec<Outcome>;
+        let _logs = log::scope("TESTS");
+
+        if !self.is_disabled() {
+            if self.sub_types.len() == 0 {
+                outcomes = vec![_run_unit_test(self)];
+            } else {
+                outcomes = _run_tests_for_pattern(self, parsers);
+            }
+        } else {
+            outcomes = vec![];
+        }
+
+        _logs.end();
+        return outcomes;
+    }
+
+    pub fn get_all_combinations(self, parsers: ParserMap) -> Vec<Test> {
+        if self.is_partial {
+            return vec![];
+        } else {
+            if self.sub_types.len() == 0 {
+                return vec![self];
+            } else {
+                let mut tests: Vec<Test> = Vec::new();
+                let pattern = self.input;
+                let mut total_combos = 1;
+                let subs = PATTERN_SUB_REGEX
+                    .captures(&pattern)
+                    .unwrap()
+                    .iter()
+                    .map(|c| {
+                        let capture = c.unwrap();
+                        let value = capture.as_str();
+
+                        let modifier: Option<char> = if value.ends_with("?") {
+                            Some('?')
+                        } else if value.ends_with("+") {
+                            Some('+')
+                        } else if value.ends_with("*") {
+                            Some('*')
+                        } else {
+                            None
+                        };
+
+                        let key = if modifier.is_some() {
+                            &value[..value.len() - 1]
+                        } else {
+                            value
+                        };
+
+                        let parser = parsers.get(value).unwrap_or_else(|| {
+                            panic!(
+                                "Unknown parser type: {}, in pattern: \n\t{}",
+                                value, pattern,
+                            )
+                        });
+
+                        let mut tests: Vec<Test> = vec![];
+                        for test in parser.get_tests() {
+                            let combos = test.get_all_combinations(parsers);
+                            tests.extend(combos);
+                        }
+
+                        total_combos *= tests.len();
+                        ((capture.start(), capture.end()), key, tests, modifier)
+                    })
+                    .collect::<Vec<((usize, usize), &str, Vec<Test>, Option<char>)>>();
+
+                let mut combos: Vec<Vec<usize>> = Vec::new();
+                for combo_index in 0..total_combos {
+                    let mut combo: Vec<usize> = Vec::new();
+                    let mut remainder = combo_index;
+                    for sub_index in 0..subs.len() {
+                        let sub = &subs[sub_index];
+                        let sub_options_count = sub.2.len();
+                        let sub_option_index = remainder % sub_options_count;
+                        remainder = remainder / sub_options_count;
+                        combo.push(sub_option_index);
+                    }
+
+                    combos.push(combo);
+                }
+
+                let mut result_patterns: Vec<(String, usize)> = Vec::new();
+                for combo in combos {
+                    let curr_patterns = &result_patterns.clone();
+                    result_patterns = Vec::new();
+                    let mut result_patterns: Vec<(String, usize)> = Vec::new();
+                    result_patterns.push((pattern.clone(), 0));
+
+                    for (index, sub_index) in combo.iter().enumerate() {
+                        let sub = &subs[index];
+                        let sub_input = &sub.2[*sub_index].input;
+
+                        for (pattern, offset) in curr_patterns {
+                            let start = sub.0 .0 + offset;
+                            let end = sub.0 .1 + offset;
+
+                            let mut updated = pattern.clone();
+                            updated.replace_range(start..end, sub_input);
+                            result_patterns.push((pattern.clone(), *offset));
+
+                            let sub_modifier = sub.3;
+                            match sub_modifier {
+                                Some('?') => {
+                                    _build_and_append_optional_pattern(
+                                        sub,
+                                        &pattern,
+                                        start,
+                                        end,
+                                        &mut result_patterns,
+                                    );
+                                }
+                                Some('+') => _build_and_append_repeat_patterns(
+                                    sub,
+                                    &updated,
+                                    start,
+                                    end,
+                                    &mut result_patterns,
+                                ),
+                                Some('*') => {
+                                    _build_and_append_optional_pattern(
+                                        sub,
+                                        &pattern,
+                                        start,
+                                        end,
+                                        &mut result_patterns,
+                                    );
+                                    _build_and_append_repeat_patterns(
+                                        sub,
+                                        &updated,
+                                        start,
+                                        end,
+                                        &mut result_patterns,
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    for pattern in curr_patterns {
+                        let case = Test {
+                            parser: self.parser,
+                            tags: self.tags.clone(),
+                            input: pattern.0.clone(),
+                            expected: self.expected.clone(),
+                            is_partial: self.is_partial,
+                            sub_types: self.sub_types.clone(),
+                            is_disabled: self.is_disabled,
+                        };
+
+                        tests.push(case);
+                    }
+                }
+
+                return tests;
+            }
+        }
+    }
+}
+
+fn _build_and_append_optional_pattern(
+    sub: &((usize, usize), &str, Vec<Test>, Option<char>),
+    pattern: &String,
+    start: usize,
+    end: usize,
+    result_patterns: &mut Vec<(String, usize)>,
+) {
+    let offset = 0 - (sub.1.len() + 3);
+    let optional_pattern = pattern.clone();
+    pattern.clone().replace_range(start..end, "");
+    result_patterns.push((optional_pattern, offset));
+}
+
+fn _build_and_append_repeat_patterns(
+    sub: &((usize, usize), &str, Vec<Test>, Option<char>),
+    updated_pattern: &String,
+    start: usize,
+    end: usize,
+    result_patterns: &mut Vec<(String, usize)>,
+) {
+    for i in [1, 2, 3, 5, 8, 13] {
+        let offset = (sub.1.len() + 3) * i;
+        let mut consistent_repeat_pattern = updated_pattern[0..start].to_owned();
+        let mut random_repeat_pattern = updated_pattern[0..start].to_owned();
+        let mut index = 0;
+        for sub_input in HashSet::<&String>::from_iter(sub.2.iter().map(|t| &t.input)) {
+            if index >= i {
+                break;
+            } else {
+                index += 1;
+            }
+
+            random_repeat_pattern.push_str(sub_input);
+        }
+
+        for sub_input in sub.2.iter().map(|t| &t.input) {
+            for _ in 0..i {
+                consistent_repeat_pattern.push_str(&sub_input);
+            }
+        }
+
+        consistent_repeat_pattern.push_str(&updated_pattern[end..]);
+
+        result_patterns.push((random_repeat_pattern, offset));
+        result_patterns.push((consistent_repeat_pattern, offset));
     }
 }
 
@@ -185,24 +404,24 @@ where
     fn disable(self) -> R; // disables the test when used on the root builder.
 }
 
-impl Mockable<TokenBuilder, Match> for TokenBuilder {
+impl Mockable<TokenBuilder, Token> for TokenBuilder {
     fn partial(self) -> TokenBuilder {
         self.tag(_PARTIAL_TAG)
     }
 
-    fn mock(self) -> Match {
+    fn mock(self) -> Token {
         self.partial().tag(_MOCK_TAG).partial().build(0, 0)
     }
 
-    fn sub(self) -> Match {
+    fn sub(self) -> Token {
         self.tag(_SUB_TAG).mock()
     }
 
-    fn pattern(self) -> Match {
+    fn pattern(self) -> Token {
         self.tag(_PATTERN_TAG).mock()
     }
 
-    fn disable(self) -> Match {
+    fn disable(self) -> Token {
         self.tag(_DISABLED_TAG).mock()
     }
 }
@@ -231,11 +450,11 @@ impl Mockable<ErrorBuilder, Option<Error>> for ErrorBuilder {
 pub struct Mock;
 impl Mock {
     #[allow(non_snake_case)]
-    pub fn Token<T>(start: usize, end: usize) -> Match
+    pub fn Token<T>(start: usize, end: usize) -> Token
     where
         T: parser::Type + 'static,
     {
-        Match::Of_Type::<T>().partial().build(start, end)
+        Token::Of_Type::<T>().partial().build(start, end)
     }
 
     #[allow(non_snake_case)]
@@ -244,11 +463,11 @@ impl Mock {
     }
 
     #[allow(non_snake_case)]
-    pub fn Sub<T>() -> Match
+    pub fn Sub<T>() -> Token
     where
         T: parser::Type + 'static,
     {
-        Match::Of_Type::<T>().sub()
+        Token::Of_Type::<T>().sub()
     }
 }
 
@@ -286,18 +505,10 @@ pub fn run_for(parsers: ParserMap) -> Vec<Outcome> {
 }
 
 pub fn run(test: Test, parsers: ParserMap) -> Vec<Outcome> {
-    if test.is_disabled() {
-        return Vec::new();
-    }
-
-    if test.sub_types.len() == 0 {
-        return vec![_run_unit_test(test, parsers)];
-    } else {
-        return _run_tests_for_pattern(test, parsers);
-    }
+    test.run_with_context(parsers)
 }
 
-fn _run_unit_test(test: Test, parsers: ParserMap) -> Outcome {
+fn _run_unit_test(test: Test) -> Outcome {
     let parser = test.parser;
     let input = &test.input;
     let expected = &test.expected;
@@ -311,7 +522,14 @@ fn _run_unit_test(test: Test, parsers: ParserMap) -> Outcome {
 }
 
 fn _run_tests_for_pattern(base: Test, parsers: ParserMap) -> Vec<Outcome> {
-    todo!()
+    let combos = base.get_all_combinations(parsers);
+    let mut outcomes: Vec<Outcome> = Vec::new();
+    for combo in combos {
+        let outcome = _run_unit_test(combo);
+        outcomes.push(outcome);
+    }
+
+    return outcomes;
 }
 
 fn _validate_outcome(expected: &Parsed, result: &Parsed) -> Comparison {
@@ -343,7 +561,7 @@ fn _validate_outcome(expected: &Parsed, result: &Parsed) -> Comparison {
     }
 }
 
-fn _compare_tokens(expected: &Match, result: &Match) -> Comparison {
+fn _compare_tokens(expected: &Token, result: &Token) -> Comparison {
     match _compare_name(&expected.name, &result.name, &expected.tags) {
         Comparison::Pass => match _compare_sizes(expected, result, &expected.tags) {
             Comparison::Pass => match _compare_tags(&expected.tags, &result.tags) {
@@ -374,7 +592,7 @@ fn _compare_tokens(expected: &Match, result: &Match) -> Comparison {
                         &expected.tags,
                     ) {
                         Comparison::Pass => {
-                            match _compare_token_props(&expected, &result, &expected.tags) {
+                            match _compare_props(&expected.keys, &result.keys, &expected.tags) {
                                 Comparison::Pass => Comparison::Pass,
                                 Comparison::Fail(message) => Comparison::Fail(message),
                             }
@@ -410,7 +628,7 @@ fn _compare_errors(expected: Option<Error>, result: Option<Error>) -> Comparison
                             &expected.tags,
                         ) {
                             Comparison::Pass => {
-                                match _compare_error_props(&expected, &result, &expected.tags) {
+                                match _compare_props(&expected.keys, &result.keys, &expected.tags) {
                                     Comparison::Pass => Comparison::Pass,
                                     Comparison::Fail(message) => Comparison::Fail(message),
                                 }
@@ -521,7 +739,7 @@ fn _compare_tags(
         }
     } else {
         if let Some(result) = result {
-            return Comparison::Fail(format!("Expected no tags, but found: {:?}.", expected));
+            return Comparison::Fail(format!("Expected no tags, but found: {:?}.", result));
         } else {
             return Comparison::Pass;
         }
@@ -629,18 +847,89 @@ fn _compare_children(
     }
 }
 
-fn _compare_token_props(
-    expected: &Match,
-    result: &Match,
+fn _compare_props(
+    expected_keys: &Option<HashMap<String, usize>>,
+    result_keys: &Option<HashMap<String, usize>>,
     tags: &Option<HashSet<String>>,
 ) -> Comparison {
-    todo!();
-}
+    if let Some(tags) = tags
+        && tags.contains(_PARTIAL_TAG)
+    {
+        if let Some(expected) = expected_keys {
+            if let Some(result) = result_keys {
+                for (key, expected_value) in expected {
+                    if let Some(result_value) = result.get(key) {
+                        if expected_value == result_value {
+                            continue;
+                        } else {
+                            return Comparison::Fail(format!(
+                                "Expected prop: {} to be: {}, but found: {}.",
+                                key, expected_value, result_value
+                            ));
+                        }
+                    } else {
+                        return Comparison::Fail(format!(
+                            "Expected prop: {} to be: {}, but found: None.",
+                            key, expected_value
+                        ));
+                    }
+                }
 
-fn _compare_error_props(
-    expected: &Error,
-    result: &Error,
-    tags: &Option<HashSet<String>>,
-) -> Comparison {
-    todo!();
+                return Comparison::Pass;
+            } else {
+                return Comparison::Fail(format!(
+                    "Expected props: {:?}, but found: None.",
+                    expected.keys()
+                ));
+            }
+        } else {
+            return Comparison::Pass;
+        }
+    } else {
+        if let Some(expected) = expected_keys {
+            if let Some(result) = result_keys {
+                if expected.len() != result.len() {
+                    return Comparison::Fail(format!(
+                        "Expected props: {:?}, but found: {:?}.",
+                        expected.keys(),
+                        result.keys()
+                    ));
+                } else {
+                    for (key, expected_value) in expected {
+                        if let Some(result_value) = result.get(key) {
+                            if expected_value == result_value {
+                                continue;
+                            } else {
+                                return Comparison::Fail(format!(
+                                    "Expected prop: {} to be: {}, but found: {}.",
+                                    key, expected_value, result_value
+                                ));
+                            }
+                        } else {
+                            return Comparison::Fail(format!(
+                                "Expected prop: {} to be: {}, but found: None.",
+                                key, expected_value
+                            ));
+                        }
+                    }
+
+                    return Comparison::Pass;
+                }
+            } else {
+                return Comparison::Fail(format!(
+                    "Expected props: {:?}, but found: None.",
+                    expected.keys()
+                ));
+            }
+        } else {
+            if let Some(result) = result_keys {
+                return Comparison::Fail(format!(
+                    "Expected None, but found props: {:?}.",
+                    result.keys()
+                ));
+            } else {
+                return Comparison::Pass;
+            }
+        }
+    }
 }

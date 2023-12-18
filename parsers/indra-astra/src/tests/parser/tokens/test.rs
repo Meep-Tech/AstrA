@@ -775,8 +775,8 @@
 //             }
 
 //             for (key, index) in expected_props {
-//                 let expected_prop: &Token;
-//                 let mut result_prop: Token;
+//                 let expected_prop: &Parser;
+//                 let mut result_prop: Parser;
 
 //                 if !expected.tag(_TEST_PARTIAL_PROPS_TAG) {
 //                     if index >= &mut result.children.len() {

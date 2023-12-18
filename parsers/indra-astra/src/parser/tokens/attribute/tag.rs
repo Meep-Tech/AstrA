@@ -5,7 +5,7 @@ token! {
     match cursor.curr() {
       '#' => {
         cursor.read();
-        End::Child::<tokens::statement::expression::attribute_expression::Token>(&KEY, cursor)
+        End::Child::<tokens::statement::expression::attribute_expression::Parser>(&KEY, cursor)
       },
       '>' => match cursor.next() {
         '#' => End::TODO(),

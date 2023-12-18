@@ -1,5 +1,5 @@
 // use crate::parser::{
-//     results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
+//     results::{builder::Builder, error::Error, parsed::Parsed, token::Parser},
 //     tokens::statement::{assignment::entry, expression::invocation::identifier::key::name},
 // };
 
@@ -18,32 +18,32 @@
 //             Test::tags::<Self>(
 //                 &["Alphabetic"],
 //                 "abc",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 2)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 2)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphabetic", "Single Dash in Middle"],
 //                 "abc-def",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 6)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 6)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphabetic", "Underscore", "Dash"],
 //                 "abc_efg-hij",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 10)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 10)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphanumeric", "Numeric Start"],
 //                 "123abc",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 5)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 5)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphanumeric", "Underscore"],
 //                 "abc_123",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 6)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 6)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphanumeric", "Underscore", "Dash"],
 //                 "abc_123-456",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 10)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 10)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphabetic", "Double Dash", "Error"],
@@ -53,22 +53,22 @@
 //             Test::tags::<Self>(
 //                 &["Alphabetic", "Double Underscore"],
 //                 "abc__def",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 7)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 7)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphabetic", "Double Underscore", "Dash"],
 //                 "abc__def-ghi",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 11)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 11)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphanumeric", "Numeric End"],
 //                 "abc123",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 5)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 5)),
 //             ),
 //             Test::tags::<Self>(
 //                 &["Alphanumeric", "Numeric Middle"],
 //                 "abc123def",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 8)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 8)),
 //             ),
 //             Test::tags::<Self>(
 //                 &[
@@ -78,7 +78,7 @@
 //                     "Numeric Start",
 //                 ],
 //                 "123abc456",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 8)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 8)),
 //             ),
 //             Test::tags::<Self>(
 //                 &[
@@ -89,7 +89,7 @@
 //                     "Underscore",
 //                 ],
 //                 "123abc_456",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 9)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 9)),
 //             ),
 //             Test::tags::<Self>(
 //                 &[
@@ -101,7 +101,7 @@
 //                     "Dash",
 //                 ],
 //                 "123abc_456-789",
-//                 Parsed::Pass(Token::New().name(name::KEY).build(0, 13)),
+//                 Parsed::Pass(Parser::New().name(name::KEY).build(0, 13)),
 //             ),
 //             Test::tags::<Self>(
 //                 &[

@@ -9,8 +9,8 @@ token! {
       &KEY,
       cursor,
       &[
-        &command::Token::Get(),
-        &file::Token::Get(),
+        &command::Parser::Get(),
+        &file::Parser::Get(),
       ]
     )
   }
