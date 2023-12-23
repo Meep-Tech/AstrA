@@ -1,72 +1,75 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, rc::Rc};
+use super::cell::{Cell, Referable, Reference, Source, Srs};
+use std::collections::HashMap;
 
-pub type Srs<T> = Rc<RefCell<T>>;
-pub type Ref<T> = Rc<RefCell<T>>;
+// pub type Srs<T> = Rc<RefCell<T>>;
+// pub type Ref<T> = Rc<RefCell<T>>;
 
-pub trait Refable<T> {
-    #[allow(non_snake_case)]
-    fn New(val: T) -> Srs<T> {
-        Rc::new(RefCell::new(val))
-    }
+// pub trait Refable<T> {
+//     #[allow(non_snake_case)]
+//     fn New(val: T) -> Srs<T> {
+//         Rc::new(RefCell::new(val))
+//     }
 
-    fn get_ref(&self) -> Ref<T>;
-}
+//     fn get_ref(&self) -> Ref<T>;
+// }
 
-impl<T> Refable<T> for Srs<T> {
-    fn get_ref(&self) -> Ref<T> {
-        Rc::clone(&self)
-    }
-}
+// impl<T> Refable<T> for Srs<T> {
+//     fn get_ref(&self) -> Ref<T> {
+//         Rc::clone(&self)
+//     }
+// }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Key;
 
 pub struct Structure {
-    trts: Option<HashMap<Key, Srs<Trait>>>,
+    traits: Option<HashMap<Key, Srs<Trait>>>,
     own: Option<HashMap<Key, Srs<Entry>>>,
     // This structure as an entry within its parent/super structure.
-    var: Option<Ref<Entry>>,
+    source: Option<Reference<Entry>>,
 }
 
 impl Structure {
     #[allow(non_snake_case)]
-    pub fn New(var: Ref<Entry>) -> Self {
+    pub fn New(srs: Reference<Entry>) -> Self {
         Structure {
-            trts: None,
+            traits: None,
             own: None,
-            var: Some(var),
+            source: Some(srs),
         }
     }
 
     #[allow(non_snake_case)]
-    pub(crate) fn Void() -> Self {
-        Structure {
-            trts: None,
+    pub(crate) fn Void() -> Srs<Self> {
+        Source::New(Structure {
+            traits: None,
             own: None,
-            var: None,
-        }
+            source: None,
+        })
     }
 }
 
 pub enum Value {
-    STX(Structure),
-    PMV(Primitive),
-    REF(Ref<Value>),
+    Stx(Structure),
+    Pmv(Primitive),
+    Ref(Reference<Value>),
 }
 
 pub enum Primitive {
-    STR(String),
-    INT(i64),
-    BLN(bool),
-    DEC(f64),
-    NIL,
+    Str(String),
+    Int(i64),
+    Bln(bool),
+    Dec(f64),
+    Nil,
 }
 
 pub struct Entry {
+    // The key of this entry within its parent/super structure.
     key: Key,
-    val: Srs<Value>,
+    // The value of this entry.
+    value: Srs<Value>,
     // The parent/super structure of this entry.
-    srs: Ref<Structure>,
+    source: Reference<Structure>,
 }
 
 impl Entry {
@@ -74,21 +77,25 @@ impl Entry {
     pub(crate) fn Root() -> Srs<Entry> {
         let root = Entry {
             key: Key,
-            val: Srs::New(Value::PMV(Primitive::NIL)),
-            srs: Ref::New(Structure::Void()),
+            value: Srs::New(Value::Pmv(Primitive::Nil)),
+            source: Reference::New(&Structure::Void()),
         };
 
-        let root_srs = Srs::New(root);
-        let root_val = Srs::New(Value::STX(Structure::New(root_srs.get_ref())));
+        let mut root_source = Srs::New(root);
+        let root_value = Srs::New(Value::Stx(Structure::New(root_source.get_ref())));
 
-        (*root_srs).borrow_mut().borrow_mut().val = root_val;
+        root_source.get_mut().value = root_value;
 
-        root_srs
+        root_source
     }
 
     #[allow(non_snake_case)]
-    pub fn New(key: Key, val: Srs<Value>, srs: Ref<Structure>) -> Self {
-        Entry { key, val, srs }
+    pub fn New(key: Key, val: Srs<Value>, srs: Reference<Structure>) -> Self {
+        Entry {
+            key,
+            value: val,
+            source: srs,
+        }
     }
 }
 
@@ -96,9 +103,9 @@ pub struct Trait {
     // The key of this trait within its parent/super structure.
     key: Key,
     // The source entry of this trait.
-    var: Ref<Entry>,
-    // The parent/super structure of this trait.
-    srs: Ref<Structure>,
+    value: Reference<Entry>,
+    // The parent/super structure that this trait is applied to.
+    source: Reference<Structure>,
 }
 
 // pub trait Node {
