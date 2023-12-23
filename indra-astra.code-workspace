@@ -8,9 +8,6 @@
 		},
 		{
 			"path": "core"
-		},
-		{
-			"path": "../../libs/utils/rust/meep-tech-log"
 		}
 	],
 	"settings": {

@@ -1,18 +1,23 @@
 use lazy_static::lazy_static;
-use meep_tech_log as log;
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
 };
 
-use crate::parser::{
-    self,
-    results::{
-        builder::Builder, error::Error, error_builder::ErrorBuilder, node::Node, parsed::Parsed,
-        r#match::Token, span::Span, token_builder::TokenBuilder,
+use crate::{
+    parser::{
+        self,
+        results::{
+            builder::Builder, error::Error, error_builder::ErrorBuilder, node::Node,
+            parsed::Parsed, r#match::Token, span::Span, token_builder::TokenBuilder,
+        },
     },
+    utils::log::{self, Styleable},
 };
+
+#[cfg(feature = "log")]
+use crate::utils::log::Color;
 
 pub struct Test {
     parser: &'static Rc<dyn parser::Type>,
@@ -25,7 +30,7 @@ pub struct Test {
 }
 
 lazy_static! {
-    static ref PATTERN_SUB_REGEX: Regex = Regex::new(r"{([a-z\-]+[\?\*\+]?)}").unwrap();
+    static ref PATTERN_SUB_REGEX: Regex = Regex::new(r"\{([a-z\-]+[\?\*\+]?)\}").unwrap();
 }
 
 impl Test {
@@ -153,26 +158,53 @@ impl Test {
             }
     }
 
-    pub fn run(self) -> Vec<Outcome> {
-        let parsers = parser::get_all();
-        self.run_with_context(&parsers)
+    pub fn get_name(&self) -> String {
+        self.tags.join(" & ")
     }
 
-    pub fn run_with_context(self, parsers: ParserMap) -> Vec<Outcome> {
+    pub fn format_input(&self, decorator: Option<InputDecoration>) -> String {
+        _format_input(&self.input, decorator)
+    }
+
+    pub fn get_formatted_input(&self) -> String {
+        self.format_input(None)
+    }
+
+    pub fn run(self) -> Vec<Outcome> {
+        let parsers = parser::get_all();
+        self.run_with_context(
+            &parsers,
+            &Settings {
+                panic_on_fail: false,
+            },
+        )
+    }
+
+    pub fn run_with_context(self, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
         let outcomes: Vec<Outcome>;
-        let _logs = log::scope("TESTS");
+
+        log::color!("TESTS", Color::Yellow);
+        log::push_unique!("TESTS");
+        log::push!("-");
+        log::push!(&self.parser.name());
+        log::push!("-");
 
         if !self.is_disabled() {
             if self.sub_types.len() == 0 {
                 outcomes = vec![_run_unit_test(self)];
+                _check_for_panic_on_fail(&outcomes.first().unwrap(), settings);
             } else {
-                outcomes = _run_tests_for_pattern(self, parsers);
+                outcomes = _run_tests_for_pattern(self, parsers, settings);
             }
         } else {
             outcomes = vec![];
         }
 
-        _logs.end();
+        log::pop!();
+        log::pop!();
+        log::pop!();
+        log::pop_unique!("TESTS");
+
         return outcomes;
     }
 
@@ -187,11 +219,9 @@ impl Test {
                 let pattern = self.input;
                 let mut total_combos = 1;
                 let subs = PATTERN_SUB_REGEX
-                    .captures(&pattern)
-                    .unwrap()
-                    .iter()
+                    .captures_iter(&pattern)
                     .map(|c| {
-                        let capture = c.unwrap();
+                        let capture = c.get(1).unwrap();
                         let value = capture.as_str();
 
                         let modifier: Option<char> = if value.ends_with("?") {
@@ -483,12 +513,23 @@ enum Comparison {
 
 pub type ParserMap<'p> = &'p HashMap<&'p str, Rc<dyn parser::Type>>;
 
-pub fn run_all() -> Vec<Outcome> {
-    let parsers = parser::get_all();
-    run_for(parsers)
+#[derive(Debug)]
+pub struct Settings {
+    pub panic_on_fail: bool,
 }
 
-pub fn run_for(parsers: ParserMap) -> Vec<Outcome> {
+pub fn run_all() -> Vec<Outcome> {
+    run_all_with_settings(&Settings {
+        panic_on_fail: false,
+    })
+}
+
+pub fn run_all_with_settings(settings: &Settings) -> Vec<Outcome> {
+    let parsers = parser::get_all();
+    run_all_with_context(parsers, settings)
+}
+
+pub fn run_all_with_context(parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
     let mut outcomes: Vec<Outcome> = Vec::new();
     for parser in parsers.values() {
         let tests = parser.get_tests();
@@ -497,15 +538,25 @@ pub fn run_for(parsers: ParserMap) -> Vec<Outcome> {
             tags.push(parser.name().to_string());
             let mut test = test;
             test.tags = tags;
-            let outcome = run(test, parsers);
+            let outcome = run_with_context(test, parsers, settings);
             outcomes.extend(outcome);
         }
     }
     return outcomes;
 }
 
-pub fn run(test: Test, parsers: ParserMap) -> Vec<Outcome> {
-    test.run_with_context(parsers)
+pub fn run(test: Test) -> Vec<Outcome> {
+    run_with_context(
+        test,
+        &parser::get_all(),
+        &Settings {
+            panic_on_fail: false,
+        },
+    )
+}
+
+pub fn run_with_context(test: Test, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
+    test.run_with_context(parsers, settings)
 }
 
 fn _run_unit_test(test: Test) -> Outcome {
@@ -513,23 +564,107 @@ fn _run_unit_test(test: Test) -> Outcome {
     let input = &test.input;
     let expected = &test.expected;
 
+    log::push!(&test.get_name());
+    log::plain!(&["START"], &test.get_formatted_input());
+
     let result = parser.parse(&input);
     let comparison = _validate_outcome(&expected, &result);
-    match comparison {
+    let result = match comparison {
         Comparison::Pass => Outcome::Pass(test),
         Comparison::Fail(message) => Outcome::Fail(test, result, message),
+    };
+
+    #[cfg(feature = "log")]
+    match &result {
+        Outcome::Pass(_test) => {
+            log::log!(
+                &["END"],
+                &format!(
+                    "{}{} \n => {}",
+                    "✔".color(log::Color::Green),
+                    " PASS".color(log::Color::Green),
+                    match _test.expected {
+                        Parsed::Pass(ref token) => token.name(),
+                        Parsed::Fail(ref error) => match error {
+                            Some(error) => error.name(),
+                            None => "None",
+                        },
+                    }
+                )
+            );
+        }
+        Outcome::Fail(_test, _result, _message) => {
+            log::error!(
+                &["END"],
+                &format!(
+                    "{}\n{}{} \t=> {}\n\n{}\n{}\n{}",
+                    &_format_input(&_test.input, Some(InputDecoration::XMark)),
+                    "✘".color(log::Color::Red),
+                    " FAIL".color(log::Color::Red),
+                    match _result {
+                        Parsed::Pass(ref token) => token.name.clone(),
+                        Parsed::Fail(ref error) => match error {
+                            Some(error) => error.name.clone(),
+                            None => "None".to_string(),
+                        },
+                    },
+                    &format!("\t- Reason:\n{}", _message)
+                        .indent(2)
+                        .color(log::Color::Yellow),
+                    &format!(
+                        "\t- Expected:\n{}",
+                        match _test.expected {
+                            Parsed::Pass(ref token) => format!("{:#?}", token),
+                            Parsed::Fail(ref error) => match error {
+                                Some(error) => format!("{:#?}", error),
+                                None => "None".to_string(),
+                            },
+                        }
+                    )
+                    .indent(2)
+                    .color(log::Color::Green),
+                    &format!(
+                        "\t- Actual:\n{}",
+                        match _result {
+                            Parsed::Pass(ref token) => format!("{:#?}", token),
+                            Parsed::Fail(ref error) => match error {
+                                Some(error) => format!("{:#?}", error),
+                                None => "None".to_string(),
+                            },
+                        }
+                    )
+                    .indent(2)
+                    .color(log::Color::Red),
+                )
+            );
+        }
     }
+
+    log::pop!();
+
+    return result;
 }
 
-fn _run_tests_for_pattern(base: Test, parsers: ParserMap) -> Vec<Outcome> {
+fn _run_tests_for_pattern(base: Test, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
     let combos = base.get_all_combinations(parsers);
     let mut outcomes: Vec<Outcome> = Vec::new();
     for combo in combos {
         let outcome = _run_unit_test(combo);
+
+        _check_for_panic_on_fail(&outcome, settings);
+
         outcomes.push(outcome);
     }
 
     return outcomes;
+}
+
+fn _check_for_panic_on_fail(outcome: &Outcome, settings: &Settings) {
+    if let Outcome::Fail(test, _, _) = outcome {
+        if settings.panic_on_fail {
+            panic!("Test failed: {}", test.get_name(),);
+        }
+    }
 }
 
 fn _validate_outcome(expected: &Parsed, result: &Parsed) -> Comparison {
@@ -547,10 +682,10 @@ fn _validate_outcome(expected: &Parsed, result: &Parsed) -> Comparison {
         },
         Parsed::Fail(resulting_failure) => match expected {
             Parsed::Pass(expected_pass) => Comparison::Fail(format!(
-                "Expected pass of type: {}, but found failure of type: {}.",
+                "Expected pass of type: {}, but found {}",
                 expected_pass.name,
                 match resulting_failure {
-                    Some(err) => err.name.clone(),
+                    Some(err) => format!("error: {}; {}", err.name.clone(), err.get_message()),
                     None => "None".to_string(),
                 }
             )),
@@ -647,8 +782,9 @@ fn _compare_errors(expected: Option<Error>, result: Option<Error>) -> Comparison
             expected.name,
         )),
         (None, Some(result)) => Comparison::Fail(format!(
-            "Expected None, but found error of type: {}.",
-            result.name
+            "Expected None, but found error: {}; {}.",
+            result.name,
+            result.get_message()
         )),
         (None, None) => Comparison::Pass,
     }
@@ -786,14 +922,8 @@ fn _compare_children(
                     return Comparison::Fail(format!(
                         "Expected to find child token of type: {}, but found end of parent instead.",
                          match last_e {
-                            Some(e) => match e {
-                                Parsed::Pass(e) => e.name.clone(),
-                                Parsed::Fail(e) => match e {
-                                    Some(e) => e.name.clone(),
-                                    None => "None".to_string(),
-                                },
-                            },
-                            None => "None".to_string(),
+                            Some(e) => e.get_name().to_string(),
+                            None => "none".to_string(),
                         }
                     ));
                 }
@@ -822,7 +952,12 @@ fn _compare_children(
                     match _validate_outcome(expected_child, result_child) {
                         Comparison::Pass => {}
                         Comparison::Fail(message) => {
-                            return Comparison::Fail(format!("Child {} failed: {}", index, message))
+                            return Comparison::Fail(format!(
+                                "Child of type {}, at index {}, failed: {}",
+                                result_child.get_name(),
+                                index,
+                                message
+                            ))
                         }
                     }
                 }
@@ -932,4 +1067,21 @@ fn _compare_props(
             }
         }
     }
+}
+
+pub enum InputDecoration {
+    CheckMark,
+    XMark,
+}
+
+fn _format_input(input: &str, decorator: Option<InputDecoration>) -> String {
+    format!(
+        "\n{}┏{}\n\t┖",
+        match decorator {
+            Some(InputDecoration::CheckMark) => "✔\t".color(log::Color::Green),
+            Some(InputDecoration::XMark) => "✘\t".color(log::Color::Red),
+            None => "\t".to_string(),
+        },
+        format!("\n{}", input).replace("\n", "\n\t┣ "),
+    )
 }

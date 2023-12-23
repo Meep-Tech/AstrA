@@ -23,21 +23,21 @@
 # Patterns
 ## Named
 ```
-#{%name%}
+#{name}
 ```
 - tag
   - name
 
 ## Named & Input
 ```
->#{%name%}
+>#{name}
 ```
 - input-tag #tag
   - name
 
 ## Named & Output
 ```
->>#{%name%}
+>>#{name}
 ```
 - output-tag #tag
   - name

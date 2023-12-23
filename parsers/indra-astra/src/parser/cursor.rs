@@ -21,15 +21,18 @@ pub struct State {
 }
 
 impl Cursor {
-    pub fn new(source: &str) -> Cursor {
-        Cursor::new_with(source, Context::new_empty())
+    #[allow(non_snake_case)]
+    pub fn New(source: &str) -> Cursor {
+        Cursor::New_With(source, Context::new_empty())
     }
 
-    pub fn new_for(source: &str, lang: Language) -> Cursor {
-        Cursor::new_with(source, Context::new_for(lang))
+    #[allow(non_snake_case)]
+    pub fn New_For(source: &str, lang: Language) -> Cursor {
+        Cursor::New_With(source, Context::new_for(lang))
     }
 
-    pub fn new_with(source: &str, ctx: Context) -> Cursor {
+    #[allow(non_snake_case)]
+    pub fn New_With(source: &str, ctx: Context) -> Cursor {
         log::color!("CURSOR", log::Color::BrightGreen);
         log::color!("TOKEN", log::Color::BrightBlue);
         log::color!("INDENT", log::Color::BrightWhite);

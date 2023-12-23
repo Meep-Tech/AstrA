@@ -1,11 +1,11 @@
-use crate::parser::tokens::{statement::expression::invocation::identifier::key::name, token};
+use crate::parser::tokens::{statement::expression::literal::identifier::key::name, token};
 
 token! {
   tag => |cursor: &mut Cursor| {
     match cursor.curr() {
       '#' => {
         cursor.read();
-        End::Child::<tokens::statement::expression::attribute_expression::Parser>(&KEY, cursor)
+        End::Child::<tokens::statement::expression::Parser>(&KEY, cursor)
       },
       '>' => match cursor.next() {
         '#' => End::TODO(),

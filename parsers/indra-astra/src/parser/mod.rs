@@ -6,14 +6,13 @@ pub mod indents;
 pub mod results;
 pub mod tokens;
 
-use crate::utils::log::{self};
+use crate::utils::log::{self, Styleable};
 use cursor::Cursor;
-use meep_tech_log::{self as Log, Styleable};
 use results::{builder::Builder, end::End, parsed::Parsed, r#match::Match};
 use std::{any::TypeId, collections::HashMap, rc::Rc};
 
-#[cfg(feature = "verbose")]
-use crate::utils::log::Styleable;
+#[cfg(feature = "log")]
+use crate::utils::log::Color;
 
 pub type Instance<TToken = tokens::Type> = Rc<TToken>;
 
@@ -92,6 +91,10 @@ pub trait Type: Sync {
     // #region Data
     fn name(&self) -> &'static str;
 
+    fn tags(&self) -> Vec<&'static str> {
+        Vec::new()
+    }
+
     fn rule(&self, start: &mut Cursor) -> End;
 
     fn type_id(&self) -> TypeId
@@ -112,7 +115,7 @@ pub trait Type: Sync {
     // #region Parser Methods
 
     fn parse(&self, input: &str) -> Parsed {
-        let mut cursor = Cursor::new(input);
+        let mut cursor = Cursor::New(input);
         self.parse_at(&mut cursor)
     }
 
@@ -151,7 +154,7 @@ pub trait Type: Sync {
     }
 
     fn parse_with_options(&self, input: &str, optional: bool, ignored: bool) -> Parsed {
-        let mut cursor = Cursor::new(input);
+        let mut cursor = Cursor::New(input);
         self.parse_with_options_at(&mut cursor, optional, ignored)
     }
 
@@ -171,7 +174,7 @@ pub trait Type: Sync {
                     .build(start, cursor.prev_pos());
                 log::info!(
                     &[":END", "MATCH"],
-                    &format!("@ {} = {:#?}", cursor.prev_pos(), token).color(log::Color::Green),
+                    &format!("@ {} => {:#?}", cursor.prev_pos(), token).color(log::Color::Green),
                 );
                 Parsed::Pass(token)
             }
@@ -194,7 +197,7 @@ pub trait Type: Sync {
                                     .effect(log::Effect::Strikethrough)
                                     .color(log::Color::BrightBlack)
                             ],
-                            &format!("@ {} = {:#?}", cursor.prev_pos(), err)
+                            &format!("@ {} => {:#?}", cursor.prev_pos(), error)
                                 .effect(log::Effect::Strikethrough)
                                 .color(log::Color::BrightBlack),
                         );
@@ -212,7 +215,7 @@ pub trait Type: Sync {
                 } else {
                     log::info!(
                         &[":END", "FAIL"],
-                        &format!("@ {} = {:#?}", cursor.prev_pos(), err)
+                        &format!("@ {} => {:#?}", cursor.prev_pos(), error)
                             .color(log::Color::Red)
                             .effect(log::Effect::Underline),
                     );
@@ -314,7 +317,7 @@ where
                     "Parser key not found for type: {:?} with id: {:?}.\n\t {}?",
                     std::any::type_name::<TType>(),
                     type_id,
-                    &"...Did you add it to the all parsers list".color(Log::Color::Yellow)
+                    &"...Did you add it to the all parsers list".color(log::Color::Yellow)
                 )
             });
         result = get_by_key::<TType>(key);
@@ -351,7 +354,7 @@ where
                     "Parser key not found for type: {:?} with id: {:?}.\n\t {}?",
                     std::any::type_name::<TType>(),
                     TypeId::of::<TType>(),
-                    &"...Did you add it to the all parsers list".color(Log::Color::Yellow)
+                    &"...Did you add it to the all parsers list".color(log::Color::Yellow)
                 )
             });
         result = get_for_key(key);
@@ -400,19 +403,15 @@ pub fn init_all() {
         Rc::new(tokens::statement::assignment::entry::Parser {}),
         Rc::new(tokens::statement::assignment::entry::named_entry::Parser {}),
         Rc::new(tokens::statement::expression::Parser {}),
-        Rc::new(tokens::statement::expression::attribute_expression::Parser {}),
-        Rc::new(tokens::statement::expression::entry_expression::Parser {}),
+        //Rc::new(tokens::statement::expression::attribute_expression::Parser {}),
+        //Rc::new(tokens::statement::expression::value::Parser {}),
         Rc::new(tokens::statement::expression::invocation::Parser {}),
-        Rc::new(tokens::statement::expression::invocation::identifier::Parser {}),
-        Rc::new(tokens::statement::expression::invocation::identifier::key::Parser {}),
-        Rc::new(tokens::statement::expression::invocation::identifier::key::name::Parser {}),
-        Rc::new(tokens::statement::expression::invocation::identifier::lookup::Parser {}),
-        Rc::new(
-            tokens::statement::expression::invocation::identifier::lookup::dot_lookup::Parser {},
-        ),
-        Rc::new(
-            tokens::statement::expression::invocation::identifier::lookup::slash_lookup::Parser {},
-        ),
+        Rc::new(tokens::statement::expression::literal::Parser {}),
+        Rc::new(tokens::statement::expression::literal::identifier::key::Parser {}),
+        Rc::new(tokens::statement::expression::literal::identifier::key::name::Parser {}),
+        Rc::new(tokens::statement::expression::invocation::lookup::Parser {}),
+        Rc::new(tokens::statement::expression::invocation::lookup::dot_lookup::Parser {}),
+        Rc::new(tokens::statement::expression::invocation::lookup::slash_lookup::Parser {}),
         Rc::new(tokens::statement::expression::literal::Parser {}),
         Rc::new(tokens::statement::expression::literal::escape::Parser {}),
         Rc::new(tokens::statement::expression::literal::escape::escape_sequence::Parser {}),
@@ -422,9 +421,9 @@ pub fn init_all() {
         Rc::new(tokens::statement::expression::literal::escape::quote_escape::Parser {}),
         Rc::new(tokens::statement::expression::literal::escape::quote_escape::double::Parser {}),
         Rc::new(tokens::statement::expression::literal::escape::quote_escape::single::Parser {}),
-        Rc::new(tokens::statement::expression::literal::markup::Parser {}),
-        Rc::new(tokens::statement::expression::literal::markup::element::Parser {}),
-        Rc::new(tokens::statement::expression::literal::markup::element::text::Parser {}),
+        // Rc::new(tokens::statement::expression::literal::markup::Parser {}),
+        // Rc::new(tokens::statement::expression::literal::markup::element::Parser {}),
+        // Rc::new(tokens::statement::expression::literal::markup::element::text::Parser {}),
         Rc::new(tokens::statement::expression::literal::primitive::Parser {}),
         Rc::new(tokens::statement::expression::literal::primitive::string::Parser {}),
         Rc::new(

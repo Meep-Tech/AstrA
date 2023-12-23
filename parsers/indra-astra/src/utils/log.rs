@@ -20,14 +20,14 @@ pub const IS_VVV: bool = false;
 
 // #region Macros
 
-#[cfg(feature = "log")]
+#[allow(unused_macros)]
 macro_rules! log {
     ($($rest:tt)*) => {
         #[cfg(feature = "log")]
         log::log_info($($rest)*);
     };
 }
-#[cfg(feature = "log")]
+#[allow(unused_imports)]
 pub(crate) use log;
 
 macro_rules! info {
@@ -54,31 +54,35 @@ macro_rules! vvv {
 }
 pub(crate) use vvv;
 
-#[cfg(feature = "log")]
+#[allow(unused_macros)]
 macro_rules! plain {
     ($($rest:tt)*) => {
         #[cfg(feature = "log")]
         log::log_info_plain($($rest)*);
     }
 }
-#[cfg(feature = "log")]
+#[allow(unused_imports)]
 pub(crate) use plain;
 
-// macro_rules! warning {
-//     ($($rest:tt)*) => {
-//         #[cfg(feature = "log")]
-//         log::log_warn($($rest)*);
-//     }
-// }
-// pub(crate) use warning;
+#[allow(unused_macros)]
+macro_rules! warning {
+    ($($rest:tt)*) => {
+        #[cfg(feature = "log")]
+        log::log_warn($($rest)*);
+    }
+}
+#[allow(unused_imports)]
+pub(crate) use warning;
 
-// macro_rules! error {
-//     ($($rest:tt)*) => {
-//         #[cfg(feature = "log")]
-//         log::log_error($($rest)*);
-//     }
-// }
-// pub(crate) use error;
+#[allow(unused_macros)]
+macro_rules! error {
+    ($($rest:tt)*) => {
+        #[cfg(feature = "log")]
+        log::log_error($($rest)*);
+    }
+}
+#[allow(unused_imports)]
+pub(crate) use error;
 
 // macro_rules! ln {
 //     () => {
@@ -399,24 +403,25 @@ fn style_text(message: &str) -> String {
     let mut message_splitters: Vec<(usize, &str)> =
         message.match_indices(|c: char| c.is_whitespace()).collect();
     let mut styled_message = String::new();
+
     for part in message_parts {
+        if !message_splitters.is_empty() {
+            let mut next_splitter = message_splitters.remove(0);
+            styled_message.push_str(next_splitter.1);
+            while (!message_splitters.is_empty())
+                && ((message_splitters.first().unwrap().0 - next_splitter.0) == 1)
+            {
+                next_splitter = message_splitters.remove(0);
+                styled_message.push_str(next_splitter.1);
+            }
+        };
+
         unsafe {
             if _STYLES.borrow().contains_key(part) {
                 styled_message.push_str(_STYLES.borrow().get(part).unwrap());
             } else {
                 styled_message.push_str(part);
             }
-
-            if !message_splitters.is_empty() {
-                let mut next_splitter = message_splitters.remove(0);
-                styled_message.push_str(next_splitter.1);
-                while (!message_splitters.is_empty())
-                    && ((message_splitters.first().unwrap().0 - next_splitter.0) == 1)
-                {
-                    next_splitter = message_splitters.remove(0);
-                    styled_message.push_str(next_splitter.1);
-                }
-            };
         }
     }
     styled_message

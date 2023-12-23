@@ -1,5 +1,5 @@
 use crate::parser::tokens::splay_mods;
 
 splay_mods! {
-    markup: [element]
+    identifier: [key]
 }

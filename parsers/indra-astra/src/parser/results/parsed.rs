@@ -3,14 +3,56 @@ use std::{collections::HashSet, fmt::Display};
 use super::{
     error::Error,
     node::{Node, _EMPTY_TAGS},
-    r#match::Match,
+    r#match::Token,
     span::Span,
 };
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Parsed {
-    Pass(Match),
+    Pass(Token),
     Fail(Option<Error>),
+}
+
+impl Parsed {
+    pub fn get_name(&self) -> &str {
+        match self {
+            Parsed::Pass(node) => node.name(),
+            Parsed::Fail(error) => match error {
+                Some(error) => error.name(),
+                None => "none",
+            },
+        }
+    }
+
+    pub fn get_tags(&self) -> &HashSet<String> {
+        match self {
+            Parsed::Pass(node) => node.tags(),
+            Parsed::Fail(error) => match error {
+                Some(error) => error.tags(),
+                None => &_EMPTY_TAGS,
+            },
+        }
+    }
+
+    pub fn get_start(&self) -> usize {
+        match self {
+            Parsed::Pass(node) => node.start(),
+            Parsed::Fail(error) => match error {
+                Some(error) => error.start(),
+                None => 0,
+            },
+        }
+    }
+
+    pub fn get_end(&self) -> usize {
+        match self {
+            Parsed::Pass(node) => node.end(),
+            Parsed::Fail(error) => match error {
+                Some(error) => error.end(),
+                None => 0,
+            },
+        }
+    }
 }
 
 pub trait Formatable: Display {

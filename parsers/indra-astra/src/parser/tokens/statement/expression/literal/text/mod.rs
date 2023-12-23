@@ -1,6 +1,6 @@
 use crate::parser::tokens::{
     statement::expression::{
-        invocation::identifier::lookup::{dot_lookup, slash_lookup},
+        invocation::lookup::{dot_lookup, slash_lookup},
         literal::escape::escape_sequence,
     },
     token,

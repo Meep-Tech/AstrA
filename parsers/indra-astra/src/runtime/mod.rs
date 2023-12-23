@@ -1,17 +1,32 @@
-use self::nodes::Node;
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
-pub mod nodes;
+use self::node::Srs;
+
+pub mod node;
 pub mod project;
 
-pub struct Runtime<'rt> {
-    pub root: Rc<dyn Node<'rt>>,
+pub struct Runtime {
+    pub root: Srs<node::Entry>,
     pub fs: FileSystem,
     pub env: HashMap<String, String>,
     pub args: Vec<String>,
 }
 
-impl<'rt> Runtime<'rt> {}
+impl Runtime {
+    #[allow(non_snake_case)]
+    pub fn New() -> Self {
+        Runtime {
+            env: HashMap::new(),
+            args: Vec::new(),
+            root: node::Entry::Root(),
+            fs: FileSystem {
+                root: Directory {
+                    name: "/".to_string(),
+                },
+            },
+        }
+    }
+}
 
 pub struct FileSystem {
     pub root: Directory,

@@ -1,6 +1,8 @@
 [features]
 default = []
 log = []
+test = ["log"]
+panic-on-fail = ["vvv"]
 verbose = ["v", "log"]
 v = ["log", "verbose"]
 vv = ["log", "verbose", "v"]
@@ -25,5 +27,4 @@ path = "src/lib.rs"
 indexmap = "2.1.0"
 lazy_static = "1.4.0"
 regex = "1.10.2"
-meep-tech-log = { path = "../../../../libs/utils/rust/meep-tech-log" }
 

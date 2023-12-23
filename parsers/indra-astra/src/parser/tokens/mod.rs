@@ -7,7 +7,7 @@ use crate::utils::log::{self, Styleable};
 use crate::utils::log::Color;
 
 use self::{
-    statement::expression::invocation::identifier::key::name,
+    statement::expression::literal::identifier::key::name,
     symbol::operator::assigner::mutable_field_assigner, whitespace::indent,
 };
 
@@ -20,7 +20,7 @@ pub mod whitespace;
 pub type Type = dyn super::Type;
 
 macro_rules! token {
-    ($key:ident => $rule:expr) => {
+    ($key:ident $(#$tags:ident)* => $rule:expr) => {
         pub const KEY: &str = stringify!($key);
 
         pub struct Parser;
@@ -28,6 +28,10 @@ macro_rules! token {
             fn name(&self) -> &'static str {
                 crate::parser::tokens::imports!();
                 &KEY
+            }
+
+            fn tags(&self) -> Vec<&'static str> {
+                vec![$(stringify!($tags),)*]
             }
 
             fn rule(
@@ -41,7 +45,7 @@ macro_rules! token {
         }
     };
 
-    ($key:ident => $rule:expr, tests: $($tests:expr)*) => {
+    ($key:ident $(#$tags:ident)* => $rule:expr, tests: $($tests:expr)*) => {
         pub const KEY: &str = stringify!($key);
 
         pub struct Parser;
@@ -49,6 +53,10 @@ macro_rules! token {
             fn name(&self) -> &'static str {
                 crate::parser::tokens::imports!();
                 &KEY
+            }
+
+            fn tags(&self) -> Vec<&'static str> {
+                vec![$(stringify!($tags),)*]
             }
 
             fn rule(

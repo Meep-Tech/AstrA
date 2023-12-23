@@ -1,5 +1,6 @@
 use crate::parser::tokens::splay_mods;
+pub mod escape;
 
 splay_mods! {
-    literal: [escape, markup, primitive, structure]
+    literal: [primitive, structure, identifier, text]
 }

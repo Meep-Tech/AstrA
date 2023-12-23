@@ -45,7 +45,7 @@ token! {
         loop {
             if cursor.is_eof() {
                 cursor.read();
-                return _check_end(is_pure_numeric, cursor, start);
+                return _check_end_is_valid(is_pure_numeric, cursor, start);
             }
 
             curr = cursor.curr();
@@ -72,7 +72,7 @@ token! {
                 cursor.read();
                 continue;
             } else {
-                return _check_end(is_pure_numeric, cursor, start);
+                return _check_end_is_valid(is_pure_numeric, cursor, start);
             }
 
             last_lone_char = None;
@@ -82,10 +82,10 @@ token! {
     tests:
         unit!(["Alphabetic"]
             : "abc"
-            => Parsed::Pass(Token::Of_Type::<Self>().build(0, 2)))
+            => Parsed::Pass(Token::Of_Type::<Self>().partial().build(0, 2)))
 }
 
-fn _check_end(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {
+fn _check_end_is_valid(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {
     if !is_pure_numeric {
         if is_allowed_in_middle_with_repeating(cursor.prev())
             || is_allowed_in_middle_without_repeating(cursor.prev())

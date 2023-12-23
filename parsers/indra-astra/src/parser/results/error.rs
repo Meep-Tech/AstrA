@@ -123,6 +123,40 @@ impl Error {
 
         return End::Fail(parent_err);
     }
+
+    pub fn get_message(&self) -> String {
+        let current = &self;
+        let mut result = self.text.clone().unwrap_or("".to_string());
+
+        if self.text.is_none() {
+            let error_children = current
+                .children
+                .iter()
+                .filter_map(|c| match &c {
+                    Parsed::Fail(f) => match f {
+                        Some(f) => Some(f),
+                        None => None,
+                    },
+                    _ => None,
+                })
+                .collect::<Vec<&Error>>();
+
+            if !error_children.is_empty() {
+                result.push_str("[");
+
+                result.push_str(
+                    &error_children
+                        .iter()
+                        .map(|c| format!("\n\t - {}: {}", &c.name, c.get_message()))
+                        .collect::<String>(),
+                );
+
+                result.push_str("\n]");
+            }
+        }
+
+        return result;
+    }
 }
 
 impl Node<Parsed> for Error {

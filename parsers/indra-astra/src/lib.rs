@@ -6,8 +6,9 @@
 #![feature(iter_intersperse)]
 #![feature(stmt_expr_attributes)]
 #![feature(let_chains)]
+#![feature(trait_alias)]
 
 pub mod parser;
-//pub mod runtime;
+pub mod runtime;
 pub mod tests;
 pub mod utils;
