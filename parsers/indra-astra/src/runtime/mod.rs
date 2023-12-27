@@ -58,32 +58,21 @@ impl<'rt> Runtime<'rt> {
 
     pub fn load(&mut self) {}
 
-    pub fn root(&mut self) -> &Src<Entry> {
+    pub fn root(&self) -> &Src<Entry> {
         &self.root
     }
 
-    pub fn env(&mut self) -> &HashMap<String, String> {
+    pub fn env(&self) -> &HashMap<String, String> {
         &self.env
     }
 
-    pub fn args(&mut self) -> &Vec<String> {
+    pub fn args(&self) -> &Vec<String> {
         &self.args
     }
 
-    pub fn fs(&mut self) -> &FileSystem<'rt> {
+    pub fn fs(&self) -> &FileSystem<'rt> {
         &self.fs
     }
-
-    // pub fn global(&mut self) -> &mut Structure {
-    //     let root_source = &mut self.root();
-    //     let mut root = root_source.get(&mut self);
-    //     let root_entry = Entry::Unwrap(root.borrow_mut());
-    //     let global_source = root_entry.value();
-    //     let mut global = global_source.get(self);
-    //     let global_struct = Structure::Unwrap(global.borrow_mut());
-
-    //     global_struct
-    // }
 
     // #region Internal
     fn _add_node(&mut self, node: Any) -> Id {

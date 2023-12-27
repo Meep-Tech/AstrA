@@ -10,9 +10,16 @@ pub struct Key;
 
 type TNode = Any;
 
+pub trait Node {
+    #[allow(non_snake_case)]
+    fn Downcast(any: &mut TNode) -> &mut Self;
+
+    fn as_any(self) -> Any;
+}
+
 impl Node for Key {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         match any {
             Any::Key(key) => key,
             _ => panic!("Expected Any::Key"),
@@ -67,7 +74,7 @@ impl Structure {
 
 impl Node for Structure {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         match any {
             Any::Val(Value::Stx(stx)) => stx,
             _ => panic!("Expected Any::Val(Value::Stx)"),
@@ -79,12 +86,6 @@ impl Node for Structure {
     }
 }
 
-pub trait Node {
-    #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self;
-    fn as_any(self) -> Any;
-}
-
 pub enum Any {
     Key(Key),
     Val(Value),
@@ -94,7 +95,7 @@ pub enum Any {
 
 impl Node for Any {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         any
     }
 
@@ -111,7 +112,7 @@ pub enum Value {
 
 impl Node for Value {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         match any {
             Any::Val(value) => value,
             _ => panic!("Expected Any::Val"),
@@ -133,7 +134,7 @@ pub enum Primitive {
 
 impl Node for Primitive {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         match any {
             Any::Val(Value::Pmv(pmv)) => pmv,
             _ => panic!("Expected Any::Val(Value::Pmv)"),
@@ -156,17 +157,17 @@ pub struct Entry {
 
 impl Entry {
     #[allow(non_snake_case)]
-    pub(crate) fn Root(rt: &mut Runtime) -> Src<Entry> {
+    pub(crate) fn Root<'rt>(rt: &mut Runtime) -> Src<Entry> {
         let root_entry = Entry {
             key: Key,
-            value: Src::Of(Value::Pmv(Primitive::Nil), rt),
+            value: Src::Empty(),
             source: Rfr::To(&Structure::Root(rt)),
         };
 
         let root_source = Src::Of(root_entry, rt);
         let globals = Structure::In_Entry(&root_source);
         let globals_source = Src::Of(Value::Stx(globals), rt);
-        Entry::Unwrap(&mut root_source.get(&rt)).value = globals_source;
+        Entry::Downcast(&mut root_source.get(rt)).value = globals_source;
 
         root_source
     }
@@ -187,7 +188,7 @@ impl Entry {
 
 impl Node for Entry {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         match any {
             Any::Var(var) => var,
             _ => panic!("Expected Any::Var"),
@@ -210,7 +211,7 @@ pub struct Trait {
 
 impl Node for Trait {
     #[allow(non_snake_case)]
-    fn Unwrap(any: &mut TNode) -> &mut Self {
+    fn Downcast(any: &mut TNode) -> &mut Self {
         match any {
             Any::Trt(trt) => trt,
             _ => panic!("Expected Any::Trt"),
