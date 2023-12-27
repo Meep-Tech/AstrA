@@ -27,4 +27,5 @@ path = "src/lib.rs"
 indexmap = "2.1.0"
 lazy_static = "1.4.0"
 regex = "1.10.2"
+slotmap = "1.0.7"
 

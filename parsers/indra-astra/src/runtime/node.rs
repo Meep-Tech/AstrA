@@ -1,58 +1,126 @@
-use super::cell::{Cell, Referable, Reference, Source, Srs};
+//use super::cell::{Opt, Rfr, Src};
+use super::{
+    cell::{Cell, Opt, Rfr, Src},
+    Runtime,
+};
 use std::collections::HashMap;
-
-// pub type Srs<T> = Rc<RefCell<T>>;
-// pub type Ref<T> = Rc<RefCell<T>>;
-
-// pub trait Refable<T> {
-//     #[allow(non_snake_case)]
-//     fn New(val: T) -> Srs<T> {
-//         Rc::new(RefCell::new(val))
-//     }
-
-//     fn get_ref(&self) -> Ref<T>;
-// }
-
-// impl<T> Refable<T> for Srs<T> {
-//     fn get_ref(&self) -> Ref<T> {
-//         Rc::clone(&self)
-//     }
-// }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Key;
 
+type TNode = Any;
+
+impl Node for Key {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        match any {
+            Any::Key(key) => key,
+            _ => panic!("Expected Any::Key"),
+        }
+    }
+
+    fn as_any(self) -> Any {
+        Any::Key(self)
+    }
+}
+
 pub struct Structure {
-    traits: Option<HashMap<Key, Srs<Trait>>>,
-    own: Option<HashMap<Key, Srs<Entry>>>,
-    // This structure as an entry within its parent/super structure.
-    source: Option<Reference<Entry>>,
+    // The entry that this structure is contained within.
+    source: Opt<Rfr<Entry>>,
+    // The traits that this structure has implemented on its `own`.
+    traits: Opt<HashMap<Key, Src<Trait>>>,
+    // The entries that this structure has implemented on its `own`.
+    entries: Opt<HashMap<Key, Src<Entry>>>,
 }
 
 impl Structure {
     #[allow(non_snake_case)]
-    pub fn New(srs: Reference<Entry>) -> Self {
+    pub fn In_Entry(source: &Src<Entry>) -> Self {
+        Structure::New(source, None, None)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn New(
+        source: &Src<Entry>,
+        traits: Opt<HashMap<Key, Src<Trait>>>,
+        own: Opt<HashMap<Key, Src<Entry>>>,
+    ) -> Self {
         Structure {
-            traits: None,
-            own: None,
-            source: Some(srs),
+            traits,
+            entries: own,
+            source: Some(Rfr::To(source)),
         }
     }
 
     #[allow(non_snake_case)]
-    pub(crate) fn Void() -> Srs<Self> {
-        Source::New(Structure {
-            traits: None,
-            own: None,
-            source: None,
-        })
+    pub(crate) fn Root(rt: &mut Runtime) -> Src<Self> {
+        Src::Of(
+            Structure {
+                traits: None,
+                entries: None,
+                source: None,
+            },
+            rt,
+        )
+    }
+}
+
+impl Node for Structure {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        match any {
+            Any::Val(Value::Stx(stx)) => stx,
+            _ => panic!("Expected Any::Val(Value::Stx)"),
+        }
+    }
+
+    fn as_any(self) -> Any {
+        Any::Val(Value::Stx(self))
+    }
+}
+
+pub trait Node {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self;
+    fn as_any(self) -> Any;
+}
+
+pub enum Any {
+    Key(Key),
+    Val(Value),
+    Var(Entry),
+    Trt(Trait),
+}
+
+impl Node for Any {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        any
+    }
+
+    fn as_any(self) -> Any {
+        self
     }
 }
 
 pub enum Value {
     Stx(Structure),
     Pmv(Primitive),
-    Ref(Reference<Value>),
+    Ref(Cell<Any>),
+}
+
+impl Node for Value {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        match any {
+            Any::Val(value) => value,
+            _ => panic!("Expected Any::Val"),
+        }
+    }
+
+    fn as_any(self) -> Any {
+        Any::Val(self)
+    }
 }
 
 pub enum Primitive {
@@ -63,39 +131,71 @@ pub enum Primitive {
     Nil,
 }
 
+impl Node for Primitive {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        match any {
+            Any::Val(Value::Pmv(pmv)) => pmv,
+            _ => panic!("Expected Any::Val(Value::Pmv)"),
+        }
+    }
+
+    fn as_any(self) -> Any {
+        Any::Val(Value::Pmv(self))
+    }
+}
+
 pub struct Entry {
     // The key of this entry within its parent/super structure.
     key: Key,
     // The value of this entry.
-    value: Srs<Value>,
+    value: Src<Value>,
     // The parent/super structure of this entry.
-    source: Reference<Structure>,
+    source: Rfr<Structure>,
 }
 
 impl Entry {
     #[allow(non_snake_case)]
-    pub(crate) fn Root() -> Srs<Entry> {
-        let root = Entry {
+    pub(crate) fn Root(rt: &mut Runtime) -> Src<Entry> {
+        let root_entry = Entry {
             key: Key,
-            value: Srs::New(Value::Pmv(Primitive::Nil)),
-            source: Reference::New(&Structure::Void()),
+            value: Src::Of(Value::Pmv(Primitive::Nil), rt),
+            source: Rfr::To(&Structure::Root(rt)),
         };
 
-        let mut root_source = Srs::New(root);
-        let root_value = Srs::New(Value::Stx(Structure::New(root_source.get_ref())));
-
-        root_source.get_mut().value = root_value;
+        let root_source = Src::Of(root_entry, rt);
+        let globals = Structure::In_Entry(&root_source);
+        let globals_source = Src::Of(Value::Stx(globals), rt);
+        Entry::Unwrap(&mut root_source.get(&rt)).value = globals_source;
 
         root_source
     }
 
     #[allow(non_snake_case)]
-    pub fn New(key: Key, val: Srs<Value>, srs: Reference<Structure>) -> Self {
+    pub fn New(source: Src<Structure>, key: Key, value: Value, rt: &mut Runtime) -> Self {
         Entry {
             key,
-            value: val,
-            source: srs,
+            value: Src::Of(value, rt),
+            source: Rfr::To(&source),
         }
+    }
+
+    pub fn value(&mut self) -> &Src<Value> {
+        &self.value
+    }
+}
+
+impl Node for Entry {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        match any {
+            Any::Var(var) => var,
+            _ => panic!("Expected Any::Var"),
+        }
+    }
+
+    fn as_any(self) -> Any {
+        Any::Var(self)
     }
 }
 
@@ -103,9 +203,23 @@ pub struct Trait {
     // The key of this trait within its parent/super structure.
     key: Key,
     // The source entry of this trait.
-    value: Reference<Entry>,
+    value: Rfr<Entry>,
     // The parent/super structure that this trait is applied to.
-    source: Reference<Structure>,
+    source: Rfr<Structure>,
+}
+
+impl Node for Trait {
+    #[allow(non_snake_case)]
+    fn Unwrap(any: &mut TNode) -> &mut Self {
+        match any {
+            Any::Trt(trt) => trt,
+            _ => panic!("Expected Any::Trt"),
+        }
+    }
+
+    fn as_any(self) -> Any {
+        Any::Trt(self)
+    }
 }
 
 // pub trait Node {
