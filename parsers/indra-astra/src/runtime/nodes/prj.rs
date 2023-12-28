@@ -1,7 +1,9 @@
 use crate::{parser::results::r#match::Token, runtime::scope::Scope};
 
+use super::Any;
+
 pub enum Analysis {
-    Valid,
+    Valid(Any),
     Invalid,
 }
 

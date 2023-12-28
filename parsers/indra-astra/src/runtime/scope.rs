@@ -1,10 +1,10 @@
-use std::{borrow::Borrow, path::Path};
+use std::path::Path;
 
-use super::{cell::Rfr, nodes::Structure, Runtime};
+use super::{nodes::Struct, rfr::Rfr, Runtime};
 
 pub struct Scope<'rt> {
     rt: &'rt Runtime<'rt>,
-    own: Rfr<Structure>,
+    own: Rfr<Struct>,
     path: &'rt Path,
 }
 
@@ -13,7 +13,7 @@ impl<'rt> Scope<'rt> {
     pub fn Root(rt: &'rt Runtime<'rt>) -> Self {
         Self {
             rt,
-            own: Rfr::<Structure>::To(rt.root.get_value(rt).to_structure(rt).borrow()),
+            own: rt.root.get_value(rt).as_struct(),
             path: rt.fs.source,
         }
     }

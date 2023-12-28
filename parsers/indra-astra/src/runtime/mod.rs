@@ -1,23 +1,25 @@
-use slotmap::{DefaultKey, SlotMap};
+use slotmap::SlotMap;
 use std::{collections::HashMap, fs::File, io::Read, path::Path, sync::Mutex};
 
 use crate::parser::{self, results::parsed::Parsed, Type};
 
 pub mod nodes;
+pub mod rfr;
 pub mod scope;
 
 use self::{
     nodes::{Any, Entry},
+    rfr::{RId, Rfr},
     scope::Scope,
 };
 
 pub struct Runtime<'rt> {
-    root: Entry,
+    root: Rfr<Entry>,
     fs: FileSystem<'rt>,
     env: HashMap<String, String>,
     args: Vec<String>,
 
-    __: SlotMap<DefaultKey, Mutex<Any>>,
+    __: SlotMap<RId, Mutex<Any>>,
 }
 
 impl<'rt> Runtime<'rt> {
@@ -27,7 +29,7 @@ impl<'rt> Runtime<'rt> {
             __: SlotMap::with_key(),
             env: HashMap::new(),
             args: Vec::new(),
-            root: Entry::Empty(),
+            root: Rfr::Empty(),
             fs: FileSystem::<'rt> {
                 source,
                 root: Directory {
@@ -78,7 +80,7 @@ impl<'rt> Runtime<'rt> {
 
     pub fn load(&mut self) {}
 
-    pub fn root(&self) -> &Entry {
+    pub fn root(&self) -> &Rfr<Entry> {
         &self.root
     }
 
@@ -95,11 +97,11 @@ impl<'rt> Runtime<'rt> {
     }
 
     // #region Internal
-    fn _add_node(&mut self, node: Any) -> Id {
+    fn _add_node(&mut self, node: Any) -> RId {
         self.__.insert(Mutex::new(node))
     }
 
-    fn _get_node(&self, id: Id) -> &Mutex<Any> {
+    fn _get_node(&self, id: RId) -> &Mutex<Any> {
         self.__.get(id).unwrap()
     }
 
