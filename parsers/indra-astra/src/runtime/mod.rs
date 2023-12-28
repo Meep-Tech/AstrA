@@ -1,16 +1,18 @@
 use slotmap::{DefaultKey, SlotMap};
-use std::{collections::HashMap, path::Path, sync::Mutex};
+use std::{collections::HashMap, fs::File, io::Read, path::Path, sync::Mutex};
+
+use crate::parser::{self, results::parsed::Parsed, Type};
+
+pub mod nodes;
+pub mod scope;
 
 use self::{
-    cell::{Id, Src},
-    node::{Any, Entry},
+    nodes::{Any, Entry},
+    scope::Scope,
 };
 
-pub mod cell;
-pub mod node;
-
 pub struct Runtime<'rt> {
-    root: Src<Entry>,
+    root: Entry,
     fs: FileSystem<'rt>,
     env: HashMap<String, String>,
     args: Vec<String>,
@@ -25,7 +27,7 @@ impl<'rt> Runtime<'rt> {
             __: SlotMap::with_key(),
             env: HashMap::new(),
             args: Vec::new(),
-            root: Src::Empty(),
+            root: Entry::Empty(),
             fs: FileSystem::<'rt> {
                 source,
                 root: Directory {
@@ -54,11 +56,29 @@ impl<'rt> Runtime<'rt> {
         rt
     }
 
-    pub fn init(&mut self) {}
+    pub fn init(&mut self) {
+        let prj_file = self._find_prj_file_path();
+        let mut prj_file_contents = String::new();
+        if let Result::Err(err) = prj_file.unwrap().read_to_string(&mut prj_file_contents) {
+            panic!("Failed to read project file: {}", err);
+        }
+
+        let prj_file_parse_result = parser::tokens::source::file::Parser::Parse(&prj_file_contents);
+
+        match prj_file_parse_result {
+            Parsed::Pass(prj_file_root_token) => {
+                let prj_file_analysis_result =
+                    nodes::prj::Analyze(&prj_file_root_token, Scope::Root(self));
+            }
+            Parsed::Fail(err) => {
+                panic!("Failed to parse project file: {:?}", err);
+            }
+        }
+    }
 
     pub fn load(&mut self) {}
 
-    pub fn root(&self) -> &Src<Entry> {
+    pub fn root(&self) -> &Entry {
         &self.root
     }
 
@@ -81,6 +101,38 @@ impl<'rt> Runtime<'rt> {
 
     fn _get_node(&self, id: Id) -> &Mutex<Any> {
         self.__.get(id).unwrap()
+    }
+
+    fn _find_prj_file_path(&self) -> Option<File> {
+        let root = self.fs.source;
+        let root_dir_name = root.file_name().unwrap().to_str().unwrap();
+
+        let potential_dirs = vec!["/", "src", "prj", ".prj", ".", "()", root_dir_name];
+        let potential_names = vec!["prj", ".prj", ".", "()", "", root_dir_name];
+        let potential_exts = vec![
+            "prj",
+            "axa",
+            "prj.axa",
+            "bin.axa",
+            "lib.axa",
+            "bin.prj.axa",
+            "lib.prj.axa",
+            "prj.bin.axa",
+            "prj.lib.axa",
+        ];
+
+        for dir in &potential_dirs {
+            for name in &potential_names {
+                for ext in &potential_exts {
+                    let path = root.join(dir).join(name).with_extension(ext);
+                    if path.exists() {
+                        return Some(File::open(path).unwrap());
+                    }
+                }
+            }
+        }
+
+        None
     }
     // #endregion
 }
