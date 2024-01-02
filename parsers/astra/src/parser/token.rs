@@ -6,6 +6,31 @@ use std::{
 
 static _EMPTY_KEYS: LazyLock<HashMap<String, usize>> = LazyLock::new(|| HashMap::new());
 
+pub trait Category {
+    #[allow(non_snake_case)]
+    fn Get() -> Self
+    where
+        Self: Sized;
+
+    #[allow(non_snake_case)]
+    fn All() -> HashSet<Type>
+    where
+        Self: Sized;
+
+    #[allow(non_snake_case)]
+    fn Any() -> Type
+    where
+        Self: Sized,
+    {
+        Type::Ambiguous(Self::All().into_iter().collect())
+    }
+
+    #[allow(non_snake_case)]
+    fn Souces() -> HashSet<Type> {
+        todo!()
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     None,
@@ -16,18 +41,6 @@ pub enum Type {
     Procedural(Procedural),
     Entry(Entry),
     Modifier(Modifier),
-}
-
-pub trait Category {
-    fn All() -> HashSet<Type>
-    where
-        Self: Sized;
-    fn type_id() -> Type
-    where
-        Self: Sized,
-    {
-        Type::Ambiguous(Self::All().into_iter().collect())
-    }
 }
 
 impl Type {
@@ -60,49 +73,63 @@ macro_rules! cat_item {
     };
 }
 
-macro_rules! cat {
-    ($cat:ident for $cats:ident [$($types:ident $(($args:ident))? $(: $impl:ident)? $(,)?)*]) => {
+macro_rules! _def_cat {
+    ($cat:ident, $cats:ident, $($types:ident $(, $args:ident)?)*) => {
         #[derive(Clone, PartialEq, Eq, Hash)]
         pub enum $cat {
             $($types$(($args))?,)*
         }
 
         pub struct $cats;
+    };
+}
+
+macro_rules! _impl_cat {
+    ($cat:ident, $cats:ident, $($types:ident)* $(, $source:ident)?) => {
+        impl Category for $cats {
+            #[allow(non_snake_case)]
+            fn Get() -> Self {
+                Self {}
+            }
+
+            #[allow(non_snake_case)]
+            fn All() -> HashSet<Type> {
+                let mut set = HashSet::new();
+                $(set.insert($cats::$types);)*
+                set
+            }
+
+            $(
+                #[allow(non_snake_case)]
+                fn Sources() -> HashSet<Category> {
+                    let mut set = HashSet::new();
+                    set.insert($source);
+                    set
+                }
+            )?
+        }
+    };
+}
+
+macro_rules! cat {
+    ($cat:ident for $cats:ident [$($types:ident $(($args:ident))? $(: $impl:ident)? $(,)?)*]) => {
+        _def_cat!($cat, $cats, $($types $(, $args)?)*);
 
         impl $cats {
             $(cat_item!($cat, $types $(: $impl)?);)*
         }
 
-        impl Category for $cats {
-            #[allow(non_snake_case)]
-            fn All() -> HashSet<Type> {
-                let mut set = HashSet::new();
-                $(set.insert($cats::$types);)*
-                set
-            }
-        }
+        _impl_cat!($cat, $cats, $($types)*);
     };
 
     ($cat:ident in $source:ident for $cats:ident [$($types:ident $(($args:ident))? $(: $impl:ident)? $(,)?)*]) => {
-        #[derive(Clone, PartialEq, Eq, Hash)]
-        pub enum $cat {
-            $($types$(($args))?,)*
-        }
-
-        pub struct $cats;
+        _def_cat!($cat, $cats, $($types $(, $args)?)*);
 
         impl $cats {
             $(cat_item!($cat, $source, $types $(: $impl)?);)*
         }
 
-        impl Category for $cats {
-            #[allow(non_snake_case)]
-            fn All() -> HashSet<Type> {
-                let mut set = HashSet::new();
-                $(set.insert($cats::$types);)*
-                set
-            }
-        }
+        _impl_cat!($cat, $cats, $($types)*);
     };
 }
 
