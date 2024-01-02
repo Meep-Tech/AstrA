@@ -1,33 +1,56 @@
+use core::panic;
 use std::{
+    any::{type_name, Any, TypeId},
     collections::{HashMap, HashSet},
     fmt::Display,
     sync::LazyLock,
 };
 
 static _EMPTY_KEYS: LazyLock<HashMap<String, usize>> = LazyLock::new(|| HashMap::new());
+static mut _ALL_CATS: LazyLock<HashMap<TypeId, Box<dyn Any>>> = LazyLock::new(|| HashMap::new());
+
+pub struct Cats;
+impl Cats {
+    #[allow(non_snake_case)]
+    fn Get<TCategory>() -> &'static TCategory
+    where
+        TCategory: Category,
+    {
+        let type_id = TypeId::of::<TCategory>();
+        let cat = unsafe { &_ALL_CATS }.get(&type_id);
+
+        if let Some(cat) = cat {
+            return cat.downcast_ref::<TCategory>().unwrap();
+        } else {
+            panic!("Category not found: {:?}", type_name::<TCategory>());
+        }
+    }
+}
 
 pub trait Category {
     #[allow(non_snake_case)]
-    fn Get() -> Self
-    where
-        Self: Sized;
-
-    #[allow(non_snake_case)]
-    fn All() -> HashSet<Type>
-    where
-        Self: Sized;
-
-    #[allow(non_snake_case)]
-    fn Any() -> Type
-    where
-        Self: Sized,
-    {
-        Type::Ambiguous(Self::All().into_iter().collect())
+    fn has(&self, ttype: &Type) -> bool {
+        self.all().contains(ttype)
+            || self.subs().iter().any(|cat| cat.has(ttype))
+            || self.sups().iter().any(|cat| cat.has(ttype))
     }
 
     #[allow(non_snake_case)]
-    fn Souces() -> HashSet<Type> {
-        todo!()
+    fn all(&self) -> HashSet<Type>;
+
+    #[allow(non_snake_case)]
+    fn subs(&self) -> Vec<Box<dyn Category>> {
+        vec![]
+    }
+
+    #[allow(non_snake_case)]
+    fn any(&self) -> Type {
+        Type::Ambiguous(self.all().into_iter().collect())
+    }
+
+    #[allow(non_snake_case)]
+    fn sups(&self) -> Vec<Box<dyn Category>> {
+        vec![]
     }
 }
 
@@ -88,12 +111,7 @@ macro_rules! _impl_cat {
     ($cat:ident, $cats:ident, $($types:ident)* $(, $source:ident)?) => {
         impl Category for $cats {
             #[allow(non_snake_case)]
-            fn Get() -> Self {
-                Self {}
-            }
-
-            #[allow(non_snake_case)]
-            fn All() -> HashSet<Type> {
+            fn all(&self) -> HashSet<Type> {
                 let mut set = HashSet::new();
                 $(set.insert($cats::$types);)*
                 set
@@ -101,7 +119,7 @@ macro_rules! _impl_cat {
 
             $(
                 #[allow(non_snake_case)]
-                fn Sources() -> HashSet<Category> {
+                fn sources() -> Vec<Box<Category>> {
                     let mut set = HashSet::new();
                     set.insert($source);
                     set
@@ -407,33 +425,33 @@ cat! {Modifier
 //     pub const AssignerSuffix: Type = Type::Modifier(Modifier::AssignerSuffix);
 // }
 
-macro_rules! token_of_type {
-    (
-        $token:ident:
-        $type:path
-    ) => {
-        if let $type(_) = $token.ttype {
-            true
-        } else {
-            false
-        }
-    };
-}
-pub(crate) use token_of_type;
+// macro_rules! token_of_type {
+//     (
+//         $token:ident:
+//         $type:path
+//     ) => {
+//         if let $type(_) = $token.ttype {
+//             true
+//         } else {
+//             false
+//         }
+//     };
+// }
+// pub(crate) use token_of_type;
 
-macro_rules! token_is_type {
-    (
-        $token:ident:
-        $type:path
-    ) => {
-        if let $type = $token.ttype {
-            true
-        } else {
-            false
-        }
-    };
-}
-pub(crate) use token_is_type;
+// macro_rules! token_is_type {
+//     (
+//         $token:ident:
+//         $type:path
+//     ) => {
+//         if let $type = $token.ttype {
+//             true
+//         } else {
+//             false
+//         }
+//     };
+// }
+// pub(crate) use token_is_type;
 
 pub struct Token {
     pub ttype: Type,
@@ -486,9 +504,9 @@ impl Token {
 
     pub fn is_of<T>(&self) -> bool
     where
-        T: Category,
+        T: Category + 'static,
     {
-        T::All().contains(&self.ttype)
+        Cats::Get::<T>().all().contains(&self.ttype)
     }
 
     pub fn child(&mut self, index: usize) -> &Token {
