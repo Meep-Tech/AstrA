@@ -1,0 +1,21 @@
+[features]
+default = []
+log = []
+
+[package]
+name = "astra"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "astra"
+path = "src/bin.rs"
+
+[lib]
+name = "astra"
+path = "src/lib.rs"
+
+[dependencies]
+regex = "1.10.2"
+slotmap = "1.0.7"
+indexmap = "2.1.0"

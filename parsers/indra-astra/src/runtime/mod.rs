@@ -23,8 +23,9 @@ pub struct Runtime<'rt> {
 }
 
 impl<'rt> Runtime<'rt> {
+    /// Used to initialize an empty runtime.
     #[allow(non_snake_case)]
-    pub fn New(source: &'rt Path) -> Self {
+    pub(crate) fn Empty(source: &'rt Path) -> Self {
         let mut rt = Runtime::<'rt> {
             __: SlotMap::with_key(),
             env: HashMap::new(),
@@ -39,46 +40,35 @@ impl<'rt> Runtime<'rt> {
         };
 
         rt.root = Entry::Root(&mut rt);
-
         rt
     }
 
+    /// Used to initialize a runtime with the standard library.
+    #[allow(non_snake_case)]
+    pub(crate) fn Std(source: &'rt Path) -> Self {
+        let mut rt = Runtime::Empty(source);
+        rt._add_std_lib();
+        rt
+    }
+
+    /// Used to initialize a runtime for a new project.
     #[allow(non_snake_case)]
     pub fn Init(source: &'rt Path) -> Self {
-        let mut rt = Runtime::New(source);
-        rt.init();
-        rt.load();
+        let mut rt = Runtime::Std(source);
+        rt._load_config();
+        rt._init();
+        rt._load();
         rt
     }
 
+    /// Used to load a runtime for an existing project.
     #[allow(non_snake_case)]
     pub fn Load(source: &'rt Path) -> Self {
-        let mut rt = Runtime::New(source);
-        rt.load();
+        let mut rt = Runtime::Std(source);
+        rt._load_config();
+        rt._load();
         rt
     }
-
-    pub fn init(&mut self) {
-        let prj_file = self._find_prj_file_path();
-        let mut prj_file_contents = String::new();
-        if let Result::Err(err) = prj_file.unwrap().read_to_string(&mut prj_file_contents) {
-            panic!("Failed to read project file: {}", err);
-        }
-
-        let prj_file_parse_result = parser::tokens::source::file::Parser::Parse(&prj_file_contents);
-
-        match prj_file_parse_result {
-            Parsed::Pass(prj_file_root_token) => {
-                let prj_file_analysis_result =
-                    nodes::prj::Analyze(&prj_file_root_token, Scope::Root(self));
-            }
-            Parsed::Fail(err) => {
-                panic!("Failed to parse project file: {:?}", err);
-            }
-        }
-    }
-
-    pub fn load(&mut self) {}
 
     pub fn root(&self) -> &Rfr<Entry> {
         &self.root
@@ -136,6 +126,32 @@ impl<'rt> Runtime<'rt> {
 
         None
     }
+
+    fn _load_config(&mut self) {
+        let prj_file = self._find_prj_file_path();
+        let mut prj_file_contents = String::new();
+        if let Result::Err(err) = prj_file.unwrap().read_to_string(&mut prj_file_contents) {
+            panic!("Failed to read project file: {}", err);
+        }
+
+        let prj_file_parse_result = parser::tokens::source::file::Parser::Parse(&prj_file_contents);
+
+        match prj_file_parse_result {
+            Parsed::Pass(prj_file_root_token) => {
+                let prj_file_analysis_result =
+                    nodes::prj::Analyze(&prj_file_root_token, Scope::Root(self));
+            }
+            Parsed::Fail(err) => {
+                panic!("Failed to parse project file: {:?}", err);
+            }
+        }
+    }
+
+    pub fn _init(&mut self) {}
+
+    pub fn _load(&mut self) {}
+
+    fn _add_std_lib(&mut self) {}
     // #endregion
 }
 
