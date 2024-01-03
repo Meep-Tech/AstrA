@@ -29,6 +29,11 @@ impl Cats {
 
 pub trait Category {
     #[allow(non_snake_case)]
+    fn New() -> Self
+    where
+        Self: Sized;
+
+    #[allow(non_snake_case)]
     fn has(&self, ttype: &Type) -> bool {
         self.all().contains(ttype)
             || self.subs().iter().any(|cat| cat.has(ttype))
@@ -103,6 +108,7 @@ macro_rules! _def_cat {
             $($types$(($args))?,)*
         }
 
+        #[derive(Default)]
         pub struct $cats;
     };
 }
@@ -110,6 +116,12 @@ macro_rules! _def_cat {
 macro_rules! _impl_cat {
     ($cat:ident, $cats:ident, $($types:ident)* $(, $source:ident)?) => {
         impl Category for $cats {
+            #[allow(non_snake_case)]
+            fn New() -> Self {
+                Self {}
+            }
+
+
             #[allow(non_snake_case)]
             fn all(&self) -> HashSet<Type> {
                 let mut set = HashSet::new();
