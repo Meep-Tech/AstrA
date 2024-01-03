@@ -17,7 +17,7 @@ pub struct Config {
     pub skip_whitespace: bool,
 }
 
-pub fn parse(input: &str, config: &Config) -> Token {
+pub fn parse(input: &str, _config: &Config) -> Token {
     let context = Context::New_Empty();
     let mut cursor = Cursor::New_With(input, context);
 

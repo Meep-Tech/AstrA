@@ -352,20 +352,50 @@ impl Cursor {
 
     // #region Errors
 
-    pub fn unexpected_char_in(&mut self, in_token: &mut Token, expected: &[&str]) -> Status {
+    pub fn unexpected_char_in(&mut self, token: &mut Token, expected: &[&str]) -> Status {
+        self.unexpected_char_at(self.index, token, expected)
+    }
+
+    pub fn unexpected_prev_in(&mut self, token: &mut Token, expected: &[&str]) -> Status {
+        self.unexpected_char_at(self.prev_index(), token, expected)
+    }
+
+    pub fn unexpected_char_of(
+        &mut self,
+        token: &mut Token,
+        expected: HashMap<String, Option<String>>,
+    ) -> Status {
+        self.unexpected_char_at_index_of(token, self.index, expected)
+    }
+
+    pub fn unexpected_prev_of(
+        &mut self,
+        token: &mut Token,
+        expected: HashMap<String, Option<String>>,
+    ) -> Status {
+        self.unexpected_char_at_index_of(token, self.prev_index(), expected)
+    }
+
+    pub fn unexpected_char_at(
+        &mut self,
+        at: usize,
+        in_token: &mut Token,
+        expected: &[&str],
+    ) -> Status {
         in_token.errors.push(Error::Unexpected(
             &in_token.ttype,
-            self.index,
-            self.curr(),
+            at,
+            self.at(at),
             expected,
         ));
 
         Status::Err
     }
 
-    pub fn unexpected_char_of(
+    pub fn unexpected_char_at_index_of(
         &mut self,
         token: &mut Token,
+        at: usize,
         expected: HashMap<String, Option<String>>,
     ) -> Status {
         let expected = expected
@@ -381,8 +411,8 @@ impl Cursor {
 
         token.errors.push(Error::Unexpected(
             &token.ttype,
-            self.index,
-            self.curr(),
+            at,
+            self.at(at),
             expected
                 .iter()
                 .map(|e| e.as_str())

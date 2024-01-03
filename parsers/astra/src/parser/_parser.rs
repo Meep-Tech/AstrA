@@ -41,7 +41,7 @@ pub(crate) fn _parse_line_as_new_statement(
                 }
                 // unexpected
                 else {
-                    return cursor.unexpected_char_in(&mut line, &["/", "*", "\\t", "' '"]);
+                    return cursor.unexpected_prev_in(&mut line, &["/", "*", "\\t", "' '"]);
                 }
             }
         },
@@ -81,11 +81,11 @@ pub(crate) fn _parse_line_as_new_statement(
                 }
                 // #Type
                 else if !cursor.prev_is_nl() {
-                    line.ttype = Token::Type::Tags::Own;
+                    line.ttype = Token::Type::Attributes::Tags::Own;
                     // read as own tag
                     todo!()
                 } else {
-                    return cursor.unexpected_char_in(&mut line, &["#", "\\S"]);
+                    return cursor.unexpected_prev_in(&mut line, &["#", "\\S"]);
                 }
             }
         },
@@ -107,7 +107,7 @@ pub(crate) fn _parse_line_as_new_statement(
                     }
                     // UNEXPECTED
                     else {
-                        return cursor.unexpected_char_in(&mut line, &["#", "\\s"]);
+                        return cursor.unexpected_prev_in(&mut line, &["#", "\\s"]);
                     }
                 }
             },
@@ -130,7 +130,7 @@ pub(crate) fn _parse_line_as_new_statement(
                 // >input|als#type
                 else {
                     line.ttype = Token::Type::Attributes::Input;
-                    // read as an input alias
+                    // read as an input
                     todo!()
                 }
             }
@@ -139,7 +139,7 @@ pub(crate) fn _parse_line_as_new_statement(
             // |>input-alias
             '>' => {
                 line.ttype = Token::Type::Attributes::Aliases::Input;
-                // read as an input alias
+                // read as an input-only alias
                 todo!()
             }
             _ => {
@@ -154,14 +154,24 @@ pub(crate) fn _parse_line_as_new_statement(
         '-' => todo!("Ordered Entry"),
         ':' => {
             if indent.is_more()
-                && source.is_of::<Token::Type::Entries>()
-                && source.is(Token::Type::Entries::Named)
-                && let Token::Type::Entry(_) = source.ttype
+                && source.is_in::<Token::Type::Entries>()
                 && !source.has("operator")
             {}
         }
+        '_' => todo!("Anonymous Entry (_), Access-Limited Variable Key (_key), or Access-Limited Input Prefix (_>)"),
+        '@' | '$' => {
+            // $name or @name
+            line.ttype = Token::Type::Identifiers::Keys::Name;
+        },
         _ => {
-            panic!("Named Entry");
+            let c = cursor.prev();
+            if c.is_alphabetic() {
+                
+            } else if c.is_numeric() {
+                
+            } else {
+                cursor.unexpected_prev_in(source, &["/", "#", ">", "|", ".", "<", "-", ":", "_", "@", "$", "\\w"]);
+            }
         }
     }
 
