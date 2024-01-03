@@ -1,31 +1,33 @@
 use core::panic;
 use std::{
-    any::{type_name, Any, TypeId},
     collections::{HashMap, HashSet},
     fmt::Display,
     sync::LazyLock,
 };
 
 static _EMPTY_KEYS: LazyLock<HashMap<String, usize>> = LazyLock::new(|| HashMap::new());
-static mut _ALL_CATS: LazyLock<HashMap<TypeId, Box<dyn Any>>> = LazyLock::new(|| HashMap::new());
+// static mut _ALL_CATS: LazyLock<Mutex<HashMap<TypeId, Box<dyn Any>>>> =
+//     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-pub struct Cats;
-impl Cats {
-    #[allow(non_snake_case)]
-    fn Get<TCategory>() -> &'static TCategory
-    where
-        TCategory: Category,
-    {
-        let type_id = TypeId::of::<TCategory>();
-        let cat = unsafe { &_ALL_CATS }.get(&type_id);
+// pub struct Cats;
+// impl Cats {
+//     #[allow(non_snake_case)]
+//     fn Get<TCategory>() -> &'static TCategory
+//     where
+//         TCategory: Category,
+//     {
+//         let type_id = TypeId::of::<TCategory>();
+//         let cat = unsafe { &_ALL_CATS }.try_lock().unwrap().get(&type_id);
 
-        if let Some(cat) = cat {
-            return cat.downcast_ref::<TCategory>().unwrap();
-        } else {
-            panic!("Category not found: {:?}", type_name::<TCategory>());
-        }
-    }
-}
+//         if let Some(cat) = cat {
+//             return cat.downcast_ref::<TCategory>().unwrap();
+//         } else {
+//             let cat = Box::new(TCategory::New());
+//             unsafe { &_ALL_CATS }.lock().unwrap().insert(type_id, cat);
+//             return Self::Get::<TCategory>();
+//         }
+//     }
+// }
 
 pub trait Category {
     #[allow(non_snake_case)]
@@ -33,33 +35,28 @@ pub trait Category {
     where
         Self: Sized;
 
-    #[allow(non_snake_case)]
     fn has(&self, ttype: &Type) -> bool {
         self.all().contains(ttype)
             || self.subs().iter().any(|cat| cat.has(ttype))
             || self.sups().iter().any(|cat| cat.has(ttype))
     }
 
-    #[allow(non_snake_case)]
     fn all(&self) -> HashSet<Type>;
 
-    #[allow(non_snake_case)]
     fn subs(&self) -> Vec<Box<dyn Category>> {
         vec![]
     }
 
-    #[allow(non_snake_case)]
     fn any(&self) -> Type {
         Type::Ambiguous(self.all().into_iter().collect())
     }
 
-    #[allow(non_snake_case)]
     fn sups(&self) -> Vec<Box<dyn Category>> {
         vec![]
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     None,
     Ambiguous(Vec<Type>),
@@ -103,7 +100,7 @@ macro_rules! cat_item {
 
 macro_rules! _def_cat {
     ($cat:ident, $cats:ident, $($types:ident $(, $args:ident)?)*) => {
-        #[derive(Clone, PartialEq, Eq, Hash)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum $cat {
             $($types$(($args))?,)*
         }
@@ -122,7 +119,6 @@ macro_rules! _impl_cat {
             }
 
 
-            #[allow(non_snake_case)]
             fn all(&self) -> HashSet<Type> {
                 let mut set = HashSet::new();
                 $(set.insert($cats::$types);)*
@@ -130,7 +126,6 @@ macro_rules! _impl_cat {
             }
 
             $(
-                #[allow(non_snake_case)]
                 fn sources() -> Vec<Box<Category>> {
                     let mut set = HashSet::new();
                     set.insert($source);
@@ -518,7 +513,7 @@ impl Token {
     where
         T: Category + 'static,
     {
-        Cats::Get::<T>().all().contains(&self.ttype)
+        T::New().all().contains(&self.ttype)
     }
 
     pub fn child(&mut self, index: usize) -> &Token {
@@ -593,8 +588,13 @@ impl<'e> Error {
         self.index
     }
 
-    fn message(&self) -> String {
-        let mut message = String::from(format!("Error @{}: *{}*; ", self.index, self.etype,));
+    pub fn message(&self) -> String {
+        let mut message = String::from(format!(
+            "Error in {} @ {}: *{}*; ",
+            format!("{:?}", self.ttype),
+            self.index,
+            self.etype,
+        ));
 
         match self.etype.as_str() {
             Error::INVALID_KEY => {
