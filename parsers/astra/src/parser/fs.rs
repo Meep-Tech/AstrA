@@ -1,5 +1,6 @@
 use super::context::Language;
 
+#[derive(Debug, Clone)]
 pub struct File {
     pub path: String,
     pub name: String,
@@ -28,6 +29,7 @@ impl File {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Type {
     Unknown,
     AstrA,
@@ -37,12 +39,14 @@ pub enum Type {
     Markup(Markup),
 }
 
+#[derive(Debug, Clone)]
 pub enum Data {
     Data,
     Value,
     StruX(Struct),
 }
 
+#[derive(Debug, Clone)]
 pub enum Struct {
     StruX,
     Group,
@@ -54,6 +58,7 @@ pub enum Struct {
     Dex,
 }
 
+#[derive(Debug, Clone)]
 pub enum Trait {
     Trait,
     ProX,
@@ -62,6 +67,7 @@ pub enum Trait {
     Enum,
 }
 
+#[derive(Debug, Clone)]
 pub enum Markup {
     Markup,
     BloX,

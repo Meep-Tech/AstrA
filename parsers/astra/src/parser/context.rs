@@ -1,10 +1,13 @@
 use super::fs::{get_lang, get_type, File};
+
+#[derive(Debug, Clone)]
 pub enum Language {
     StruX,
     ProX,
     BloX,
 }
 
+#[derive(Debug, Clone)]
 pub struct Context {
     pub lang: Language,
     pub file: Option<File>,

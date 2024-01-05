@@ -1,9 +1,11 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use self::cats::{
     Aliases, Attribute, Attributes, Category, Comment, Comments, Entries, Entry, Identifier,
     Identifiers, Modifier, Modifiers, Procedural, Procedurals, Structure, Structures, Tags,
 };
+
+use super::{Cursor, Scanner};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -32,6 +34,7 @@ impl Type {
 
 pub(crate) mod cats;
 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub ttype: Type,
     pub start: usize,
@@ -46,7 +49,7 @@ impl Token {
     pub type Category = dyn Category;
 
     #[allow(non_snake_case)]
-    pub fn New(start: usize) -> Token {
+    pub(in super::super) fn New(start: usize) -> Token {
         Token {
             ttype: Type::None,
             start,
@@ -58,7 +61,7 @@ impl Token {
     }
 
     #[allow(non_snake_case)]
-    pub fn Of_Type(ttype: Type, start: usize) -> Token {
+    pub(in super::super) fn Of_Type(ttype: Type, start: usize) -> Token {
         Token {
             ttype,
             start,
@@ -100,11 +103,24 @@ impl Token {
         None
     }
 
-    pub fn push(&mut self, token: Token) {
+    pub fn props(&self) -> HashMap<String, &Token> {
+        let mut props = HashMap::new();
+        for (key, index) in &self.keys {
+            props.insert(key.to_string(), &self.children[*index]);
+        }
+
+        props
+    }
+
+    pub fn text_from(&self, source: &str) -> String {
+        source[self.start..self.end].to_string()
+    }
+
+    pub(in super::super) fn push(&mut self, token: Token) {
         self.children.push(token);
     }
 
-    pub fn set(&mut self, key: &str, token: Token) {
+    pub(in super::super) fn set(&mut self, key: &str, token: Token) {
         if let Some(index) = self.keys.get(key) {
             self.children[*index] = token;
             return;
@@ -115,12 +131,17 @@ impl Token {
         self.children.push(token);
     }
 
-    pub fn end(mut self, end: usize) -> Self {
-        self.end = end;
+    pub(in super::super) fn end(self, cursor: &Cursor) -> Self {
+        self.end_at(cursor.index())
+    }
+
+    pub(in super::super) fn end_at(mut self, at: usize) -> Self {
+        self.end = at;
         self
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Error {
     etype: String,
     ttype: Type,
@@ -135,7 +156,7 @@ impl<'e> Error {
     pub const IN_PROP_KEY: &'static str = "in_prop";
 
     #[allow(non_snake_case)]
-    pub fn Unexpected(
+    pub(in super::super) fn Unexpected(
         ttype: &Token::Type,
         index: usize,
         found: impl Display,
@@ -149,6 +170,21 @@ impl<'e> Error {
                 expected.iter().map(|e| e.to_string()).collect(),
                 vec![found.to_string()],
             ],
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub(in super::super) fn Invalid(
+        ttype: &Token::Type,
+        index: usize,
+        found: impl Display,
+        reason: impl Display,
+    ) -> Error {
+        Error {
+            etype: Error::INVALID_KEY.to_string(),
+            index,
+            ttype: ttype.clone(),
+            data: vec![vec![reason.to_string()], vec![found.to_string()]],
         }
     }
 
@@ -178,6 +214,16 @@ impl<'e> Error {
                     self.data[1][0],
                     self.data[0].join(", "),
                 ));
+            }
+            Error::INVALID_KEY => {
+                if self.data.len() > 1 {
+                    message.push_str(&format!(
+                        "Invalid Syntax: {}. {}",
+                        self.data[1][0], self.data[0][0],
+                    ));
+                } else {
+                    message.push_str(&format!("Invalid Syntax. {}", self.data[0][0]));
+                }
             }
             _ => panic!("unhandled error type"),
         }

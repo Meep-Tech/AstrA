@@ -1,11 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::LazyLock,
-};
+use std::collections::HashSet;
 
 use super::Type;
-
-static _EMPTY_KEYS: LazyLock<HashMap<String, usize>> = LazyLock::new(|| HashMap::new());
 
 pub trait Category {
     #[allow(non_snake_case)]
@@ -199,6 +194,14 @@ cat! {Modifier
         AssignerSuffix
     ]
 }
+
+cat! {Identifier
+    for Identifiers [
+        Key(Key): Unknown (as Keys),
+        Lookup,
+    ]
+}
+
 cat! {Key
     in Identifier
     for Keys [
@@ -206,12 +209,5 @@ cat! {Key
         Name,
         Index,
         Pattern
-    ]
-}
-
-cat! {Identifier
-    for Identifiers [
-        Key(Key): Unknown (as Keys),
-        Lookup,
     ]
 }

@@ -1,3 +1,5 @@
+use crate::parser::{cursor::Scanner, Reader};
+
 use super::{indents::Indents, Cursor, Token};
 
 pub enum Status {
@@ -10,7 +12,7 @@ pub(crate) fn _parse_line_as_new_statement(
     source: &mut Token,
     indent: Indents::Diff,
 ) -> Status {
-    let mut line = Token::New(cursor.index());
+    let mut line = cursor.token().start();
 
     macro_rules! eol {
         () => {
@@ -41,7 +43,7 @@ pub(crate) fn _parse_line_as_new_statement(
                 }
                 // unexpected
                 else {
-                    return cursor.unexpected_prev_in(&mut line, &["/", "*", "\\t", "' '"]);
+                    return cursor.err().unexpected_prev_in(&mut line, &["/", "*", "\\t", "' '"]);
                 }
             }
         },
@@ -85,11 +87,10 @@ pub(crate) fn _parse_line_as_new_statement(
                     // read as own tag
                     todo!()
                 } else {
-                    return cursor.unexpected_prev_in(&mut line, &["#", "\\S"]);
+                    return cursor.err().unexpected_prev_in(&mut line, &["#", "\\S"]);
                 }
             }
         },
-
         '>' => match cursor.read() {
             '>' => match cursor.read() {
                 // >>#OutputType
@@ -107,7 +108,7 @@ pub(crate) fn _parse_line_as_new_statement(
                     }
                     // UNEXPECTED
                     else {
-                        return cursor.unexpected_prev_in(&mut line, &["#", "\\s"]);
+                        return cursor.err().unexpected_prev_in(&mut line, &["#", "\\s"]);
                     }
                 }
             },
@@ -120,8 +121,8 @@ pub(crate) fn _parse_line_as_new_statement(
             _ => {
                 // > initial-entry
                 if indent.is_more() && cursor.prev_is_nbsp() {
-                    let line_prefix =
-                        Token::Of_Type(Token::Type::Modifiers::LinePrefix, cursor.prev_index());
+                    let line_prefix = cursor.token().at_prev(Token::Type::Modifiers::LinePrefix);
+
                     line.set("line_prefix", line_prefix);
 
                     // read as entry
@@ -149,16 +150,29 @@ pub(crate) fn _parse_line_as_new_statement(
                 todo!()
             }
         },
-        '.' => todo!("Local Line Prefix or Dot Lookup"),
         '<' => todo!("Generic Attribute, Entry, or Deconstruction"),
-        '-' => todo!("Ordered Entry"),
+        '-' => todo!("Ordered Entry, Indented Flag, or Indented Subtraction"),
+        '.' => todo!("Local Line Prefix or Dot Lookup"),
+        '_' => todo!("Anonymous Entry (_), Access-Limited Variable Key (_key), or Access-Limited Input Prefix (_>)"),
+        '{' => todo!("Map Structure"),
+        '[' => todo!("Array Structure"),
+        '(' => todo!("Group Structure"),
         ':' => {
             if indent.is_more()
                 && source.is_in::<Token::Type::Entries>()
                 && !source.has("operator")
-            {}
-        }
-        '_' => todo!("Anonymous Entry (_), Access-Limited Variable Key (_key), or Access-Limited Input Prefix (_>)"),
+            {
+                // read as an operator
+                todo!()
+            } else {
+                cursor.err().invalid_prev_in(source,
+                    &format!(
+                        "Entry already has an assignment operator on previous line: '{:?}'.", 
+                        source.prop("operator").unwrap()
+                    )
+                );
+            }
+        },
         '@' | '$' => {
             // $name or @name
             line.ttype = Token::Type::Identifiers::Keys::Name;
@@ -170,7 +184,7 @@ pub(crate) fn _parse_line_as_new_statement(
             } else if c.is_numeric() {
                 
             } else {
-                cursor.unexpected_prev_in(source, &["/", "#", ">", "|", ".", "<", "-", ":", "_", "@", "$", "\\w"]);
+                cursor.err().unexpected_prev_in(source, &["/", "#", ">", "|", ".", "<", "-", ":", "_", "@", "$", "\\w"]);
             }
         }
     }

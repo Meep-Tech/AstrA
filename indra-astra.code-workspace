@@ -4,9 +4,6 @@
 			"path": "parsers/indra-astra"
 		},
 		{
-			"path": "docs"
-		},
-		{
 			"path": "core"
 		},
 		{

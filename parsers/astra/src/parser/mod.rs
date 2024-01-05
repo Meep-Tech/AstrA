@@ -8,7 +8,7 @@ pub mod indents;
 pub mod token;
 
 pub use context::Context;
-pub use cursor::{Cursor, State};
+pub use cursor::{Cursor, Reader, Scanner, State};
 pub use indents::Indents;
 pub use token::Token;
 
@@ -21,11 +21,11 @@ pub fn parse(input: &str, _config: &Config) -> Token {
     let context = Context::New_Empty();
     let mut cursor = Cursor::New_With(input, context);
 
-    let mut source = Token::New(0);
+    let mut source = cursor.token().start();
     cursor.skip_ws();
 
     // start first line.
     _parse_line_as_new_statement(&mut cursor, &mut source, Indents::Diff::None);
 
-    source.end(cursor.index())
+    source.end(&cursor)
 }
