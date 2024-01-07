@@ -6,7 +6,7 @@ use crate::parser::{
     indents::Indents,
 };
 
-use super::{token::Error, Status, Token};
+use super::{term, Error, Status, Token};
 
 #[derive(Debug)]
 pub struct Cursor {
@@ -484,7 +484,7 @@ impl<'temp> Errer<'temp> {
         expected: &[&str],
     ) -> Status {
         in_token.errors.push(Error::Unexpected(
-            &in_token.ttype,
+            &Error::Type::Token(in_token.ttype.clone()),
             at,
             self.cursor.at(at),
             expected,
@@ -511,7 +511,7 @@ impl<'temp> Errer<'temp> {
             .collect::<Vec<String>>();
 
         token.errors.push(Error::Unexpected(
-            &token.ttype,
+            &Error::Type::Token(token.ttype.clone()),
             at,
             self.cursor.at(at),
             expected
@@ -534,7 +534,7 @@ impl<'temp> Errer<'temp> {
 
     pub fn invalid_char_at(&mut self, at: usize, in_token: &mut Token, reason: &str) -> Status {
         in_token.errors.push(Error::Invalid(
-            &in_token.ttype,
+            &Error::Type::Token(in_token.ttype.clone()),
             at,
             self.cursor.at(at),
             reason.to_string(),
