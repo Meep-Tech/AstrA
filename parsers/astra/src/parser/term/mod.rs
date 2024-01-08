@@ -1,22 +1,26 @@
-use self::cats::{Category, Delimiter, Delimiters, Operator, Operators, Whitespace, Whitespaces};
-
-use super::{Cursor, Scanner};
+use self::cats::{
+    Betweens, Category, Delimiter, Delimiters, Operator, Operators, Suffixes, Whitespace,
+    Whitespaces, Word, Words,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     None,
+    Reserved,
     Ambiguous(Vec<Type>),
-    Word,
-    Number,
+    Word(Word),
     Operator(Operator),
     Delimiter(Delimiter),
     Whitespace(Whitespace),
 }
 
 impl Type {
+    pub type Words = Words;
     pub type Operators = Operators;
     pub type Delimiters = Delimiters;
     pub type Whitespaces = Whitespaces;
+    pub type Suffixes = Suffixes;
+    pub type Betweens = Betweens;
 }
 
 pub(crate) mod cats;

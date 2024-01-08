@@ -5,7 +5,7 @@ use self::cats::{
     Identifiers, Modifier, Modifiers, Procedural, Procedurals, Structure, Structures, Tags,
 };
 
-use super::{Cursor, Error, Scanner};
+use super::{Cursor, Error};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {

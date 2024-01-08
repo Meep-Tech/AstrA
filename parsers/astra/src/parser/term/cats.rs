@@ -122,13 +122,34 @@ macro_rules! _cat_subs {
     };
 }
 
+cat! {Word
+    for Words [
+        Key,
+        Number,
+        Delimited,
+    ]
+}
+
 cat! {Operator
     for Operators [
-        Universal,
+        Unknown,
+        Between(Between): Unknown (as Betweens),
         Spaced,
         Chained,
-        Prefix,
+        Prefix(Prefix): Unknown (as Prefixes),
         Suffix(Suffix): Unknown (as Suffixes),
+    ]
+}
+
+cat! {Between
+    in Operator
+    for Betweens [
+        Unknown,
+        Pipe, // ;;
+        MutableVarAssigner, // ~
+        ConstVarAssigner,   // =
+        ProcAssigner, // >>
+        FuncAssigner, // =>
     ]
 }
 
@@ -136,15 +157,33 @@ cat! {Suffix
     in Operator
     for Suffixes [
         Unknown,
-        StruXMutableAssigner,
+        MutableFieldAssigner, // :
+        ConstFieldAssigner,   // ::
+    ]
+}
+
+cat! {Prefix
+    in Operator
+    for Prefixes [
+        Unknown,
+        Alias, // |
+        Input, // >
+        Output, // >>
     ]
 }
 
 cat! {Delimiter
     for Delimiters [
-        Seperator,
-        Open,
-        Close,
+        MapStart,
+        MapEnd,
+        ArrayStart,
+        ArrayEnd,
+        GroupStart,
+        GroupEnd,
+        GenericStart,
+        GenericEnd,
+        EntrySeperator, // ,
+        ExpressionTerminator, // ;
     ]
 }
 
