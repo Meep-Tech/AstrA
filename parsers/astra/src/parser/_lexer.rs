@@ -6,6 +6,7 @@ pub(crate) struct _Context {
     pub prev_was_delim: bool,
     pub prev_was_ws: bool,
     pub prev_was_op: bool,
+    pub is_start_of_line: bool,
 }
 
 impl _Context {
@@ -13,6 +14,7 @@ impl _Context {
     pub fn New() -> Self {
         Self {
             generic_depth: 0,
+            is_start_of_line: true,
             prev_was_ws: true,
             prev_was_delim: false,
             prev_was_op: false,
@@ -23,6 +25,7 @@ impl _Context {
 pub(crate) fn _lex_line(source: &mut Cursor, ctx: &mut _Context) -> Option<Vec<super::Term>> {
     let mut line = vec![];
 
+    ctx.is_start_of_line = true;
     line.extend(_lex_indents(source));
     line.extend(_lex_contents(source, ctx));
 
@@ -117,6 +120,8 @@ fn _lex_contents(source: &mut Cursor, ctx: &mut _Context) -> Vec<Term> {
                             ctx.prev_was_ws = false;
                             _lex_symbol(source, ctx)
                         });
+
+                        ctx.is_start_of_line = false;
                     }
                 }
             }
@@ -410,7 +415,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
                             if ctx.prev_was_delim || ctx.prev_was_ws || ctx.prev_was_op {
                                 return _as_op!(Prefixes::Spread; +2);
                             } else {
-                                return _as_op!(Chains::Range; +2);
+                                return _as_op!(Chaineds::Range; +2);
                             }
                         } else {
                             return _as_op!(Lookups::Parent; +1);
@@ -538,8 +543,89 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
 
             return _as_generic_end!();
         }
+        ':' => {
+            if let Some((_, c)) = source.peek() {
+                if c == &':' {
+                    if let Some((_, c)) = source.peek() {
+                        // ::: final field assigner
+                        if c == &':' {
+                            return _as_op!(Suffixes::FinalFieldAssigner; +2);
+                        }
+
+                        // :: const field assigner
+                        if c.is_whitespace() || c.is_delimiter() {
+                            return _as_op!(Suffixes::ConstFieldAssigner; +1);
+                        }
+                        // :: single arg literal prefix
+                        else if ctx.prev_was_delim || ctx.prev_was_ws {
+                            return _as_op!(Prefixes::SingleArgLiteral; +1);
+                        }
+                        // reserved call of some kind
+                        else {
+                            return _as_reserved!(+1);
+                        }
+                    }
+
+                    // :: const field assigner
+                    return _as_op!(Suffixes::ConstFieldAssigner; +1);
+                }
+
+                // : mutable field assigner
+                if c.is_whitespace() || c.is_delimiter() {
+                    return _as_op!(Suffixes::MutableFieldAssigner);
+                }
+                // : single arg prefix
+                else if ctx.prev_was_delim || ctx.prev_was_ws {
+                    return _as_op!(Prefixes::SingleArg);
+                }
+                // : chained call
+                else {
+                    return _as_op!(Chaineds::Caller);
+                }
+            }
+
+            // : mutable field assigner
+            return _as_op!(Suffixes::MutableFieldAssigner);
+        }
+        '|' => {
+            if let Some((_, c)) = source.peek() {
+                // || double or
+                if c == &'|' {
+                    return _as_op!(Chaineds::Or; +1);
+                }
+                // | single or
+                else if c.is_whitespace() {
+                    return _as_op!(Spaceds::Or);
+                }
+                // | alias prefix
+                else {
+                    return _as_op!(Prefixes::Alias);
+                }
+            } else if ctx.prev_was_delim || ctx.prev_was_op {
+                // | alias prefix
+                return _as_op!(Prefixes::Alias);
+            } else if ctx.prev_was_ws {
+                // | single or
+                return _as_op!(Spaceds::Or);
+            } else {
+                return _as_unknown!(Suffixes);
+            }
+        }
         _ => {
             return _as_unknown!(Operators);
+        }
+    }
+}
+
+trait MightBeDelimiter {
+    fn is_delimiter(&self) -> bool;
+}
+
+impl MightBeDelimiter for char {
+    fn is_delimiter(&self) -> bool {
+        match self {
+            '{' | '}' | '[' | ']' | '(' | ')' | ',' | ';' => true,
+            _ => false,
         }
     }
 }

@@ -66,11 +66,39 @@ impl Term {
         self.ttype == ttype
     }
 
-    pub fn is_in<T>(&self) -> bool
+    pub fn is_of<T>(&self) -> bool
     where
         T: Category + 'static,
     {
-        T::New().all().contains(&self.ttype)
+        T::Get().has(&self.ttype)
+    }
+
+    pub fn is_maybe(&self, ttype: Type) -> bool {
+        self.is(ttype.clone())
+            || if let Type::Ambiguous(types) = &self.ttype {
+                types.contains(&ttype)
+            } else {
+                false
+            }
+    }
+
+    pub fn is_maybe_of<T>(&self) -> bool
+    where
+        T: Category + 'static,
+    {
+        self.is_of::<T>()
+            || if let Type::Ambiguous(types) = &self.ttype {
+                types.iter().any(|ttype| T::Get().has(ttype))
+            } else {
+                false
+            }
+    }
+
+    pub fn is_ambiguous(&self) -> bool {
+        match self.ttype {
+            Type::Ambiguous(_) => true,
+            _ => false,
+        }
     }
 
     pub fn text_from(&self, source: &str) -> String {

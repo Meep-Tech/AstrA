@@ -4,7 +4,7 @@ use super::Type;
 
 pub trait Category {
     #[allow(non_snake_case)]
-    fn New() -> Self
+    fn Get() -> Self
     where
         Self: Sized;
 
@@ -72,7 +72,7 @@ macro_rules! _impl_cat {
     ($cat:ident, $cats:ident, $($types:ident)* $(, $sup:ident)?) => {
         impl Category for $cats {
             #[allow(non_snake_case)]
-            fn New() -> Self {
+            fn Get() -> Self {
                 Self {}
             }
 
@@ -133,21 +133,31 @@ cat! {Word
 cat! {Operator
     for Operators [
         Unknown,
-        Spaced,
-        Chained(Chained): Unknown (as Chains),
-        // Spaced | Chained
-        Between(Between): Unknown (as Betweens),
+        Spaced(Spaced): Unknown (as Spaceds),
+        Chained(Chained): Unknown (as Chaineds),
         Prefix(Prefix): Unknown (as Prefixes),
         Suffix(Suffix): Unknown (as Suffixes),
-        // Prefix | Chained
+        // Spaced &| Chained
+        Between(Between): Unknown (as Betweens),
+        // Prefix &| Chained
         Lookup(Lookup): Unknown (as Lookups),
+    ]
+}
+
+cat! {Spaced
+    in Operator
+    for Spaceds [
+        Unknown,
+        Or, // |
     ]
 }
 
 cat! {Chained
     in Operator
-    for Chains [
+    for Chaineds [
         Unknown,
+        Or, // ||
+        Caller, // :
         Range, // ...
     ]
 }
@@ -170,6 +180,7 @@ cat! {Suffix
         Unknown,
         MutableFieldAssigner, // :
         ConstFieldAssigner,   // ::
+        FinalFieldAssigner,   // :::
     ]
 }
 
@@ -182,6 +193,8 @@ cat! {Prefix
         Input, // >
         Output, // >>
         Spread, // ...
+        SingleArg, // :
+        SingleArgLiteral, // ::
     ]
 }
 
