@@ -1,6 +1,5 @@
+use super::{term, token};
 use std::fmt::Display;
-
-use super::{term, token, Token};
 
 #[derive(Debug, Clone)]
 pub enum Type {

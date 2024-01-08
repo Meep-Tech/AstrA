@@ -5,7 +5,7 @@ use self::cats::{
     Identifiers, Modifier, Modifiers, Procedural, Procedurals, Structure, Structures, Tags,
 };
 
-use super::{Cursor, Error};
+use super::{Cursor, Error, Term};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -39,6 +39,7 @@ pub struct Token {
     pub ttype: Type,
     pub start: usize,
     pub end: usize,
+    pub terms: Vec<Term>,
     pub children: Vec<Token>,
     pub errors: Vec<Error>,
     pub keys: HashMap<String, usize>,
@@ -54,9 +55,10 @@ impl Token {
             ttype: Type::None,
             start,
             end: start,
+            terms: vec![],
             children: vec![],
-            keys: HashMap::new(),
             errors: vec![],
+            keys: HashMap::new(),
         }
     }
 
@@ -66,9 +68,10 @@ impl Token {
             ttype,
             start,
             end: start,
+            terms: vec![],
             children: vec![],
-            keys: HashMap::new(),
             errors: vec![],
+            keys: HashMap::new(),
         }
     }
 
@@ -131,11 +134,7 @@ impl Token {
         self.children.push(token);
     }
 
-    pub(in super::super) fn end(self, cursor: &Cursor) -> Self {
-        self.end_at(cursor.index())
-    }
-
-    pub(in super::super) fn end_at(mut self, at: usize) -> Self {
+    pub(in super::super) fn end(mut self, at: usize) -> Self {
         self.end = at;
         self
     }

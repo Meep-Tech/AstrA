@@ -92,13 +92,15 @@ pub(crate) mod _lexer {
         let mut prev = '\n';
 
         loop {
-            match &source.peek() {
+            let n = source.peek();
+            match n {
                 // eof
                 None => {
                     break;
                 }
                 // any
-                Some((i, c)) => {
+                Some((_, ref c)) => {
+                    let c = *c;
                     match c {
                         // ws
                         ' ' | '\t' => {}
@@ -129,7 +131,7 @@ pub(crate) mod _lexer {
                         }
                     }
 
-                    prev = *c;
+                    prev = c;
                 }
             }
         }
@@ -141,7 +143,7 @@ pub(crate) mod _lexer {
         source.next();
 
         let mut p: Option<(usize, char)> = None;
-        let word = Term::Of_Type(Term::Type::Words::Number, source.count());
+        let mut word = Term::Of_Type(Term::Type::Words::Number, source.count());
 
         macro_rules! read {
             ($($prev:expr)?) => {
@@ -240,7 +242,7 @@ pub(crate) mod _lexer {
         source.next();
 
         let mut p: Option<(usize, char)> = None;
-        let key_or_delimited = Term::Of_Type(Term::Type::Words::Key, source.count());
+        let mut key_or_delimited = Term::Of_Type(Term::Type::Words::Key, source.count());
 
         macro_rules! read {
             () => {
