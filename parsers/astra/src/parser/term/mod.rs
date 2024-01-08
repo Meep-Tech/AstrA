@@ -1,6 +1,6 @@
 use self::cats::{
-    Betweens, Category, Delimiter, Delimiters, Operator, Operators, Suffixes, Whitespace,
-    Whitespaces, Word, Words,
+    Betweens, Category, Delimiter, Delimiters, Ends, Lines, Operator, Operators, Separators,
+    Starts, Suffixes, Whitespace, Whitespaces, Word, Words,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21,6 +21,10 @@ impl Type {
     pub type Whitespaces = Whitespaces;
     pub type Suffixes = Suffixes;
     pub type Betweens = Betweens;
+    pub type Lines = Lines;
+    pub type Starts = Starts;
+    pub type Ends = Ends;
+    pub type Separators = Separators;
 }
 
 pub(crate) mod cats;
@@ -73,7 +77,7 @@ impl Term {
         source[self.start..self.end].to_string()
     }
 
-    pub(in super::super) fn typing(&mut self, ttype: Type) -> &mut Self {
+    pub(in super::super) fn ttype(mut self, ttype: Type) -> Self {
         self.ttype = ttype;
         self
     }

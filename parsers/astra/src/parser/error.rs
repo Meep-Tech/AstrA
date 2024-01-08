@@ -73,9 +73,6 @@ impl<'e> Error {
         ));
 
         match self.etype.as_str() {
-            Error::INVALID_KEY => {
-                message.push_str(&self.data[0][0]);
-            }
             Error::UNEXPECTED_KEY => {
                 message.push_str(&format!(
                     "Found {}, Expected: {}",

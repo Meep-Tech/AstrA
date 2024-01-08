@@ -133,11 +133,22 @@ cat! {Word
 cat! {Operator
     for Operators [
         Unknown,
-        Between(Between): Unknown (as Betweens),
         Spaced,
-        Chained,
+        Chained(Chained): Unknown (as Chains),
+        // Spaced | Chained
+        Between(Between): Unknown (as Betweens),
         Prefix(Prefix): Unknown (as Prefixes),
         Suffix(Suffix): Unknown (as Suffixes),
+        // Prefix | Chained
+        Lookup(Lookup): Unknown (as Lookups),
+    ]
+}
+
+cat! {Chained
+    in Operator
+    for Chains [
+        Unknown,
+        Range, // ...
     ]
 }
 
@@ -146,7 +157,7 @@ cat! {Between
     for Betweens [
         Unknown,
         Pipe, // ;;
-        MutableVarAssigner, // ~
+        MutableVarAssigner, // ~=
         ConstVarAssigner,   // =
         ProcAssigner, // >>
         FuncAssigner, // =>
@@ -166,24 +177,77 @@ cat! {Prefix
     in Operator
     for Prefixes [
         Unknown,
+        Tag, // #
         Alias, // |
         Input, // >
         Output, // >>
+        Spread, // ...
+    ]
+}
+
+cat! {Lookup
+    in Operator
+    for Lookups [
+        Unknown,
+        Dot, // .
+        Slash, // /
+        Parent, // ..
+        Tag, // .#
+        Query, // .?
     ]
 }
 
 cat! {Delimiter
     for Delimiters [
-        MapStart,
-        MapEnd,
-        ArrayStart,
-        ArrayEnd,
-        GroupStart,
-        GroupEnd,
-        GenericStart,
-        GenericEnd,
-        EntrySeperator, // ,
-        ExpressionTerminator, // ;
+        Start(Start): Unknown (as Starts),
+        End(End): Unknown (as Ends),
+        Separator(Separator): Unknown (as Separators),
+        Line(Line): Unknown (as Lines),
+    ]
+}
+
+cat! {Start
+    in Delimiter
+    for Starts [
+        Unknown,
+        Map,
+        Array,
+        Group,
+        Generic,
+        Comment,
+    ]
+}
+
+cat! {End
+    in Delimiter
+    for Ends [
+        Unknown,
+        Map,
+        Array,
+        Group,
+        Generic,
+        Comment,
+    ]
+}
+
+cat! {Separator
+    in Delimiter
+    for Separators [
+        Unknown,
+        Entry,
+        Expression,
+    ]
+}
+
+cat! {Line
+    in Delimiter
+    for Lines [
+        Unknown,
+        Input,
+        Local,
+        Comment,
+        Doc,
+        Section,
     ]
 }
 
