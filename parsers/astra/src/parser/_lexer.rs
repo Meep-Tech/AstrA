@@ -313,6 +313,13 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             }
             symbol.end(source.count())
         }};
+        ($type:path; ++) => {{
+            symbol = symbol.ttype($type);
+
+            _skip_to_end_of_symbol!();
+
+            symbol.end(source.count())
+        }};
     }
 
     macro_rules! _as_unknown {
@@ -323,6 +330,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
                 source.next();
             }
 
+            ctx.prev_was_op = true;
             symbol.end(source.count())
         }};
         ($cat:ident) => {{
@@ -330,25 +338,42 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
 
             _skip_to_end_of_symbol!();
 
+            ctx.prev_was_op = true;
             symbol.end(source.count())
         }};
     }
 
     macro_rules! _as_reserved {
-        () => {{
-            symbol.ttype(Term::Type::Reserved)
-        }};
         (+$num:expr) => {{
             symbol = symbol.ttype(Term::Type::Reserved);
             for _ in 0..$num {
                 source.next();
             }
 
+            ctx.prev_was_op = true;
+            ctx.prev_was_delim = true;
+            symbol.end(source.count())
+        }};
+        () => {{
+            symbol = symbol.ttype(Term::Type::Reserved);
+
+            _skip_to_end_of_symbol!();
+
+            ctx.prev_was_op = true;
+            ctx.prev_was_delim = true;
             symbol.end(source.count())
         }};
     }
 
     macro_rules! _as_ambiguous {
+        (+$num:expr; $($types:tt)*) => {{
+            symbol = symbol.ttype(Term::Type::Ambiguous(vec![$($types)*]));
+            for _ in 0..$num {
+                source.next();
+            }
+
+            symbol.end(source.count())
+        }};
         ($($types:tt)*) => {{
             symbol.ttype(Term::Type::Ambiguous(vec![$($types)*]))
         }};
@@ -365,6 +390,11 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             ctx.prev_was_op = false;
             _as!(Term::Type::Delimiters::$cat::$type; +$num)
         }};
+        ($cat:ident::$type:ident; ++) => {{
+            ctx.prev_was_delim = true;
+            ctx.prev_was_op = false;
+            _as!(Term::Type::Delimiters::$cat::$type; ++)
+        }};
     }
 
     macro_rules! _as_op {
@@ -377,6 +407,11 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             ctx.prev_was_op = true;
             ctx.prev_was_delim = false;
             _as!(Term::Type::Operators::$cat::$type; +$num)
+        }};
+        ($cat:ident::$type:ident; ++) => {{
+            ctx.prev_was_op = true;
+            ctx.prev_was_delim = false;
+            _as!(Term::Type::Operators::$cat::$type; ++)
         }};
     }
 
@@ -403,6 +438,56 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             return _as_delim!(Separators::Entry);
         }
         '#' => {
+            if let Some((_, c)) = source.peek() {
+                if c == &'#' {
+                    if let Some((_, c)) = source.peek() {
+                        if c == &'#' {
+                            if ctx.is_start_of_line {
+                                if let Some((_, c)) = source.peek() {
+                                    // ####
+                                    if c == &'#' {
+                                        return _as_delim!(Lines::Title; ++);
+                                    }
+                                    // ### section
+                                    else if c.is_whitespace() {
+                                        return _as_delim!(Lines::Section; +2);
+                                    }
+                                }
+                            }
+
+                            // ### reserved
+                            return _as_reserved!(+2);
+                        } else if c.is_whitespace() {
+                            // ## doc OR section
+                            if ctx.is_start_of_line {
+                                return _as_ambiguous!(+2;
+                                    Term::Type::Delimiters::Lines::Doc,
+                                    Term::Type::Delimiters::Lines::Section
+                                );
+                            }
+                            // ## eol doc
+                            else {
+                                return _as_delim!(Lines::Doc; +1);
+                            }
+                        }
+                    }
+
+                    // ## tag literal
+                    return _as_op!(Prefixes::TagLiteral; +1);
+                } else if c.is_whitespace() {
+                    // # title
+                    if ctx.is_start_of_line {
+                        return _as_delim!(Lines::Title);
+                    }
+                    // # trait modifier
+                    else if ctx.prev_was_ws || ctx.prev_was_delim || ctx.prev_was_op {
+                        return _as_op!(Spaceds::TraitMod);
+                    } else {
+                        return _as_reserved!();
+                    }
+                }
+            }
+
             return _as_op!(Prefixes::Tag);
         }
         '.' => {
@@ -558,7 +643,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
                         }
                         // :: single arg literal prefix
                         else if ctx.prev_was_delim || ctx.prev_was_ws {
-                            return _as_op!(Prefixes::SingleArgLiteral; +1);
+                            return _as_op!(Prefixes::ArgLiteral; +1);
                         }
                         // reserved call of some kind
                         else {
@@ -576,7 +661,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
                 }
                 // : single arg prefix
                 else if ctx.prev_was_delim || ctx.prev_was_ws {
-                    return _as_op!(Prefixes::SingleArg);
+                    return _as_op!(Prefixes::Arg);
                 }
                 // : chained call
                 else {
@@ -608,7 +693,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
                 // | single or
                 return _as_op!(Spaceds::Or);
             } else {
-                return _as_unknown!(Suffixes);
+                return _as_reserved!();
             }
         }
         _ => {

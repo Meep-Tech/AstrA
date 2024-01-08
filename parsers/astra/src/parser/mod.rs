@@ -5,17 +5,17 @@ pub(crate) mod _lexer;
 // pub(crate) mod _parser;
 
 pub mod context;
-pub mod error;
+//pub mod error;
 pub mod fs;
 pub mod indents;
 pub mod term;
-pub mod token;
+// pub mod token;
 
 pub use context::Context;
-pub use error::Error;
+//pub use error::Error;
 pub use indents::Indents;
 pub use term::Term;
-pub use token::Token;
+// pub use token::Token;
 
 pub type Cursor<'a> = MultiPeek<CharIndices<'a>>;
 
@@ -25,22 +25,22 @@ pub struct Config {
     pub skip_whitespace: bool,
 }
 
-pub fn parse(input: &str, config: &Config) -> Token {
-    let _terms = lex(input, config);
-    // let context = Context::New_Empty();
-    // let mut cursor = Cursor::New_With(input, context);
+// pub fn parse(input: &str, config: &Config) -> Token {
+//     let _terms = lex(input, config);
+//     todo!()
+// }
 
-    // let mut source = cursor.token().start();
-    // cursor.skip_ws();
+pub fn lex(input: &str) -> Vec<Term> {
+    let config = Config {
+        initial_indent: 0,
+        skip_comments: true,
+        skip_whitespace: true,
+    };
 
-    // // start first line.
-    // _parse_line_as_new_statement(&mut cursor, &mut source, Indents::Diff::None);
-
-    // source.end(&cursor)
-    todo!()
+    lex_with(input, &config)
 }
 
-pub fn lex(input: &str, _config: &Config) -> Vec<Term> {
+pub fn lex_with(input: &str, _config: &Config) -> Vec<Term> {
     let mut terms = vec![];
     let mut source: Cursor = itertools::multipeek(input.char_indices());
     let mut ctx = _lexer::_Context::New();

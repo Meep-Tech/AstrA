@@ -149,6 +149,7 @@ cat! {Spaced
     for Spaceds [
         Unknown,
         Or, // |
+        TraitMod, // #
     ]
 }
 
@@ -189,12 +190,13 @@ cat! {Prefix
     for Prefixes [
         Unknown,
         Tag, // #
+        TagLiteral, // ##
         Alias, // |
         Input, // >
         Output, // >>
         Spread, // ...
-        SingleArg, // :
-        SingleArgLiteral, // ::
+        Arg, // :
+        ArgLiteral, // ::
     ]
 }
 
@@ -261,6 +263,7 @@ cat! {Line
         Comment,
         Doc,
         Section,
+        Title,
     ]
 }
 
