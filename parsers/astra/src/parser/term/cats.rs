@@ -124,8 +124,7 @@ macro_rules! _cat_subs {
 
 cat! {Word
     for Words [
-        Key,
-        Number,
+        Whole,
         Delimited,
     ]
 }

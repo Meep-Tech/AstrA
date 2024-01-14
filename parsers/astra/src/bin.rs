@@ -1,4 +1,4 @@
-use astra::parser::lex;
+use astra::{color, parser::lex};
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -30,7 +30,11 @@ pub fn main() {
             ("\n".to_string() + &code).replace("\n", "\n\t")
         );
         let terms = lex(&code);
-        println!("{:#?}", terms);
+        println!(
+            "Result:{}\n\n\t------------------------\n{}",
+            format!("\n{:#?}", terms).replace("\n", "\n\t"),
+            format!("\n{}", color::terms_via_ansi(&code, &terms)).replace("\n", "\n\t"),
+        );
     } else {
         panic!("Unknown command: {}", cmd);
     }

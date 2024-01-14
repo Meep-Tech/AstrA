@@ -4,6 +4,7 @@ log = []
 
 [package]
 name = "astra"
+authors = ["Meep.Tech"]
 version = "0.1.0"
 edition = "2021"
 

@@ -47,6 +47,9 @@ pub fn lex_with(input: &str, _config: &Config) -> Vec<Term> {
 
     loop {
         if source.peek().is_none() {
+            let dedents = _lexer::_update_indent_level(input.len(), 0, &mut ctx);
+            terms.extend(dedents);
+
             break;
         } else {
             source.reset_peek();

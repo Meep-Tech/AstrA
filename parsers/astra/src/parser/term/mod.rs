@@ -9,6 +9,7 @@ pub enum Type {
     Reserved,
     Ambiguous(Vec<Type>),
     Word(Word),
+    Number,
     Operator(Operator),
     Delimiter(Delimiter),
     Whitespace(Whitespace),
@@ -101,8 +102,15 @@ impl Term {
         }
     }
 
+    pub fn is_ws(&self) -> bool {
+        match self.ttype {
+            Type::Whitespace(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn text_from(&self, source: &str) -> String {
-        source[self.start..self.end].to_string()
+        source[self.start..=self.end].to_string()
     }
 
     pub(in super::super) fn ttype(mut self, ttype: Type) -> Self {
