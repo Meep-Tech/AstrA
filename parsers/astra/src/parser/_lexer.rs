@@ -39,7 +39,6 @@ pub fn _lex_indentation(source: &mut Cursor, ctx: &mut _Context) -> Vec<Term> {
     source.reset_peek();
 
     // TODO: this doesn't actually work.
-    // I need to make sure to only add indent tokens when there's an increase, otherwise there will be too many indents per dedent.
     let mut count = 0;
     loop {
         if let Some(next) = &source.peek() {
@@ -61,7 +60,7 @@ pub(crate) fn _update_indent_level(at: usize, level: usize, ctx: &mut _Context) 
     let mut dents = vec![];
     if ctx.indents.len() == 0 {
         if level != 0 {
-            ctx.indents.push(0);
+            ctx.indents.push(level);
             for i in 0..level {
                 dents.push(Term::Of_Type(Term::Type::Whitespaces::Indent, at + i));
             }
@@ -71,7 +70,10 @@ pub(crate) fn _update_indent_level(at: usize, level: usize, ctx: &mut _Context) 
         if level > last {
             ctx.indents.push(level);
             for i in 0..(level - last) {
-                dents.push(Term::Of_Type(Term::Type::Whitespaces::Indent, at + i));
+                dents.push(Term::Of_Type(
+                    Term::Type::Whitespaces::Indent,
+                    at + (level - last - i),
+                ));
             }
         } else if level < last {
             ctx.indents.pop();
