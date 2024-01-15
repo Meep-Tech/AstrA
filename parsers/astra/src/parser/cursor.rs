@@ -44,7 +44,7 @@ impl<'a> Cursor<'a> {
         //self.src.reset_peek();
     }
 
-    pub fn peeked_has(&self, cadence: Term::Cadence) {}
+    pub fn peeked_is(&self, cadence: Term::Cadence) {}
 
     pub fn indents(&self) -> &Vec<usize> {
         &self.indents

@@ -2,6 +2,10 @@ use self::cats::{
     Betweens, Category, Delimiter, Delimiters, Ends, Lines, Operator, Operators, Separators,
     Starts, Suffixes, Whitespace, Whitespaces, Word, Words,
 };
+pub enum Symbol {
+    Operator(Operator),
+    Delimiter(Delimiter),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -26,6 +30,7 @@ impl Type {
     pub type Starts = Starts;
     pub type Ends = Ends;
     pub type Separators = Separators;
+    pub type Symbol = Symbol;
 }
 
 pub enum Cadence {
@@ -40,6 +45,11 @@ pub enum Cadence {
     Open,
     Capture,
     Close,
+}
+
+impl Symbol {
+    pub type Operators = Operators;
+    pub type Delimiters = Delimiters;
 }
 
 pub(crate) mod cats;
