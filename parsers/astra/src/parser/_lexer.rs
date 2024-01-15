@@ -1,129 +1,88 @@
 use super::{Cursor, Term};
-use itertools::PeekingNext;
 
-pub(crate) struct _Context {
-    pub indents: Vec<usize>,
-    pub generic_depth: usize,
-    pub prev_was_delim: bool,
-    pub prev_was_ws: bool,
-    pub prev_was_op: bool,
-    pub is_start_of_line: bool,
+// pub(crate) struct _Context {
+//     pub indents: Vec<usize>,
+//     pub generic_depth: usize,
+//     pub prev_was_delim: bool,
+//     pub prev_was_ws: bool,
+//     pub prev_was_op: bool,
+//     pub is_start_of_line: bool,
+// }
+
+// impl _Context {
+//     #[allow(non_snake_case)]
+//     pub fn New() -> Self {
+//         Self {
+//             indents: vec![],
+//             generic_depth: 0,
+//             is_start_of_line: true,
+//             prev_was_ws: true,
+//             prev_was_delim: false,
+//             prev_was_op: false,
+//         }
+//     }
+// }
+
+pub(crate) fn _lex_line(ctx: &mut Cursor) {
+    ctx.start_line();
+    _lex_indentation(ctx);
+    _lex_content(ctx);
 }
 
-impl _Context {
-    #[allow(non_snake_case)]
-    pub fn New() -> Self {
-        Self {
-            indents: vec![],
-            generic_depth: 0,
-            is_start_of_line: true,
-            prev_was_ws: true,
-            prev_was_delim: false,
-            prev_was_op: false,
-        }
+pub(crate) fn _lex_indentation(ctx: &mut Cursor) {
+    let mut prev_level = *ctx.indents().last().unwrap_or(&0);
+
+    let mut new_level = 0;
+    while ctx.read_if_in(&[' ', '\t']) {
+        new_level += 1;
     }
-}
 
-pub(crate) fn _lex_line(source: &mut Cursor, ctx: &mut _Context) -> Option<Vec<super::Term>> {
-    let mut line = vec![];
-
-    ctx.is_start_of_line = true;
-    line.extend(_lex_indentation(source, ctx));
-    line.extend(_lex_content(source, ctx));
-
-    Some(line)
-}
-
-pub fn _lex_indentation(source: &mut Cursor, ctx: &mut _Context) -> Vec<Term> {
-    let start = source.peek().unwrap().0;
-    source.reset_peek();
-
-    // TODO: this doesn't actually work.
-    let mut count = 0;
-    loop {
-        if let Some(next) = &source.peek() {
-            if next.1 == '\t' || next.1 == ' ' {
-                count += 1;
-                source.next();
+    match ctx.next() {
+        Some('\n') => {}
+        _ => {
+            if new_level > prev_level {
+                ctx.increase_indent(new_level);
+                let start_of_increase = ctx.index() - new_level;
+                for i in 0..(new_level - prev_level) {
+                    ctx.push_as_term_at(Term::Type::Whitespaces::Indent, start_of_increase + i);
+                }
             } else {
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-
-    _update_indent_level(start, count, ctx)
-}
-
-pub(crate) fn _update_indent_level(at: usize, level: usize, ctx: &mut _Context) -> Vec<Term> {
-    let mut dents = vec![];
-    if ctx.indents.len() == 0 {
-        if level != 0 {
-            ctx.indents.push(level);
-            for i in 0..level {
-                dents.push(Term::Of_Type(Term::Type::Whitespaces::Indent, at + i));
-            }
-        }
-    } else {
-        let last = *ctx.indents.last().unwrap();
-        if level > last {
-            ctx.indents.push(level);
-            for i in 0..(level - last) {
-                dents.push(Term::Of_Type(
-                    Term::Type::Whitespaces::Indent,
-                    at + (level - last - i),
-                ));
-            }
-        } else if level < last {
-            ctx.indents.pop();
-            for _ in 0..(last - level) {
-                dents.push(Term::Of_Type(Term::Type::Whitespaces::Dedent, at - 1));
+                while ctx.indents().last().unwrap_or(&0) > &new_level {
+                    ctx.decrease_indent();
+                    for _ in 0..(prev_level - new_level) {
+                        ctx.push_prev_as_term(Term::Type::Whitespaces::Dedent);
+                    }
+                }
             }
         }
     }
-    dents
 }
 
-fn _lex_content(source: &mut Cursor, ctx: &mut _Context) -> Vec<Term> {
-    let mut contents = vec![];
+fn _lex_content(ctx: &mut Cursor) {
     loop {
-        source.reset_peek();
-        let n = source.peek();
-        match n {
+        match ctx.next() {
             // eof
-            None => {
-                break;
-            }
+            None => break,
             // any
-            Some((_, ref c)) => {
-                let c = *c;
+            Some(c) => {
                 match c {
                     // ws
                     ' ' | '\t' => {
-                        while let Some((_, _)) =
-                            source.peeking_next(|next| next.1 == ' ' || next.1 == '\t')
-                        {
-                            continue;
-                        }
-
-                        ctx.prev_was_ws = true;
-                        ctx.prev_was_delim = false;
-                        ctx.prev_was_op = false;
+                        ctx.read_spacing();
                         continue;
                     }
                     // eol
                     '\n' => {
-                        source.next();
-                        source.peeking_next(|next| next.1 == '\r');
+                        ctx.read();
+                        ctx.read_if_is('\r');
                         break;
                     }
                     // eol OR ignored
                     '\r' => {
-                        source.next();
+                        ctx.read();
 
                         // eol when with newline
-                        if let Some(_) = source.peeking_next(|next| next.1 == '\n') {
+                        if ctx.read_if_is('\n') {
                             break;
                         }
                         // else ignored
@@ -132,202 +91,148 @@ fn _lex_content(source: &mut Cursor, ctx: &mut _Context) -> Vec<Term> {
                         }
                     } // potentially numeric word
                     _ => {
-                        contents.push(if c.is_numeric() {
-                            let word = _lex_word(source);
-                            ctx.prev_was_ws = false;
-                            ctx.prev_was_delim = false;
-                            ctx.prev_was_op = false;
-
-                            word
+                        if c.is_numeric() {
+                            _lex_number_or_word(ctx);
                         }
                         // non-numeric word
                         else if c.is_alphabetic() {
-                            let key_or_delimited = _lex_key_or_delimited(source);
-                            ctx.prev_was_ws = false;
-                            ctx.prev_was_delim = false;
-                            ctx.prev_was_op = false;
-
-                            key_or_delimited
+                            _lex_word(ctx);
                         }
                         // symbol
                         else {
-                            let symbol = _lex_symbol(source, ctx);
-                            ctx.prev_was_ws = false;
+                            _lex_symbol(ctx);
+                        }
 
-                            symbol
-                        });
-
-                        ctx.is_start_of_line = false;
+                        continue;
                     }
                 }
             }
         }
     }
-
-    ctx.prev_was_ws = true;
-    ctx.prev_was_delim = false;
-    ctx.prev_was_op = false;
-    contents
 }
 
-fn _lex_word(source: &mut Cursor) -> Term {
-    let start = source.next().unwrap();
-    let mut end = start.0;
+fn _lex_number_or_word(ctx: &mut Cursor) {
+    let mut ttype = Term::Type::Number;
+    let mut tailing_underscore_count = 0;
 
-    let mut prev: Option<(usize, char)> = None;
-    let mut word = Term::Of_Type(Term::Type::Number, start.0);
-
-    macro_rules! read {
-        ($($prev:expr)?) => {
-            if prev.is_some() {
-                if word.ttype == Term::Type::Words::Whole {
-                    word = word.ttype(Term::Type::Words::Delimited);
-                }
-
-                source.next();
-                prev = None;
-            }
-            end = match source.next() {
-                Some((i, _)) => i,
-                None => end,
-            };
-        };
-    }
-
-    macro_rules! skip {
-        ($prev:expr) => {
-            prev = Some($prev);
+    while let Some(c) = ctx.peek() {
+        if c.is_numeric() {
+            tailing_underscore_count = 0;
             continue;
-        };
-    }
+        } else if c.is_alphabetic() {
+            if ttype == Term::Type::Number {
+                ttype = Term::Type::Words::Whole;
+            }
 
-    loop {
-        if let Some((i, c)) = &source.peek() {
-            // word or num
-            if c.is_alphanumeric() {
-                // word
-                if word.ttype == Term::Type::Number && !c.is_numeric() {
-                    word = word.ttype(Term::Type::Words::Whole);
-                }
-
-                read!();
-            } else {
-                // word with symbol or end of num
-                match c {
-                    // word with symbol
-                    '$' | '@' | '_' => {
-                        if word.ttype == Term::Type::Number {
-                            word = word.ttype(Term::Type::Words::Whole);
-                        }
-
-                        read!();
+            tailing_underscore_count = 0;
+            continue;
+        } else {
+            match c {
+                '$' | '@' | '_' => {
+                    if ttype == Term::Type::Number {
+                        ttype = Term::Type::Words::Whole;
                     }
-                    // word with symbol or end of num
-                    '-' | '+' | '%' | '^' | '*' | '~' => {
-                        // end of num
-                        if word.ttype == Term::Type::Number {
-                            break;
-                        }
-                        // delimited word
-                        else {
-                            match prev {
-                                Some(_) => {
-                                    // double delimiter char (not allowed in words, end without reading p)
-                                    //source.reset_peek();
-                                    break;
-                                }
-                                None => {
-                                    skip!((*i, *c));
-                                }
+
+                    if c == '_' {
+                        tailing_underscore_count += 1;
+                    } else {
+                        tailing_underscore_count = 0;
+                    }
+
+                    continue;
+                }
+                '-' | '+' | '%' | '^' | '*' | '~' => {
+                    if ttype == Term::Type::Number {
+                        match ctx.sneak_peek() {
+                            Some(n) if n.is_numeric() => {
+                                break;
+                            }
+                            Some(n) if n.is_alphabetic() => {
+                                ttype = Term::Type::Words::Delimited;
+                            }
+                            _ => {
+                                break;
                             }
                         }
+                    } else if (ctx.prev_peek().unwrap()) == c {
+                        ctx.push_as_term(ttype);
+                        ctx.read_peeked_minus(2);
+                        ctx.end_term();
+                        return;
                     }
-                    // non-word symbol
-                    _ => {
-                        break;
+
+                    if ttype != Term::Type::Words::Delimited {
+                        ttype = Term::Type::Words::Delimited;
                     }
-                };
-            };
-        }
-        // eof
-        else {
-            break;
-        }
-    }
 
-    word.end(end)
-}
-
-fn _lex_key_or_delimited(source: &mut Cursor) -> Term {
-    let start = source.next().unwrap();
-
-    let mut prev: Option<(usize, char)> = None;
-    let mut end = start.0;
-    let mut key_or_delimited = Term::Of_Type(Term::Type::Words::Whole, start.0);
-
-    macro_rules! read {
-        () => {
-            if prev.is_some() {
-                if key_or_delimited.ttype == Term::Type::Words::Whole {
-                    key_or_delimited.ttype = Term::Type::Words::Delimited;
+                    tailing_underscore_count = 0;
+                    continue;
                 }
-
-                source.next();
-                prev = None;
+                _ => {
+                    ctx.push_as_term(ttype);
+                    break;
+                }
             }
-
-            end = match source.next() {
-                Some((i, _)) => i,
-                None => end,
-            }
-        };
-    }
-
-    macro_rules! skip {
-        ($prev:expr) => {
-            prev = Some($prev);
-            continue;
-        };
-    }
-
-    loop {
-        if let Some((i, c)) = source.peek() {
-            if c.is_alphanumeric() {
-                read!();
-            } else {
-                match c {
-                    // key symbols
-                    '$' | '@' | '_' => {
-                        read!();
-                    }
-                    // delimited symbols
-                    '-' | '+' | '%' | '^' | '~' => match prev {
-                        Some((_, _)) => {
-                            //source.reset_peek();
-                            break;
-                        }
-                        None => {
-                            skip!((*i, *c));
-                        }
-                    },
-                    // non-word symbol
-                    _ => {
-                        break;
-                    }
-                };
-            };
-        }
-        // eof
-        else {
-            break;
         }
     }
 
-    key_or_delimited.end(end)
+    if tailing_underscore_count > 0 {
+        ctx.read_peeked_minus(tailing_underscore_count);
+    } else {
+        ctx.read_to_prev_peek();
+    }
+
+    ctx.end_term();
 }
 
-fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
-    let start: (usize, char) = source.next().unwrap();
+fn _lex_word(ctx: &mut Cursor) {
+    let mut ttype = Term::Type::Words::Whole;
+    let mut tailing_underscore_count = 0;
+    while let Some(c) = ctx.peek() {
+        if !c.is_alphanumeric() {
+            match c {
+                // key symbols
+                '$' | '@' => {
+                    tailing_underscore_count = 0;
+                    continue;
+                }
+                '_' => {
+                    tailing_underscore_count += 1;
+                    continue;
+                }
+                // delimited symbols
+                '-' | '+' | '%' | '^' | '~' => {
+                    if (ctx.prev_peek().unwrap()) == c {
+                        ctx.push_as_term(ttype);
+                        ctx.read_peeked_minus(2);
+                        ctx.end_term();
+                        return;
+                    }
+
+                    ttype = Term::Type::Words::Delimited;
+
+                    tailing_underscore_count = 0;
+                    continue;
+                }
+                // non-word symbol
+                _ => {
+                    break;
+                }
+            };
+        }
+    }
+
+    if tailing_underscore_count > 0 {
+        ctx.read_peeked_minus(tailing_underscore_count);
+    } else {
+        ctx.read_to_prev_peek();
+    }
+
+    ctx.end_term();
+}
+
+fn _lex_symbol(ctx: &mut Cursor) {
+    let start: (usize, char) = ctx.next().unwrap();
     let mut symbol = Term::New(start.0);
     let first = start.1;
 
@@ -486,12 +391,12 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             return _as_delim!(Separators::Entry);
         }
         '#' => {
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 if c == &'#' {
-                    if let Some((_, c)) = source.peek() {
+                    if let Some((_, c)) = ctx.peek() {
                         if c == &'#' {
                             if ctx.is_start_of_line {
-                                if let Some((_, c)) = source.peek() {
+                                if let Some((_, c)) = ctx.peek() {
                                     // ####
                                     if c == &'#' {
                                         return _as_delim!(Lines::Title; ++);
@@ -539,11 +444,11 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             return _as_op!(Prefixes::Tag);
         }
         '.' => {
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 if c == &'#' {
                     return _as_op!(Lookups::Tag; +1);
                 } else if c == &'.' {
-                    if let Some((_, c)) = source.peek() {
+                    if let Some((_, c)) = ctx.peek() {
                         if c == &'.' {
                             if ctx.prev_was_delim || ctx.prev_was_ws || ctx.prev_was_op {
                                 return _as_op!(Prefixes::Spread; +2);
@@ -561,12 +466,12 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             return _as_op!(Lookups::Dot);
         }
         '/' => {
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 // / division
                 if c.is_whitespace() {
                     todo!("math /");
                 } else if c == &'/' {
-                    if let Some((_, c)) = source.peek() {
+                    if let Some((_, c)) = ctx.peek() {
                         // /// line comment
                         if c == &'/' {
                             return _as_delim!(Lines::Comment; +2);
@@ -605,7 +510,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
         }
         ';' => {
             // ;; pipe operator
-            if let Some((_, c)) = source.peek()
+            if let Some((_, c)) = ctx.peek()
                 && c == &';'
             {
                 return _as!(Term::Type::Operators::Betweens::Pipe; +1);
@@ -616,9 +521,9 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             }
         }
         '<' => {
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 if c == &'<' {
-                    if let Some((_, c)) = source.peek() {
+                    if let Some((_, c)) = ctx.peek() {
                         // <<< reserved
                         if c == &'<' {
                             return _as_reserved!(+2);
@@ -644,12 +549,12 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
                 }};
             }
 
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 // > generic end
                 if c.is_whitespace() {
                     return _as_generic_end!();
                 } else if c == &'>' {
-                    if let Some((_, c)) = source.peek() {
+                    if let Some((_, c)) = ctx.peek() {
                         // >>> reserved
                         if c == &'>' {
                             return _as_reserved!(+2);
@@ -677,9 +582,9 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             return _as_generic_end!();
         }
         ':' => {
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 if c == &':' {
-                    if let Some((_, c)) = source.peek() {
+                    if let Some((_, c)) = ctx.peek() {
                         // ::: final field assigner
                         if c == &':' {
                             return _as_op!(Suffixes::FinalFieldAssigner; +2);
@@ -721,7 +626,7 @@ fn _lex_symbol(source: &mut Cursor, ctx: &mut _Context) -> Term {
             return _as_op!(Suffixes::MutableFieldAssigner);
         }
         '|' => {
-            if let Some((_, c)) = source.peek() {
+            if let Some((_, c)) = ctx.peek() {
                 // || double or
                 if c == &'|' {
                     return _as_op!(Chaineds::Or; +1);

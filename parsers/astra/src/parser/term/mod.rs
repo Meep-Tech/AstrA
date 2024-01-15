@@ -28,6 +28,20 @@ impl Type {
     pub type Separators = Separators;
 }
 
+pub enum Cadence {
+    Alone,
+    Intro,
+    Prefix,
+    Suffix,
+    Infix,
+    Spaced,
+    Sub,
+    Between,
+    Open,
+    Capture,
+    Close,
+}
+
 pub(crate) mod cats;
 
 #[derive(Debug, Clone)]
@@ -40,6 +54,7 @@ pub struct Term {
 impl Term {
     pub type Type = Type;
     pub type Category = dyn Category;
+    pub type Cadence = Cadence;
 
     #[allow(non_snake_case)]
     pub(in super::super) fn New(start: usize) -> Term {

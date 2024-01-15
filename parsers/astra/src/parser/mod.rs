@@ -5,19 +5,21 @@ pub(crate) mod _lexer;
 // pub(crate) mod _parser;
 
 pub mod context;
-//pub mod error;
+pub mod cursor;
 pub mod fs;
 pub mod indents;
 pub mod term;
 // pub mod token;
+//pub mod error;
 
 pub use context::Context;
-//pub use error::Error;
 pub use indents::Indents;
 pub use term::Term;
 // pub use token::Token;
+//pub use error::Error;
+pub(crate) use cursor::Cursor;
 
-pub type Cursor<'a> = MultiPeek<CharIndices<'a>>;
+pub type Source<'a> = MultiPeek<CharIndices<'a>>;
 
 pub struct Config {
     pub initial_indent: usize,
@@ -41,23 +43,12 @@ pub fn lex(input: &str) -> Vec<Term> {
 }
 
 pub fn lex_with(input: &str, _config: &Config) -> Vec<Term> {
-    let mut terms = vec![];
-    let mut source: Cursor = itertools::multipeek(input.char_indices());
-    let mut ctx = _lexer::_Context::New();
+    let mut source: Source = itertools::multipeek(input.char_indices());
+    let mut ctx = Cursor::New(source);
 
-    loop {
-        if source.peek().is_none() {
-            let dedents = _lexer::_update_indent_level(input.len(), 0, &mut ctx);
-            terms.extend(dedents);
-
-            break;
-        } else {
-            source.reset_peek();
-        }
-
-        let line = _lexer::_lex_line(&mut source, &mut ctx);
-        terms.extend(line.unwrap());
+    while !ctx.is_eof() {
+        _lexer::_lex_line(&mut ctx);
     }
 
-    terms
+    ctx.end()
 }
