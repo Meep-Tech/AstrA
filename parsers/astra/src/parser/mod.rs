@@ -1,5 +1,5 @@
 use itertools::MultiPeek;
-use std::str::CharIndices;
+use std::{str::CharIndices, usize};
 
 pub(crate) mod _lexer;
 // pub(crate) mod _parser;
@@ -8,16 +8,18 @@ pub mod context;
 pub mod cursor;
 pub mod fs;
 pub mod indents;
+pub mod symbol;
 pub mod term;
 // pub mod token;
 //pub mod error;
 
 pub use context::Context;
 pub use indents::Indents;
+pub use symbol::Symbol;
 pub use term::Term;
 // pub use token::Token;
 //pub use error::Error;
-pub(crate) use cursor::Cursor;
+pub use cursor::Cursor;
 
 pub type Source<'a> = MultiPeek<CharIndices<'a>>;
 

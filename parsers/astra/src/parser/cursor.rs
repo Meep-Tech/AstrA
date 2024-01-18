@@ -1,6 +1,6 @@
-use super::{Source, Term, _lexer};
+use super::{Source, _lexer, symbol::Cadence, Term};
 
-pub(crate) struct Cursor<'a> {
+pub struct Cursor<'a> {
     src: Source<'a>,
     index: usize,
     line: usize,
@@ -37,14 +37,14 @@ impl<'a> Cursor<'a> {
         }
     }
 
-    pub(crate) fn start_line(mut self) {
+    pub(crate) fn start_line(&mut self) {
         self.line += 1;
         self.col = 0;
         self.is_start_of_line = true;
         //self.src.reset_peek();
     }
 
-    pub fn peeked_is(&self, cadence: Term::Cadence) {}
+    pub fn peeked_is(&self, cadence: Cadence) {}
 
     pub fn indents(&self) -> &Vec<usize> {
         &self.indents

@@ -3,14 +3,14 @@ use crate::parser::{
         cats::{Whitespace, Word},
         Type,
     },
-    Term,
+    Type,
 };
 
 use self::ansi::Styleable;
 
 pub mod ansi;
 
-pub fn terms_via_ansi(src: &str, terms: &Vec<Term>) -> String {
+pub fn terms_via_ansi(src: &str, terms: &Vec<Type>) -> String {
     let mut out = String::new();
     let mut t = 0;
 
@@ -52,7 +52,7 @@ pub fn terms_via_ansi(src: &str, terms: &Vec<Term>) -> String {
     out
 }
 
-pub fn term_via_ansi(src: &str, term: &Term) -> String {
+pub fn term_via_ansi(src: &str, term: &Type) -> String {
     let rgb = for_term(term);
     let text = term.text_from(src);
 
@@ -73,7 +73,7 @@ pub fn term_via_ansi(src: &str, term: &Term) -> String {
     }
 }
 
-pub fn for_term(term: &Term) -> Option<(u8, u8, u8)> {
+pub fn for_term(term: &Type) -> Option<(u8, u8, u8)> {
     match &term.ttype {
         Type::Word(wtype) => match &wtype {
             Word::Whole => Some((128, 212, 255)),

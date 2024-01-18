@@ -27,9 +27,9 @@ pub trait Category {
     }
 }
 
-macro_rules! cat_item {
+macro_rules! _cat_item {
     ($cat:ident, $(($sup:ident), )? $type:ident $(($arg:ident))? $(: $impl:ident)? $((as $sub:ident))? $(,)?) => {
-        cat_item!(::
+        _cat_item!(::
             $cat,
             $type,
             $($sup)?,
@@ -76,7 +76,6 @@ macro_rules! _impl_cat {
                 Self {}
             }
 
-
             fn all(&self) -> HashSet<Type> {
                 let mut set = HashSet::new();
                 $(set.insert($cats::$types);)*
@@ -99,7 +98,7 @@ macro_rules! cat {
         _def_cat!($cat, $cats, $($types $(, $args)?)*);
 
         impl $cats {
-            $(cat_item!($cat, $types $(: $impl)? $((as $sub))?);)*
+            $(_cat_item!($cat, $types $(: $impl)? $((as $sub))?);)*
         }
 
         _impl_cat!($cat, $cats, $($types)*);
@@ -109,16 +108,10 @@ macro_rules! cat {
         _def_cat!($cat, $cats, $($types $(, $args)?)*);
 
         impl $cats {
-            $(cat_item!($cat, ($sup), $types $(: $impl)?) $(as $sub)?;)*
+            $(_cat_item!($cat, ($sup), $types $(: $impl)?) $(as $sub)?;)*
         }
 
         _impl_cat!($cat, $cats, $($types)*);
-    };
-}
-
-macro_rules! _cat_subs {
-    ($cats:ident, $sub:ident) => {
-        impl $cats {}
     };
 }
 

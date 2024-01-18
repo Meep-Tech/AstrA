@@ -33,20 +33,6 @@ impl Type {
     pub type Symbol = Symbol;
 }
 
-pub enum Cadence {
-    Alone,
-    Intro,
-    Prefix,
-    Suffix,
-    Infix,
-    Spaced,
-    Sub,
-    Between,
-    Open,
-    Capture,
-    Close,
-}
-
 impl Symbol {
     pub type Operators = Operators;
     pub type Delimiters = Delimiters;

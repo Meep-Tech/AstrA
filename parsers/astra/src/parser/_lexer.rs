@@ -1,33 +1,9 @@
-use std::collections::{HashMap, HashSet};
-
 use super::{
-    fs::Type,
-    term::{self, Cadence},
-    Cursor, Term,
+    symbol::{self, Symbol}, //Term,
+    term::Indent,
+    Cursor,
+    Term,
 };
-
-// pub(crate) struct _Context {
-//     pub indents: Vec<usize>,
-//     pub generic_depth: usize,
-//     pub prev_was_delim: bool,
-//     pub prev_was_ws: bool,
-//     pub prev_was_op: bool,
-//     pub is_start_of_line: bool,
-// }
-
-// impl _Context {
-//     #[allow(non_snake_case)]
-//     pub fn New() -> Self {
-//         Self {
-//             indents: vec![],
-//             generic_depth: 0,
-//             is_start_of_line: true,
-//             prev_was_ws: true,
-//             prev_was_delim: false,
-//             prev_was_op: false,
-//         }
-//     }
-// }
 
 pub(crate) fn _lex_line(ctx: &mut Cursor) {
     ctx.start_line();
@@ -36,7 +12,7 @@ pub(crate) fn _lex_line(ctx: &mut Cursor) {
 }
 
 pub(crate) fn _lex_indentation(ctx: &mut Cursor) {
-    let mut prev_level = *ctx.indents().last().unwrap_or(&0);
+    let prev_level = *ctx.indents().last().unwrap_or(&0);
 
     let mut new_level = 0;
     while ctx.read_if_in(&[' ', '\t']) {
@@ -50,13 +26,16 @@ pub(crate) fn _lex_indentation(ctx: &mut Cursor) {
                 ctx.increase_indent(new_level);
                 let start_of_increase = ctx.index() - new_level;
                 for i in 0..(new_level - prev_level) {
-                    ctx.push_as_term_at(Term::Type::Whitespaces::Indent, start_of_increase + i);
+                    ctx.push_as_term_at(
+                        Term::Type::Indent(Indent::Increase),
+                        start_of_increase + i,
+                    );
                 }
             } else {
                 while ctx.indents().last().unwrap_or(&0) > &new_level {
                     ctx.decrease_indent();
                     for _ in 0..(prev_level - new_level) {
-                        ctx.push_prev_as_term(Term::Type::Whitespaces::Dedent);
+                        ctx.push_prev_as_term(Term::Type::Indent(Indent::Decrease));
                     }
                 }
             }
@@ -106,7 +85,7 @@ fn _lex_content(ctx: &mut Cursor) {
                         }
                         // symbol
                         else {
-                            _old_lex_symbol(ctx);
+                            _lex_symbol(ctx);
                         }
 
                         continue;
@@ -128,7 +107,9 @@ fn _lex_number_or_word(ctx: &mut Cursor) {
             continue;
         } else if c.is_alphabetic() {
             if ttype == Term::Type::Number {
-                ttype = Term::Type::Words::Whole;
+                ttype = Term::Type::Word {
+                    is_delimited: false,
+                };
             }
 
             prev_was_delim = false;
@@ -138,7 +119,9 @@ fn _lex_number_or_word(ctx: &mut Cursor) {
             match c {
                 '$' | '@' | '_' => {
                     if ttype == Term::Type::Number {
-                        ttype = Term::Type::Words::Whole;
+                        ttype = Term::Type::Word {
+                            is_delimited: false,
+                        }
                     }
 
                     if c == '_' {
@@ -157,29 +140,26 @@ fn _lex_number_or_word(ctx: &mut Cursor) {
                                 break;
                             }
                             Some(n) if n.is_alphabetic() => {
-                                ttype = Term::Type::Words::Delimited;
+                                ttype = Term::Type::Word { is_delimited: true };
                             }
                             _ => {
                                 break;
                             }
                         }
                     } else if (ctx.prev_peek().unwrap()) == c {
-                        ctx.push_as_term(ttype);
+                        ctx.start_term(ttype);
                         ctx.read_peeked_minus(2);
                         ctx.end_term();
                         return;
                     }
 
-                    if ttype != Term::Type::Words::Delimited {
-                        ttype = Term::Type::Words::Delimited;
-                    }
-
+                    ttype = Term::Type::Word { is_delimited: true };
                     prev_was_delim = true;
                     tailing_underscore_count = 0;
                     continue;
                 }
                 _ => {
-                    ctx.push_as_term(ttype);
+                    ctx.start_term(ttype);
                     break;
                 }
             }
@@ -198,7 +178,9 @@ fn _lex_number_or_word(ctx: &mut Cursor) {
 }
 
 fn _lex_word(ctx: &mut Cursor) {
-    let mut ttype = Term::Type::Words::Whole;
+    let mut ttype = Term::Type::Word {
+        is_delimited: false,
+    };
     let mut tailing_underscore_count = 0;
     let mut prev_was_delim = false;
     while let Some(c) = ctx.peek() {
@@ -218,13 +200,13 @@ fn _lex_word(ctx: &mut Cursor) {
                 // delimited symbols
                 '-' | '+' | '%' | '^' | '*' | '~' => {
                     if prev_was_delim && ctx.prev_peek().unwrap() == c {
-                        ctx.push_as_term(ttype);
+                        ctx.start_term(ttype);
                         ctx.read_peeked_minus(2);
                         ctx.end_term();
                         return;
                     }
 
-                    ttype = Term::Type::Words::Delimited;
+                    ttype = Term::Type::Word { is_delimited: true };
 
                     prev_was_delim = true;
                     tailing_underscore_count = 0;
@@ -232,6 +214,7 @@ fn _lex_word(ctx: &mut Cursor) {
                 }
                 // non-word symbol
                 _ => {
+                    ctx.start_term(ttype);
                     break;
                 }
             };
@@ -249,59 +232,44 @@ fn _lex_word(ctx: &mut Cursor) {
     ctx.end_term();
 }
 
-enum Sym {
-    Type(Symbol),
-    Switch(SymbolSwitch),
-    Map(SymbolMap),
-}
-
-struct Symbol {
-    chars: Vec<char>,
-    cadences: HashSet<Cadence>,
-    ttype: term::Symbol,
-}
-
-struct SymbolSwitch {
-    __: HashMap<Cadence, Sym>,
-}
-
-struct SymbolMap {
-    __: HashMap<char, Sym>,
-}
-
 fn _lex_symbol(ctx: &mut Cursor) {
-    let mut symbols: &SymbolMap = _get_all_symbols();
+    let mut symbols = &symbol::MAP;
 
     while let Some(c) = ctx.peek() {
-        let sym = symbols.__.get(&c);
-        match sym {
+        let node = symbols.get(&c);
+        match node {
             None => {
-                // read as unknown
+                let last = ctx.prev_peek().unwrap();
+
+                ctx.start_term(Term::Type::Symbol(Symbol::Unknown()));
+                if last.is_whitespace() || last.is_alphanumeric() {
+                    ctx.read_to_prev_peek();
+                } else {
+                    ctx.read_peeked();
+                }
+
+                ctx.end_term();
+                break;
             }
-            Some(Sym::Type(sym)) => {
+            Some(symbol::Node::Type(sym)) => {
                 // try to read as type; or unknown
             }
-            Some(Sym::Switch(sym)) => {
-                // check cadences and try to read as any matching types; or unknown
-            }
-            Some(Sym::Map(sym)) => {
+            Some(symbol::Node::Map(sym)) => {
                 // narrow down options, and continue
                 symbols = sym;
                 continue;
             }
+            Some(symbol::Node::Set(sym)) => {
+                // check cadences or ambiguous or unknown
+            }
         }
     }
-}
-
-fn _get_all_symbols() -> &'static SymbolMap {
-    todo!()
 }
 
 // fn _old_lex_symbol(ctx: &mut Cursor) {
 //     let start: (usize, char) = ctx.next().unwrap();
 //     let mut symbol = Term::New(start.0);
 //     let first = start.1;
-
 //     macro_rules! _skip_to_end_of_symbol {
 //         () => {{
 //             let mut end = start.0;
@@ -316,11 +284,9 @@ fn _get_all_symbols() -> &'static SymbolMap {
 //                     break;
 //                 }
 //             }
-
 //             end
 //         }};
 //     }
-
 //     macro_rules! _as {
 //         ($type:path) => {{
 //             symbol.ttype($type)
@@ -334,34 +300,26 @@ fn _get_all_symbols() -> &'static SymbolMap {
 //         }};
 //         ($type:path; ++) => {{
 //             symbol = symbol.ttype($type);
-
 //             let end = _skip_to_end_of_symbol!();
-
 //             symbol.end(end)
 //         }};
 //     }
-
 //     macro_rules! _as_unknown {
 //         ($cat:ident; +$num:expr) => {{
 //             symbol = symbol.ttype(Term::Type::$cat::Unknown);
-
 //             for _ in 0..$num {
 //                 source.next();
 //             }
-
 //             ctx.prev_was_op = true;
 //             symbol.end(start.0 + $num)
 //         }};
 //         ($cat:ident) => {{
 //             symbol = symbol.ttype(Term::Type::$cat::Unknown);
-
 //             let end = _skip_to_end_of_symbol!();
-
 //             ctx.prev_was_op = true;
 //             symbol.end(end)
 //         }};
 //     }
-
 //     macro_rules! _as_reserved {
 //         (+$num:expr) => {{
 //             symbol = symbol.ttype(Term::Type::Reserved);
@@ -375,15 +333,12 @@ fn _get_all_symbols() -> &'static SymbolMap {
 //         }};
 //         () => {{
 //             symbol = symbol.ttype(Term::Type::Reserved);
-
 //             let end = _skip_to_end_of_symbol!();
-
 //             ctx.prev_was_op = true;
 //             ctx.prev_was_delim = true;
 //             symbol.end(end)
 //         }};
 //     }
-
 //     macro_rules! _as_ambiguous {
 //         (+$num:expr; $($types:tt)*) => {{
 //             symbol = symbol.ttype(Term::Type::Ambiguous(vec![$($types)*]));
