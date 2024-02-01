@@ -89,8 +89,8 @@ fn main() {
         };
 
         println!("Running Tests with Settings: {:?}", &settings);
-        //astra::parser::init_all();
-        //tests::run_all_with_settings(&settings);
+        astra::parser::init_all();
+        tests::run_all_with_settings(&settings);
     } else {
         let input = std::env::args().collect::<Vec<String>>();
         if log::IS_VVV {
