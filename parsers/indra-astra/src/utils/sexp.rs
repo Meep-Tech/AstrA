@@ -1,4 +1,4 @@
-use crate::utils::ansi::{Color, Styleable};
+use super::ansi::{Color, ColorLoop, Styleable};
 use std::collections::{HashMap, HashSet};
 
 pub trait SExpressable<TNode> {
@@ -9,7 +9,7 @@ pub trait SExpressable<TNode> {
     fn name_color() -> Color;
     fn node_to_sexp_str(node: &TNode, depth: usize, colors: &Option<Color::Loop>) -> String;
 
-    fn to_sexp_str(&self, depth: usize, colors: &Option<Color::Loop>) -> String {
+    fn to_sexp_str(&self, depth: usize, colors: &Option<ColorLoop>) -> String {
         let depth = depth + 1;
         let mut result = String::new();
 
