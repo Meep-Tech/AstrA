@@ -12,10 +12,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "args"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b7432c65177b8d5c032d56e020dd8d407e939468479fc8c300e2d93e6d970b"
+dependencies = [
+ "getopts",
+ "log",
+]
+
+[[package]]
+name = "astra"
+version = "0.1.0"
+dependencies = [
+ "args",
+ "getopts",
+ "indexmap",
+ "lazy_static",
+ "regex",
+ "slotmap",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
+
+[[package]]
+name = "getopts"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14dbbfd5c71d70241ecf9e6f13737f7b5ce823821063188d7e46c41d371eebd5"
+dependencies = [
+ "unicode-width",
+]
 
 [[package]]
 name = "hashbrown"
@@ -34,20 +65,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "indra_astra"
-version = "0.1.0"
-dependencies = [
- "indexmap",
- "lazy_static",
- "regex",
- "slotmap",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
+name = "log"
+version = "0.4.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
 name = "memchr"
@@ -92,6 +119,12 @@ checksum = "dbff4acf519f630b3a3ddcfaea6c06b42174d9a44bc70c620e9ed1649d58b82a"
 dependencies = [
  "version_check",
 ]
+
+[[package]]
+name = "unicode-width"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e51733f11c9c4f72aa0c160008246859e340b00807569a0da0e7a1079b27ba85"
 
 [[package]]
 name = "version_check"

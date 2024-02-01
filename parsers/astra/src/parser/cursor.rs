@@ -1,284 +1,283 @@
-use super::{Source, _lexer, symbol::Cadence, Term};
+use crate::token::{Code, Source, Token};
 
-pub struct Cursor<'a> {
-    src: Source<'a>,
-    index: usize,
-    line: usize,
-    col: usize,
-    curr: char,
-    next: Option<char>,
-    prev: Option<char>,
-    terms: Vec<Term>,
-    indents: Vec<usize>,
-    is_start_of_line: bool,
-    prev_was_break: bool,
-    peek_buff: Vec<char>,
-    potential_generic_depth: usize,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Language {
+    StruX,
+    ProX,
+    BloX,
 }
 
-impl<'a> Cursor<'a> {
-    #[allow(non_snake_case)]
-    pub(crate) fn New(mut src: Source<'a>) -> Self {
-        let first = src.next().unwrap();
+impl Language {
+    fn for_source(root: Source) -> Language {
+        match root {
+            Source::Code(code) => match code {
+                Code::Axa => Language::StruX,
+                Code::Stx => Language::StruX,
+                Code::Prx => Language::ProX,
+                Code::Blx => Language::BloX,
+                Code::Arc => Language::StruX,
+                Code::Mot => Language::BloX,
+                Code::Cmd => Language::ProX,
+            },
+            Source::Command => Language::ProX,
+        }
+    }
+}
+
+pub struct Cursor {
+    src: Vec<char>,
+    row: usize,
+    col: usize,
+    ins: Indents,
+    tks: Tokens,
+    lng: Language,
+    cfg: Config,
+    pos: usize,
+    buf: usize,
+}
+
+pub struct Config {
+    source_type: Source,
+}
+
+impl Config {
+    pub fn source_type(&self) -> Source {
+        self.source_type
+    }
+}
+
+impl Cursor {
+    pub(crate) fn new(src: &str, root: Source) -> Cursor {
         Cursor {
-            src,
-            index: 0,
-            line: 0,
+            pos: 0,
+            row: 0,
             col: 0,
-            curr: first.1,
-            next: None,
-            prev: None,
-            terms: vec![],
-            indents: vec![],
-            is_start_of_line: true,
-            peek_buff: vec![],
-            prev_was_break: true,
-            potential_generic_depth: 0,
+            buf: 0,
+            src: src.chars().collect(),
+            ins: Indents::new(),
+            tks: Tokens::new(root),
+            lng: Language::for_source(root),
+            cfg: Config { source_type: root },
         }
     }
 
-    pub(crate) fn start_line(&mut self) {
-        self.line += 1;
-        self.col = 0;
-        self.is_start_of_line = true;
-        //self.src.reset_peek();
+    pub fn context(&self) -> Language {
+        self.lng.clone()
     }
 
-    pub fn peeked_is(&self, cadence: Cadence) {}
+    pub fn config(&self) -> &Config {
+        &self.cfg
+    }
 
-    pub fn indents(&self) -> &Vec<usize> {
-        &self.indents
+    pub fn indent(&self) -> &Indents {
+        &self.ins
     }
 
     pub fn index(&self) -> usize {
-        self.index
-    }
-
-    pub fn prev(&self) -> Option<char> {
-        self.prev
-    }
-
-    pub fn next(&mut self) -> Option<char> {
-        if let None = self.next {
-            self.next = match self.src.peek() {
-                Some((_, c)) => Some(*c),
-                None => None,
-            };
-            self.src.reset_peek();
-        }
-
-        self.next
-    }
-
-    pub(crate) fn sneak_peek(&self) -> Option<char> {
-        self.clone().peek()
-    }
-
-    pub(crate) fn peek(&mut self) -> Option<char> {
-        if self.next.is_none() {
-            self.next = match self.src.peek() {
-                Some((i, c)) => Some(*c),
-                None => None,
-            };
-
-            self.peek_buff.push(self.next.unwrap());
-            self.next
+        if self.pos == 0 {
+            0
         } else {
-            let next_peek = match self.src.peek() {
-                Some((_, c)) => Some(*c),
-                None => None,
-            };
-
-            if next_peek.is_some() {
-                self.peek_buff.push(next_peek.unwrap());
-            }
-
-            next_peek
+            self.pos - 1
         }
     }
 
-    pub(crate) fn prev_peek(&self) -> Option<char> {
-        if self.peek_buff.len() > 0 {
-            Some(self.peek_buff[self.peek_buff.len() - 1])
+    /// the char that was read before the current char(if any)
+    pub fn prev(&self) -> char {
+        if self.pos != 0 {
+            self.char_at(self.pos - 1)
         } else {
-            None
+            '\0'
         }
     }
 
-    pub fn is_eof(&self) -> bool {
-        self.next().is_none()
+    /// the char that will be read next
+    pub fn next(&self) -> char {
+        if self.pos == self.src.len() {
+            '\0'
+        } else {
+            self.char_at(self.pos)
+        }
     }
 
-    pub(crate) fn reset(&mut self) {
-        self.src.reset_peek();
-        self.peek_buff.clear();
+    /// the char after the next char
+    pub fn next_next(&self) -> char {
+        if self.pos + 1 >= self.src.len() {
+            '\0'
+        } else {
+            self.char_at(self.pos + 1)
+        }
     }
 
-    pub(crate) fn read(&mut self) -> Option<char> {
-        self.prev = Some(self.curr);
-        self.curr = self.src.next()?.1;
+    /// used to continuously peek ahead at the next char and the ones after using a buffer
+    pub fn peek(&mut self) -> char {
+        let next = self.char_at(self.pos + self.buf);
+        self.buf += 1;
 
-        self.index += 1;
-        self.col += 1;
-
-        self.next = None;
-        self.peek_buff.clear();
-
-        Some(self.curr)
+        next
     }
 
-    pub(crate) fn read_peeked(&mut self) -> usize {
-        self.read_peeked_minus(0)
+    /// Get the last peeked at char (defaults to the next char if no peeking has been done by you)
+    pub fn prev_peek(&mut self) -> char {
+        if self.buf == 0 {
+            self.next()
+        } else {
+            self.char_at(self.pos + self.buf - 1)
+        }
     }
 
-    pub(crate) fn read_peeked_minus(&mut self, minus: usize) -> usize {
-        let mut count = 0;
-        for _ in 0..(self.peek_buff.len() - minus) {
-            count += 1;
+    // reset the peek buffer
+    pub fn reset_peek(&mut self) {
+        self.buf = 0;
+    }
+
+    /// get the peek buffer as a string
+    pub fn peeked(&self) -> String {
+        let mut buf = String::new();
+        for i in 0..self.buf {
+            buf.push(self.char_at(self.pos + i));
+        }
+
+        buf
+    }
+
+    /// Read the next char; increment the cursor's actual position, updating indents, and resetting the peek buffer.
+    pub fn read(&mut self) {
+        if !self.is_eof() {
+            self._update_position();
+            self.reset_peek();
+        } else {
+            log::warn!("Attempted to read past EOF");
+        }
+    }
+
+    /// read n chars
+    pub fn read_(&mut self, n: usize) {
+        for _ in 0..n {
             self.read();
         }
-
-        count
     }
 
-    pub(crate) fn read_to_prev_peek(&mut self) -> usize {
-        self.read_peeked_minus(1)
+    /// read all peeked chars, leaving the next char as the next unpeeked char.
+    pub fn read_peeked(&mut self) {
+        self.read_(self.buf);
     }
 
-    pub(crate) fn read_if<F>(&mut self, f: F) -> bool
-    where
-        F: FnOnce(char) -> bool,
-    {
-        if let Some(c) = self.next() {
-            if f(c) {
-                self.read();
-                return true;
+    /// read to the last peeked char, but leave it as the next char.
+    pub fn read_to_peek(&mut self) {
+        self.read_(self.buf - 1);
+    }
+
+    /// get a char at a specific index
+    pub fn char_at(&self, index: usize) -> char {
+        self.src[index]
+    }
+
+    /// get the current position of the cursor
+    pub fn is_eof(&self) -> bool {
+        self.pos == self.src.len()
+    }
+
+    fn _update_position(&mut self) {
+        self.col += 1;
+
+        match self.next() {
+            '\n' => {
+                if self.ins.is_reading {
+                    self._close_indent();
+                }
+                self._start_indent();
+                if self.next_next() == '\r' {
+                    self.pos += 1;
+                }
+                self.col = 0;
+                self.row += 1;
+            }
+            '\r' => {
+                if self.next_next() == '\n' {
+                    self.pos += 1;
+                } else {
+                    if self.ins.is_reading {
+                        self._close_indent();
+                    }
+                    self._start_indent();
+                }
+                self.col = 0;
+                self.row += 1;
+            }
+            ' ' | '\t' => {
+                if self.ins.is_reading {
+                    self.ins.curr += 1;
+                }
+            }
+            _ => {
+                if self.ins.is_reading {
+                    self._close_indent();
+                }
             }
         }
 
-        false
+        self.pos += 1;
     }
 
-    pub(crate) fn read_if_is(&mut self, c: char) -> bool {
-        self.read_if(|next| next == c)
+    fn _start_indent(&mut self) {
+        self.ins.is_reading = true;
+        self.ins.curr = 0;
     }
 
-    pub(crate) fn read_if_in(&mut self, chars: &[char]) -> bool {
-        self.read_if(|next| chars.contains(&next))
-    }
-
-    pub(crate) fn read_while<F>(&mut self, f: F) -> usize
-    where
-        F: Fn(char) -> bool,
-    {
-        let mut count = 0;
-        while self.read_if(f) {
-            count += 1;
-        }
-
-        count
-    }
-
-    pub(crate) fn read_until<F>(&mut self, f: F) -> usize
-    where
-        F: Fn(char) -> bool,
-    {
-        let mut count = 0;
-        while !self.read_if(f) {
-            count += 1;
-        }
-
-        count
-    }
-
-    pub(crate) fn read_until_is(&mut self, c: char) -> usize {
-        self.read_until(|next| next == c)
-    }
-
-    pub(crate) fn read_spacing(&mut self) -> usize {
-        let count = self.read_while(|next| next.is_whitespace());
-        if count > 0 {
-            self.prev_was_break = true;
-        }
-
-        count
-    }
-
-    pub(crate) fn find_before<F, U>(&mut self, before: U, find: F) -> bool
-    where
-        F: FnOnce(char) -> bool,
-        U: FnOnce(char) -> bool,
-    {
-        let mut found = false;
-        while let Some(c) = self.peek() {
-            if before(c) {
-                break;
-            } else if find(c) {
-                found = true;
-                break;
+    fn _close_indent(&mut self) {
+        self.ins.is_reading = false;
+        if self.ins.increased() {
+            self.ins.stack.push(self.ins.curr);
+        } else {
+            while self.ins.decreased() {
+                self.ins.stack.pop();
             }
         }
-
-        self.src.reset_peek();
-        found
     }
+}
 
-    pub(crate) fn push_term(&mut self, term: Term) {
-        if !term.is_ws() {
-            self.prev_was_break = false;
-            self.is_start_of_line = false;
+pub struct Tokens {
+    root: Token,
+    stack: Vec<Token>,
+}
+
+impl Tokens {
+    pub fn new(root: Source) -> Tokens {
+        Tokens {
+            root: Token::new(Token::Type::Source(root), 0),
+            stack: vec![],
         }
+    }
+}
 
-        self.terms.push(term);
+pub struct Indents {
+    is_reading: bool,
+    curr: usize,
+    stack: Vec<usize>,
+}
+
+impl Indents {
+    pub fn new() -> Indents {
+        Indents {
+            is_reading: false,
+            curr: 0,
+            stack: vec![0],
+        }
     }
 
-    pub(crate) fn push_as_term(&mut self, ttype: Term::Type) {
-        self.push_as_term_at(ttype, self.index)
+    pub fn increased(&self) -> bool {
+        self.curr > *self.stack.last().unwrap()
     }
 
-    pub(crate) fn push_as_term_at(&mut self, ttype: Term::Type, at: usize) {
-        self.push_term(Term::Of_Type(ttype, at));
+    pub fn decreased(&self) -> bool {
+        self.curr < *self.stack.last().unwrap()
     }
 
-    pub(crate) fn push_prev_as_term(&mut self, ttype: Term::Type) {
-        self.push_as_term_at(ttype, self.index - 1)
+    pub fn same(&self) -> bool {
+        self.curr == *self.stack.last().unwrap()
     }
 
-    pub(crate) fn start_term_at(&self, ttype: Term::Type, at: usize) -> &mut Term {
-        let term = Term::Of_Type(ttype, at);
-        self.push_term(term);
-
-        self.terms.last_mut().unwrap()
-    }
-
-    pub(crate) fn start_term(&self, ttype: Term::Type) -> &mut Term {
-        self.start_term_at(ttype, self.index)
-    }
-
-    pub(crate) fn started_term(&self, ttype: Term::Type) -> &mut Term {
-        self.start_term_at(ttype, self.index - 1)
-    }
-
-    pub(crate) fn end_term(&self) -> &Term {
-        &self.terms.last_mut().unwrap().end(self.index)
-    }
-
-    pub(crate) fn ended_term(&self) -> &Term {
-        &self.terms.last_mut().unwrap().end(self.index - 1)
-    }
-
-    pub(crate) fn increase_indent(&mut self, indent: usize) {
-        self.indents.push(indent);
-    }
-
-    pub(crate) fn decrease_indent(&mut self) {
-        self.indents.pop();
-    }
-
-    pub(crate) fn end(&mut self) -> Vec<Term> {
-        // close all open indents
-        _lexer::_lex_indentation(self);
-
-        self.terms
+    pub fn is_reading(&self) -> bool {
+        self.is_reading
     }
 }

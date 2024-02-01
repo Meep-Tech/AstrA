@@ -1,5 +1,5 @@
 use crate::{
-    parser::results::{builder::Builder, end::End, r#match::Match},
+    parser::results::{builder::Builder, end::End, token::Token},
     utils::log,
 };
 use std::collections::{HashMap, HashSet};
@@ -7,7 +7,8 @@ use std::collections::{HashMap, HashSet};
 pub struct TokenBuilder {
     pub name: Option<String>,
     pub tags: Option<HashSet<String>>,
-    pub children: Option<Vec<Match>>,
+    pub children: Option<Vec<Token>>,
+    pub start: Option<usize>,
     pub keys: Option<HashMap<String, usize>>,
 }
 
@@ -17,6 +18,7 @@ impl TokenBuilder {
         TokenBuilder {
             name: None,
             tags: None,
+            start: None,
             children: None,
             keys: None,
         }
@@ -29,7 +31,7 @@ impl TokenBuilder {
     }
 
     pub fn set_name(&mut self, name: &str) -> &mut TokenBuilder {
-        log::info!(&["TOKEN", "-", "NAME"], name);
+        log::vvv!(&["TOKEN", "-", "NAME"], name);
         self.name = Some(name.to_string());
         self
     }
@@ -41,8 +43,20 @@ impl TokenBuilder {
         }
     }
 
+    pub fn start(mut self, start: usize) -> TokenBuilder {
+        log::vvv!(&["TOKEN", "-", "START"], &start.to_string());
+        self.start = Some(start);
+        self
+    }
+
+    pub fn set_start(&mut self, start: usize) -> &mut TokenBuilder {
+        log::vvv!(&["TOKEN", "-", "START"], &start.to_string());
+        self.start = Some(start);
+        self
+    }
+
     pub fn tag(mut self, tag: &str) -> TokenBuilder {
-        log::info!(
+        log::vvv!(
             &["TOKEN", "-", "TAG"],
             &format!(
                 "{} : {}",
@@ -64,7 +78,7 @@ impl TokenBuilder {
     }
 
     pub fn add_tag(&mut self, tag: &str) -> &mut TokenBuilder {
-        log::info!(
+        log::vvv!(
             &["TOKEN", "-", "TAG"],
             &format!(
                 "{} : {}",
@@ -84,8 +98,8 @@ impl TokenBuilder {
         self
     }
 
-    pub fn child(mut self, child: Match) -> TokenBuilder {
-        log::info!(
+    pub fn child(mut self, child: Token) -> TokenBuilder {
+        log::vvv!(
             &["TOKEN", "-", "CHILD"],
             &format!(
                 "{} : {}",
@@ -106,8 +120,8 @@ impl TokenBuilder {
         self
     }
 
-    pub fn add_child(&mut self, child: Match) -> &mut TokenBuilder {
-        log::info!(
+    pub fn add_child(&mut self, child: Token) -> &mut TokenBuilder {
+        log::vvv!(
             &["TOKEN", "-", "CHILD"],
             &format!(
                 "{} : {}",
@@ -127,8 +141,8 @@ impl TokenBuilder {
         self
     }
 
-    pub fn prop(mut self, key: &str, value: Match) -> TokenBuilder {
-        log::info!(
+    pub fn prop(mut self, key: &str, value: Token) -> TokenBuilder {
+        log::vvv!(
             &["TOKEN", "-", "PROP"],
             &format!(
                 "{} : {}",
@@ -154,8 +168,8 @@ impl TokenBuilder {
         self
     }
 
-    pub fn set_prop(&mut self, key: &str, value: Match) -> &mut TokenBuilder {
-        log::info!(
+    pub fn set_prop(&mut self, key: &str, value: Token) -> &mut TokenBuilder {
+        log::vvv!(
             &["TOKEN", "-", "PROP"],
             &format!(
                 "{} : {}",
@@ -181,8 +195,8 @@ impl TokenBuilder {
     }
 }
 
-impl Builder<Match> for TokenBuilder {
-    fn build(self, start: usize, end: usize) -> Match {
+impl Builder<Token> for TokenBuilder {
+    fn build(self, start: usize, end: usize) -> Token {
         log::vvv!(
             &["TOKEN", ":BUILD"],
             &format!(
@@ -193,7 +207,7 @@ impl Builder<Match> for TokenBuilder {
             )
         );
 
-        return Match {
+        return Token {
             name: self.name.unwrap(),
             tags: self.tags,
             children: self.children.unwrap_or(Vec::new()),
@@ -201,6 +215,13 @@ impl Builder<Match> for TokenBuilder {
             start,
             end,
         };
+    }
+
+    fn build_to(self, end: usize) -> Token {
+        let start = self
+            .start
+            .unwrap_or_else(|| panic!("Builder::build_to called without start being set!"));
+        self.build(start, end)
     }
 
     fn end(self) -> End {

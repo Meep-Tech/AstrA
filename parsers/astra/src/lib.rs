@@ -3,6 +3,8 @@
 #![feature(inherent_associated_types)]
 #![feature(let_chains)]
 #![feature(concat_idents)]
-pub mod color;
+#![feature(map_entry_replace)]
+
 pub mod parser;
+pub mod token;
 pub mod utils;

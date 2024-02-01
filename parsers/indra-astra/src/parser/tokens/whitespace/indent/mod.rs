@@ -1,8 +1,8 @@
 use crate::parser::{
     cursor::Cursor,
-    results::{builder::Builder, error::Error, parsed::Parsed, r#match::Match},
+    results::{builder::Builder, error::Error, parsed::Parsed, token::Token},
     tokens::token,
-    Type as _,
+    Parser as _,
 };
 
 pub mod current;
@@ -10,9 +10,9 @@ pub mod decrease;
 pub mod increase;
 
 pub enum Indents {
-    Increase(Match),
-    Decrease(Match),
-    Current(Match),
+    Increase(Token),
+    Decrease(Token),
+    Current(Token),
     Error(Error),
     None,
 }
@@ -56,12 +56,12 @@ pub fn Parse_Opt_At(cursor: &mut Cursor) -> Indents {
 
 #[allow(non_snake_case)]
 pub fn Parse_Opt_Or_Skip(input: &str) -> Indents {
-    Match(Parser::Instance().parse_opt_or_skip(input))
+    Match(Parser::Get().parse_opt_or_skip(input))
 }
 
 #[allow(non_snake_case)]
 pub fn Parse_Opt_Or_Skip_At(cursor: &mut Cursor) -> Indents {
-    Match(Parser::Instance().parse_opt_or_skip_at(cursor))
+    Match(Parser::Get().parse_opt_or_skip_at(cursor))
 }
 
 #[allow(non_snake_case)]

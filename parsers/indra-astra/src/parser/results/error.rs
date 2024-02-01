@@ -1,6 +1,12 @@
-use crate::parser::results::{
-    end::End, error_builder::ErrorBuilder, parsed::Parsed, r#match::Match,
-    token_builder::TokenBuilder,
+use crate::{
+    parser::results::{
+        end::End, error_builder::ErrorBuilder, parsed::Parsed, token::Token,
+        token_builder::TokenBuilder,
+    },
+    utils::{
+        ansi::{Color, Styleable},
+        sexp::SExpressable,
+    },
 };
 use std::collections::{HashMap, HashSet};
 
@@ -9,7 +15,7 @@ use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use super::span::Span;
 
 pub struct ChildOrError {
-    pub child: Option<Match>,
+    pub child: Option<Token>,
     pub err: Option<Error>,
 }
 
@@ -39,28 +45,16 @@ impl Error {
         })
     }
 
-    pub fn to_builder(self) -> ErrorBuilder {
-        return ErrorBuilder {
-            name: self.name,
-            tags: self.tags,
-            text: self.text,
-            children: if !self.children.is_empty() {
-                Some(self.children)
-            } else {
-                None
-            },
-            keys: self.keys,
-        };
-    }
-
-    pub fn unexpected(key: &str, value: &str) -> End {
+    #[allow(non_snake_case)]
+    pub fn Unexpected(key: &str, value: &str) -> End {
         let mut err = Error::New(&["unexpected_", key, "_in_{}"].concat());
         err.set_text(&format!("Unexpected: `{}`.", value))
             .add_tag("unexpected");
         End::Fail(err)
     }
 
-    pub fn mismatch(key: &str, expected: &str, found: &str) -> End {
+    #[allow(non_snake_case)]
+    pub fn Mismatch(key: &str, expected: &str, found: &str) -> End {
         let mut err = Error::New(&["unexpected_", key, "_in_{}"].concat());
         err.set_text(&format!(
             "Expected: `{}`, but found: `{}`.",
@@ -70,7 +64,8 @@ impl Error {
         End::Fail(err)
     }
 
-    pub fn missing(key: &str, expected: &str, found: &str) -> End {
+    #[allow(non_snake_case)]
+    pub fn Missing(key: &str, expected: &str, found: &str) -> End {
         let mut err = Error::New(&["missing_expected_", key, "_in_{}"].concat());
         err.set_text(&format!(
             "Expected: `{}`, but found: `{}`.",
@@ -80,11 +75,13 @@ impl Error {
         End::Fail(err)
     }
 
-    pub fn in_child(parent: TokenBuilder, err: Option<Error>) -> End {
+    #[allow(non_snake_case)]
+    pub fn In_Child(parent: TokenBuilder, err: Option<Error>) -> End {
         let mut parent_err = ErrorBuilder {
             name: "incomplete_{}".to_string(),
             text: None,
             tags: parent.tags,
+            start: parent.start,
             children: Some(
                 parent
                     .children
@@ -102,11 +99,13 @@ impl Error {
         return End::Fail(parent_err);
     }
 
-    pub fn in_prop(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
+    #[allow(non_snake_case)]
+    pub fn In_Prop(parent: TokenBuilder, key: &str, err: Option<Error>) -> End {
         let mut parent_err = ErrorBuilder {
             name: "incomplete_{}".to_string(),
             text: None,
             tags: parent.tags,
+            start: parent.start,
             children: Some(
                 parent
                     .children
@@ -122,6 +121,21 @@ impl Error {
         parent_err.set_prop(key, Parsed::Fail(err));
 
         return End::Fail(parent_err);
+    }
+
+    pub fn to_builder(self) -> ErrorBuilder {
+        return ErrorBuilder {
+            name: self.name,
+            tags: self.tags,
+            text: self.text,
+            start: Some(self.start),
+            children: if !self.children.is_empty() {
+                Some(self.children)
+            } else {
+                None
+            },
+            keys: self.keys,
+        };
     }
 
     pub fn get_message(&self) -> String {
@@ -176,6 +190,39 @@ impl Node<Parsed> for Error {
     fn keys(&self) -> &HashMap<String, usize> {
         let hash_map = self.keys.as_ref();
         hash_map.unwrap_or(&_EMPTY_KEYS)
+    }
+}
+
+impl SExpressable<Parsed> for Error {
+    fn get_children(&self) -> Vec<&Parsed> {
+        self.children()
+    }
+    fn get_keys(&self) -> &HashMap<String, usize> {
+        self.keys()
+    }
+    fn get_name(&self) -> &str {
+        self.name()
+    }
+    fn get_tags(&self) -> &HashSet<String> {
+        self.tags()
+    }
+    fn name_color() -> Color {
+        Color::BrightRed
+    }
+    fn node_to_sexp_str(node: &Parsed, depth: usize, colors: &Option<Color::Loop>) -> String {
+        match node {
+            Parsed::Pass(token) => token.to_sexp_str(depth, colors),
+            Parsed::Fail(err) => match err {
+                Some(err) => err.to_sexp_str(depth, colors),
+                None => {
+                    if colors.is_some() {
+                        "<None>".color(Color::Magenta)
+                    } else {
+                        "<None>".to_string()
+                    }
+                }
+            },
+        }
     }
 }
 

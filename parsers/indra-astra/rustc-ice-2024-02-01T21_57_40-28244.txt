@@ -1,0 +1,63 @@
+delayed span bug: 
+   0: std::backtrace::Backtrace::force_capture
+   1: std::backtrace::Backtrace::capture
+   2: <rustc_errors::HandlerInner>::emit_diagnostic
+   3: <rustc_errors::Handler>::emit_diagnostic
+   4: <rustc_span::ErrorGuaranteed as rustc_errors::diagnostic_builder::EmissionGuarantee>::diagnostic_builder_emit_producing_guarantee
+   5: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::depth_limit_error
+   6: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::depth_limit_error
+   7: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+   8: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+   9: rustc_ty_utils::assoc::associated_types_for_impl_traits_in_associated_fn
+  10: rustc_ty_utils::ty::param_env
+  11: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  12: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  13: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  14: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  15: <rustc_hir_analysis::bounds::Bounds>::push_sized
+  16: <dyn rustc_hir_analysis::astconv::AstConv>::associated_path_to_ty
+  17: <dyn rustc_hir_analysis::astconv::AstConv>::associated_path_to_ty
+  18: <dyn rustc_hir_analysis::astconv::AstConv>::res_to_ty
+  19: <dyn rustc_hir_analysis::astconv::AstConv>::associated_path_to_ty
+  20: <dyn rustc_hir_analysis::astconv::AstConv>::associated_path_to_ty
+  21: <dyn rustc_hir_analysis::astconv::AstConv>::ty_of_fn
+  22: rustc_hir_analysis::collect::trait_def
+  23: rustc_hir_analysis::collect::fn_sig
+  24: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  25: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  26: <rustc_query_impl::plumbing::QueryCtxt as rustc_query_system::query::QueryContext>::load_side_effects
+  27: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  28: <rustc_hir_analysis::collect::CollectItemTypesVisitor as rustc_hir::intravisit::Visitor>::visit_trait_item
+  29: <rustc_hir_analysis::collect::resolve_bound_vars::BoundVarContext as rustc_hir::intravisit::Visitor>::visit_lifetime
+  30: rustc_hir_analysis::collect::collect_mod_item_types
+  31: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  32: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  33: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  34: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  35: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  36: <rustc_hir_analysis::variance::variance_of_opaque::{closure#0}::OpaqueTypeLifetimeCollector as rustc_type_ir::visit::TypeVisitor<rustc_middle::ty::context::TyCtxt>>::visit_ty
+  37: rustc_hir_analysis::check_crate
+  38: rustc_interface::passes::analysis
+  39: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  40: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  41: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  42: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  43: rustc_query_impl::profiling_support::alloc_self_profile_query_strings
+  44: rustc_driver_impl::main
+  45: <rustc_middle::ty::SymbolName as core::fmt::Display>::fmt
+  46: <rustc_middle::ty::SymbolName as core::fmt::Display>::fmt
+  47: <rustc_middle::ty::SymbolName as core::fmt::Display>::fmt
+  48: <rustc_middle::ty::SymbolName as core::fmt::Display>::fmt
+  49: <rustc_middle::ty::SymbolName as core::fmt::Display>::fmt
+  50: <rustc_middle::ty::SymbolName as core::fmt::Display>::fmt
+  51: std::sys::windows::thread::Thread::new
+  52: BaseThreadInitThunk
+  53: RtlUserThreadStart
+
+
+
+rustc version: 1.76.0-nightly (b10cfcd65 2023-11-29)
+platform: x86_64-pc-windows-msvc
+
+query stack during panic:
+end of query stack

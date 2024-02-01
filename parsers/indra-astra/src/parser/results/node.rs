@@ -1,3 +1,4 @@
+use crate::utils::sexp::SExpressable;
 use std::{
     collections::{HashMap, HashSet},
     sync::LazyLock,
@@ -6,7 +7,7 @@ use std::{
 pub(crate) static _EMPTY_KEYS: LazyLock<HashMap<String, usize>> = LazyLock::new(|| HashMap::new());
 pub(crate) static _EMPTY_TAGS: LazyLock<HashSet<String>> = LazyLock::new(|| HashSet::new());
 
-pub trait Node<TNode> {
+pub trait Node<TNode>: SExpressable<TNode> {
     fn name(&self) -> &str;
 
     fn tags(&self) -> &HashSet<String>;

@@ -7,7 +7,7 @@
 #![feature(stmt_expr_attributes)]
 #![feature(let_chains)]
 #![feature(trait_alias)]
-
+#![feature(inherent_associated_types)]
 pub mod parser;
 pub mod runtime;
 pub mod tests;

@@ -1,7 +1,7 @@
 use slotmap::SlotMap;
 use std::{collections::HashMap, fs::File, io::Read, path::Path, sync::Mutex};
 
-use crate::parser::{self, results::parsed::Parsed, Type};
+use crate::parser::{self, results::parsed::Parsed, Parser};
 
 pub mod nodes;
 pub mod rfr;

@@ -9,21 +9,23 @@ vv = ["log", "verbose", "v"]
 vvv = ["log", "verbose", "v", "vv"]
 
 [package]
-name = "indra_astra"
+name = "astra"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "indra_astra"
+name = "astra"
 path = "src/bin.rs"
 
 [lib]
-name = "indra_astra"
+name = "astra"
 path = "src/lib.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+args = "2.2.0"
+getopts = "0.2.21"
 indexmap = "2.1.0"
 lazy_static = "1.4.0"
 regex = "1.10.2"

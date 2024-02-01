@@ -3,8 +3,8 @@ use std::{collections::HashSet, fmt::Display};
 use super::{
     error::Error,
     node::{Node, _EMPTY_TAGS},
-    r#match::Token,
     span::Span,
+    token::Token,
 };
 
 #[derive(PartialEq, Eq, Debug, Clone)]

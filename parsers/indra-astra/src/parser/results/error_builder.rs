@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 pub struct ErrorBuilder {
     pub name: String,
+    pub start: Option<usize>,
     pub text: Option<String>,
     pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Parsed>>,
@@ -17,11 +18,24 @@ impl ErrorBuilder {
         log::vv!(&["ERROR", ":NEW"], name);
         ErrorBuilder {
             name: name.to_string(),
+            start: None,
             text: None,
             tags: None,
             children: None,
             keys: None,
         }
+    }
+
+    pub fn start(mut self, start: usize) -> ErrorBuilder {
+        log::vv!(&["ERROR", "-", "START"], &start.to_string());
+        self.start = Some(start);
+        self
+    }
+
+    pub fn set_start(&mut self, start: usize) -> &mut ErrorBuilder {
+        log::vv!(&["ERROR", "-", "START"], &start.to_string());
+        self.start = Some(start);
+        self
     }
 
     pub fn text(mut self, text: &str) -> ErrorBuilder {
@@ -244,6 +258,13 @@ impl Builder<Option<Error>> for ErrorBuilder {
             start,
             end,
         });
+    }
+
+    fn build_to(self, end: usize) -> Option<Error> {
+        let start = self.start.unwrap_or_else(|| {
+            panic!("build_to called with start not set");
+        });
+        self.build(start, end)
     }
 
     fn end(self) -> End {

@@ -7,6 +7,9 @@ use crate::{
     utils::log,
 };
 
+#[cfg(feature = "log")]
+use crate::utils::ansi::Color;
+
 pub struct Cursor {
     pub src: Vec<char>,
     pub indents: Indents,
@@ -33,10 +36,10 @@ impl Cursor {
 
     #[allow(non_snake_case)]
     pub fn New_With(source: &str, ctx: Context) -> Cursor {
-        log::color!("CURSOR", log::Color::BrightGreen);
-        log::color!("TOKEN", log::Color::BrightBlue);
-        log::color!("INDENT", log::Color::BrightWhite);
-        log::bg!("INDENT", log::Color::BrightBlack);
+        log::color!("CURSOR", Color::BrightGreen);
+        log::color!("TOKEN", Color::BrightBlue);
+        log::color!("INDENT", Color::BrightWhite);
+        log::bg!("INDENT", Color::BrightBlack);
         log::push_unique!("PARSE");
 
         log::vvv!(
@@ -286,6 +289,14 @@ impl Cursor {
 
     pub fn prev_str(&self) -> String {
         return self.back(1).to_string();
+    }
+
+    pub fn next_pos(&self) -> usize {
+        return self.pos + 1;
+    }
+
+    pub fn curr_pos(&self) -> usize {
+        return self.pos;
     }
 
     pub fn prev_pos(&self) -> usize {

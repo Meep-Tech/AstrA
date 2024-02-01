@@ -1,4 +1,4 @@
-use crate::{parser::results::r#match::Token, runtime::scope::Scope};
+use crate::{parser::results::token::Token, runtime::scope::Scope};
 
 use super::Any;
 

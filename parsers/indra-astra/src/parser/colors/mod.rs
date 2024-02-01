@@ -1,12 +1,11 @@
 use crate::{
-    parser::{
-        results::{node::Node, r#match::Match},
-        tokens::statement::{assignment::entry, expression::literal::structure},
-    },
-    utils::log::{Color, Effect},
+    parser::results::{node::Node, token::Token},
+    utils::ansi::{Color, Effect},
 };
 
-pub fn ascii(src: &str, lexed: &Match) -> String {
+use super::tokens::expression::{assignment::entry, literal::structure};
+
+pub fn ascii(src: &str, lexed: &Token) -> String {
     let mut result = String::new();
     let start = lexed.start;
     let end = lexed.end;
@@ -51,7 +50,7 @@ pub enum Category {
 
 impl Category {
     #[allow(non_snake_case)]
-    pub fn For(token: &Match) -> Category {
+    pub fn For(token: &Token) -> Category {
         if token.tag(entry::KEY) {
             return Category::FieldDeclaration;
         } else if token.tag(structure::KEY) {

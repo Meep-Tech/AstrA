@@ -1,32 +1,43 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     parser::{
         self,
         results::{
             builder::Builder, error::Error, error_builder::ErrorBuilder, node::Node,
-            parsed::Parsed, r#match::Token, span::Span, token_builder::TokenBuilder,
+            parsed::Parsed, span::Span, token::Token, token_builder::TokenBuilder,
         },
     },
-    utils::log::{self, Styleable},
+    utils::{
+        ansi::{Color, Styleable},
+        log,
+    },
 };
 
-#[cfg(feature = "log")]
-use crate::utils::log::Color;
-
 pub struct Test {
-    parser: &'static Rc<dyn parser::Type>,
+    parser: Box<dyn parser::Parser>,
     tags: Vec<String>,
     input: String,
     expected: Parsed,
     is_partial: bool,
     sub_types: Vec<String>,
     is_disabled: bool,
+}
+
+impl Clone for Test {
+    fn clone(&self) -> Self {
+        Test {
+            parser: self.parser.get(),
+            tags: self.tags.clone(),
+            input: self.input.clone(),
+            expected: self.expected.clone(),
+            is_partial: self.is_partial,
+            sub_types: self.sub_types.clone(),
+            is_disabled: self.is_disabled,
+        }
+    }
 }
 
 lazy_static! {
@@ -37,10 +48,10 @@ impl Test {
     #[allow(non_snake_case)]
     pub fn Unit<TParser>(tags: &[&str], input: &str, expected: Parsed) -> Test
     where
-        TParser: parser::Type + 'static,
+        TParser: parser::Parser + 'static,
     {
         Test {
-            parser: TParser::Get(),
+            parser: Box::new(TParser::Get()),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             input: input.to_string(),
             expected,
@@ -53,10 +64,10 @@ impl Test {
     #[allow(non_snake_case)]
     pub fn Error<TParser>(tags: &[&str], input: &str, expected: Error) -> Test
     where
-        TParser: parser::Type + 'static,
+        TParser: parser::Parser + 'static,
     {
         Test {
-            parser: TParser::Get(),
+            parser: Box::new(TParser::Get()),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             input: input.to_string(),
             expected: Parsed::Fail(Some(expected)),
@@ -69,10 +80,10 @@ impl Test {
     #[allow(non_snake_case)]
     pub fn Partial<TParser>(tags: &[&str], input: &str, expected: Parsed) -> Test
     where
-        TParser: parser::Type + 'static,
+        TParser: parser::Parser + 'static,
     {
         Test {
-            parser: TParser::Get(),
+            parser: Box::new(TParser::Get()),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             input: input.to_string(),
             expected,
@@ -85,7 +96,7 @@ impl Test {
     #[allow(non_snake_case)]
     pub fn Pattern<TParser>(tags: &[&str], template: &str, expected: Parsed) -> Test
     where
-        TParser: parser::Type + 'static,
+        TParser: parser::Parser + 'static,
     {
         let mut sub_types: Vec<String> = Vec::new();
         for capture in PATTERN_SUB_REGEX.captures_iter(template) {
@@ -93,7 +104,7 @@ impl Test {
         }
 
         Test {
-            parser: TParser::Get(),
+            parser: Box::new(TParser::Get()),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             input: template.to_string(),
             expected,
@@ -106,14 +117,14 @@ impl Test {
     #[allow(non_snake_case)]
     pub fn Error_Pattern<TParser>(tags: &[&str], template: &str, expected: Error) -> Test
     where
-        TParser: parser::Type + 'static,
+        TParser: parser::Parser + 'static,
     {
         let mut sub_types: Vec<String> = Vec::new();
         for capture in PATTERN_SUB_REGEX.captures_iter(template) {
             sub_types.push(capture[1].to_string());
         }
         Test {
-            parser: TParser::Get(),
+            parser: Box::new(TParser::Get()),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             input: template.to_string(),
             expected: Parsed::Fail(Some(expected)),
@@ -126,14 +137,14 @@ impl Test {
     #[allow(non_snake_case)]
     pub fn Partial_Pattern<TParser>(tags: &[&str], template: &str, expected: Parsed) -> Test
     where
-        TParser: parser::Type + 'static,
+        TParser: parser::Parser + 'static,
     {
         let mut sub_types: Vec<String> = Vec::new();
         for capture in PATTERN_SUB_REGEX.captures_iter(template) {
             sub_types.push(capture[1].to_string());
         }
         Test {
-            parser: TParser::Get(),
+            parser: Box::new(TParser::Get()),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             input: template.to_string(),
             expected,
@@ -173,9 +184,11 @@ impl Test {
     pub fn run(self) -> Vec<Outcome> {
         let parsers = parser::get_all();
         self.run_with_context(
-            &parsers,
+            parsers,
             &Settings {
                 panic_on_fail: false,
+                test_tags: vec![],
+                test_types: vec![],
             },
         )
     }
@@ -183,10 +196,13 @@ impl Test {
     pub fn run_with_context(self, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
         let outcomes: Vec<Outcome>;
 
+        #[cfg(feature = "log")]
+        let test_name = &self.parser.name();
+
         log::color!("TESTS", Color::Yellow);
         log::push_unique!("TESTS");
         log::push!("-");
-        log::push!(&self.parser.name());
+        log::push_unique!(&test_name);
         log::push!("-");
 
         if !self.is_disabled() {
@@ -201,22 +217,26 @@ impl Test {
         }
 
         log::pop!();
-        log::pop!();
+        log::pop_unique!(&test_name);
         log::pop!();
         log::pop_unique!("TESTS");
 
         return outcomes;
     }
 
-    pub fn get_all_combinations(self, parsers: ParserMap) -> Vec<Test> {
+    pub fn get_all_combinations(
+        &self,
+        parsers: ParserMap,
+        ignore: &Vec<Box<dyn parser::Parser>>,
+    ) -> Vec<Test> {
         if self.is_partial {
             return vec![];
         } else {
             if self.sub_types.len() == 0 {
-                return vec![self];
+                return vec![self.clone()];
             } else {
                 let mut tests: Vec<Test> = Vec::new();
-                let pattern = self.input;
+                let pattern = &self.input;
                 let mut total_combos = 1;
                 let subs = PATTERN_SUB_REGEX
                     .captures_iter(&pattern)
@@ -247,10 +267,77 @@ impl Test {
                             )
                         });
 
+                        log::vv!(
+                            &["PATTERN"],
+                            &format!(
+                                "Found sub parser: {} for key {} in pattern: \n\t{}",
+                                parser.name(),
+                                value,
+                                pattern
+                            )
+                        );
+
                         let mut tests: Vec<Test> = vec![];
-                        for test in parser.get_tests() {
-                            let combos = test.get_all_combinations(parsers);
-                            tests.extend(combos);
+
+                        let mut ignored: Vec<Box<dyn parser::Parser>> =
+                            ignore.iter().map(|p| p.get()).collect();
+                        ignored.push(self.parser.get());
+
+                        let mut sub_parsers = vec![parser.get()];
+                        sub_parsers.extend(parser::get_recursive_subs(&*parser.get()));
+                        sub_parsers = sub_parsers
+                            .iter()
+                            .filter(|p| {
+                                let mut sub_sub_parsers = parser::get_recursive_subs(&*p.get());
+                                sub_sub_parsers.push(p.get());
+
+                                !sub_sub_parsers
+                                    .iter()
+                                    .any(|p| ignored.iter().any(|i| i.name() == p.name()))
+                            })
+                            .map(|p| p.get())
+                            .collect();
+
+                        log::vv!(
+                            &["PATTERN"],
+                            &format!(
+                                "Found {} sub parsers for key {}: {}",
+                                sub_parsers.len(),
+                                value,
+                                sub_parsers
+                                    .iter()
+                                    .map(|p| p.name())
+                                    .collect::<Vec<&str>>()
+                                    .join(", ")
+                            )
+                        );
+
+                        for parser in sub_parsers {
+                            for test in parser.get_tests() {
+                                let combos = test.get_all_combinations(parsers, &ignored);
+                                tests.extend(combos);
+                            }
+                        }
+
+                        if tests.len() == 0 {
+                            panic!(
+                                "No tests found for parser: {}, in pattern: \n\t{}",
+                                value, pattern,
+                            )
+                        } else {
+                            log::vv!(
+                                &["PATTERN"],
+                                &format!(
+                                    "Found {} tests for key {}: {}",
+                                    tests.len(),
+                                    value,
+                                    tests
+                                        .iter()
+                                        .map(|t| t.get_name())
+                                        .collect::<Vec<String>>()
+                                        .join(", ")
+                                )
+                            );
                         }
 
                         total_combos *= tests.len();
@@ -262,8 +349,7 @@ impl Test {
                 for combo_index in 0..total_combos {
                     let mut combo: Vec<usize> = Vec::new();
                     let mut remainder = combo_index;
-                    for sub_index in 0..subs.len() {
-                        let sub = &subs[sub_index];
+                    for sub in subs.iter() {
                         let sub_options_count = sub.2.len();
                         let sub_option_index = remainder % sub_options_count;
                         remainder = remainder / sub_options_count;
@@ -273,77 +359,83 @@ impl Test {
                     combos.push(combo);
                 }
 
-                let mut result_patterns: Vec<(String, usize)> = Vec::new();
                 for combo in combos {
-                    let curr_patterns = &result_patterns.clone();
-                    result_patterns = Vec::new();
-                    let mut result_patterns: Vec<(String, usize)> = Vec::new();
-                    result_patterns.push((pattern.clone(), 0));
+                    let mut result = pattern.clone();
+                    let mut offset: i32 = 0;
 
-                    for (index, sub_index) in combo.iter().enumerate() {
-                        let sub = &subs[index];
-                        let sub_input = &sub.2[*sub_index].input;
-
-                        for (pattern, offset) in curr_patterns {
-                            let start = sub.0 .0 + offset;
-                            let end = sub.0 .1 + offset;
-
-                            let mut updated = pattern.clone();
-                            updated.replace_range(start..end, sub_input);
-                            result_patterns.push((pattern.clone(), *offset));
-
-                            let sub_modifier = sub.3;
-                            match sub_modifier {
-                                Some('?') => {
-                                    _build_and_append_optional_pattern(
-                                        sub,
-                                        &pattern,
-                                        start,
-                                        end,
-                                        &mut result_patterns,
-                                    );
-                                }
-                                Some('+') => _build_and_append_repeat_patterns(
-                                    sub,
-                                    &updated,
-                                    start,
-                                    end,
-                                    &mut result_patterns,
-                                ),
-                                Some('*') => {
-                                    _build_and_append_optional_pattern(
-                                        sub,
-                                        &pattern,
-                                        start,
-                                        end,
-                                        &mut result_patterns,
-                                    );
-                                    _build_and_append_repeat_patterns(
-                                        sub,
-                                        &updated,
-                                        start,
-                                        end,
-                                        &mut result_patterns,
-                                    );
-                                }
-                                _ => {}
-                            }
-                        }
+                    for (i, sub) in subs.iter().enumerate() {
+                        let (start, end) = sub.0;
+                        let input = &sub.2[combo[i]].input;
+                        let in_len: i32 = ((end - start) + 2).try_into().unwrap();
+                        let out_len: i32 = input.len().try_into().unwrap();
+                        let diff: i32 = out_len - in_len;
+                        let start = (start as i32) + offset - 1;
+                        let start: usize = start.try_into().unwrap();
+                        let end: i32 = (end as i32) + offset + 1;
+                        let end: usize = end.try_into().unwrap();
+                        result.replace_range(start..end, input);
+                        offset += diff;
                     }
 
-                    for pattern in curr_patterns {
-                        let case = Test {
-                            parser: self.parser,
-                            tags: self.tags.clone(),
-                            input: pattern.0.clone(),
-                            expected: self.expected.clone(),
-                            is_partial: self.is_partial,
-                            sub_types: self.sub_types.clone(),
-                            is_disabled: self.is_disabled,
-                        };
+                    let case = Test {
+                        parser: self.parser.get(),
+                        tags: self.tags.clone(),
+                        input: result,
+                        expected: self.expected.clone(),
+                        is_partial: self.is_partial,
+                        sub_types: self.sub_types.clone(),
+                        is_disabled: self.is_disabled,
+                    };
 
-                        tests.push(case);
-                    }
+                    tests.push(case);
+
+                    // for (index, sub_index) in combo.iter().enumerate() {
+                    //     let sub = &subs[index];
+                    //     let sub_input = &sub.2[*sub_index].input;
+                    //     for (pattern, offset) in curr_patterns {
+                    //         let start = sub.0 .0 + offset;
+                    //         let end = sub.0 .1 + offset;
+                    //         let mut updated = pattern.clone();
+                    //         updated.replace_range(start..end, sub_input);
+                    //         result_patterns.push((pattern.clone(), *offset));
+                    //         //let sub_modifier = sub.3;
+                    //         // match sub_modifier {
+                    //         //     Some('?') => {
+                    //         //         _build_and_append_optional_pattern(
+                    //         //             sub,
+                    //         //             &pattern,
+                    //         //             start,
+                    //         //             end,
+                    //         //             &mut result_patterns,
+                    //         //         );
+                    //         //     }
+                    //         //     Some('+') => _build_and_append_repeat_patterns(
+                    //         //         sub,
+                    //         //         &updated,
+                    //         //         start,
+                    //         //         end,
+                    //         //         &mut result_patterns,
+                    //         //     ),
+                    //         //     Some('*') => {
+                    //         //         _build_and_append_optional_pattern(
+                    //         //             sub,
+                    //         //             &pattern,
+                    //         //             start,
+                    //         //             end,
+                    //         //             &mut result_patterns,
+                    //         //         );
+                    //         //         _build_and_append_repeat_patterns(
+                    //         //             sub,
+                    //         //             &updated,
+                    //         //             start,
+                    //         //             end,
+                    //         //             &mut result_patterns,
+                    //         //         );
+                    //         //     }
+                    //         //     _ => {}
+                    //         // }
+                    //     }
+                    // }
                 }
 
                 return tests;
@@ -352,53 +444,53 @@ impl Test {
     }
 }
 
-fn _build_and_append_optional_pattern(
-    sub: &((usize, usize), &str, Vec<Test>, Option<char>),
-    pattern: &String,
-    start: usize,
-    end: usize,
-    result_patterns: &mut Vec<(String, usize)>,
-) {
-    let offset = 0 - (sub.1.len() + 3);
-    let optional_pattern = pattern.clone();
-    pattern.clone().replace_range(start..end, "");
-    result_patterns.push((optional_pattern, offset));
-}
+// fn _build_and_append_optional_pattern(
+//     sub: &((usize, usize), &str, Vec<Test>, Option<char>),
+//     pattern: &String,
+//     start: usize,
+//     end: usize,
+//     result_patterns: &mut Vec<(String, usize)>,
+// ) {
+//     let offset = 0 - (sub.1.len() + 3);
+//     let optional_pattern = pattern.clone();
+//     pattern.clone().replace_range(start..end, "");
+//     result_patterns.push((optional_pattern, offset));
+// // }
 
-fn _build_and_append_repeat_patterns(
-    sub: &((usize, usize), &str, Vec<Test>, Option<char>),
-    updated_pattern: &String,
-    start: usize,
-    end: usize,
-    result_patterns: &mut Vec<(String, usize)>,
-) {
-    for i in [1, 2, 3, 5, 8, 13] {
-        let offset = (sub.1.len() + 3) * i;
-        let mut consistent_repeat_pattern = updated_pattern[0..start].to_owned();
-        let mut random_repeat_pattern = updated_pattern[0..start].to_owned();
-        let mut index = 0;
-        for sub_input in HashSet::<&String>::from_iter(sub.2.iter().map(|t| &t.input)) {
-            if index >= i {
-                break;
-            } else {
-                index += 1;
-            }
+// fn _build_and_append_repeat_patterns(
+//     sub: &((usize, usize), &str, Vec<Test>, Option<char>),
+//     updated_pattern: &String,
+//     start: usize,
+//     end: usize,
+//     result_patterns: &mut Vec<(String, usize)>,
+// ) {
+//     for i in [1, 2, 3, 5, 8, 13] {
+//         let offset = (sub.1.len() + 3) * i;
+//         let mut consistent_repeat_pattern = updated_pattern[0..start].to_owned();
+//         let mut random_repeat_pattern = updated_pattern[0..start].to_owned();
+//         let mut index = 0;
+//         for sub_input in HashSet::<&String>::from_iter(sub.2.iter().map(|t| &t.input)) {
+//             if index >= i {
+//                 break;
+//             } else {
+//                 index += 1;
+//             }
 
-            random_repeat_pattern.push_str(sub_input);
-        }
+//             random_repeat_pattern.push_str(sub_input);
+//         }
 
-        for sub_input in sub.2.iter().map(|t| &t.input) {
-            for _ in 0..i {
-                consistent_repeat_pattern.push_str(&sub_input);
-            }
-        }
+//         for sub_input in sub.2.iter().map(|t| &t.input) {
+//             for _ in 0..i {
+//                 consistent_repeat_pattern.push_str(&sub_input);
+//             }
+//         }
 
-        consistent_repeat_pattern.push_str(&updated_pattern[end..]);
+//         consistent_repeat_pattern.push_str(&updated_pattern[end..]);
 
-        result_patterns.push((random_repeat_pattern, offset));
-        result_patterns.push((consistent_repeat_pattern, offset));
-    }
-}
+//         result_patterns.push((random_repeat_pattern, offset));
+//         result_patterns.push((consistent_repeat_pattern, offset));
+//     }
+// }
 
 macro_rules! unit {
     ([$($tag:literal $(&)?)*]: $input:literal => $expected:expr) => {
@@ -482,7 +574,7 @@ impl Mock {
     #[allow(non_snake_case)]
     pub fn Token<T>(start: usize, end: usize) -> Token
     where
-        T: parser::Type + 'static,
+        T: parser::Parser + 'static,
     {
         Token::Of_Type::<T>().partial().build(start, end)
     }
@@ -492,10 +584,11 @@ impl Mock {
         Error::New(name).partial().build(start, end)
     }
 
+    // TODO: Check subs by tag instead of by type/name!
     #[allow(non_snake_case)]
     pub fn Sub<T>() -> Token
     where
-        T: parser::Type + 'static,
+        T: parser::Parser + 'static,
     {
         Token::Of_Type::<T>().sub()
     }
@@ -511,34 +604,80 @@ enum Comparison {
     Fail(String),
 }
 
-pub type ParserMap<'p> = &'p HashMap<&'p str, Rc<dyn parser::Type>>;
+pub type ParserMap<'p> = &'p HashMap<String, Box<dyn parser::Parser>>;
 
 #[derive(Debug)]
 pub struct Settings {
     pub panic_on_fail: bool,
+    pub test_types: Vec<String>,
+    pub test_tags: Vec<String>,
 }
 
 pub fn run_all() -> Vec<Outcome> {
     run_all_with_settings(&Settings {
         panic_on_fail: false,
+        test_types: vec![],
+        test_tags: vec![],
     })
 }
 
 pub fn run_all_with_settings(settings: &Settings) -> Vec<Outcome> {
+    log::color!("TESTS", Color::Yellow);
+    log::color!("TOKEN", Color::Blue);
+    log::bg!(":START", Color::BrightGreen);
+    log::bg!(":END", Color::BrightMagenta);
+    log::push_unique!("TESTS");
+    log::push!("*");
     let parsers = parser::get_all();
-    run_all_with_context(parsers, settings)
+    let result = run_all_for(parsers, settings);
+    log::pop_unique!("TESTS");
+    log::pop!();
+    return result;
 }
 
-pub fn run_all_with_context(parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
+pub fn run_all_for(parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
     let mut outcomes: Vec<Outcome> = Vec::new();
     for parser in parsers.values() {
+        if settings.test_types.len() > 0
+            && !settings.test_types.contains(&parser.name().to_string())
+        {
+            log::vv!(
+                &["IGNORED"],
+                &format!("Skipping tests for parser: {}", parser.name())
+            );
+            continue;
+        }
+
         let tests = parser.get_tests();
+        log::vv!(
+            &["RUNNING"],
+            &format!(
+                "Running {} tests for parser: {}",
+                tests.len(),
+                parser.name()
+            )
+        );
+
         for test in tests {
+            if settings.test_tags.len() > 0
+                && !test.tags.iter().any(|t| settings.test_tags.contains(t))
+            {
+                log::vv!(
+                    &["IGNORED"],
+                    &format!(
+                        "Skipping test: {}, for parser: {}",
+                        test.get_name(),
+                        parser.name()
+                    )
+                );
+                continue;
+            }
+
             let mut tags = test.tags.clone();
             tags.push(parser.name().to_string());
             let mut test = test;
             test.tags = tags;
-            let outcome = run_with_context(test, parsers, settings);
+            let outcome = run_in_context(test, parsers, settings);
             outcomes.extend(outcome);
         }
     }
@@ -546,26 +685,29 @@ pub fn run_all_with_context(parsers: ParserMap, settings: &Settings) -> Vec<Outc
 }
 
 pub fn run(test: Test) -> Vec<Outcome> {
-    run_with_context(
+    run_in_context(
         test,
         &parser::get_all(),
         &Settings {
             panic_on_fail: false,
+            test_types: vec![],
+            test_tags: vec![],
         },
     )
 }
 
-pub fn run_with_context(test: Test, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
+pub fn run_in_context(test: Test, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
     test.run_with_context(parsers, settings)
 }
 
 fn _run_unit_test(test: Test) -> Outcome {
-    let parser = test.parser;
+    #[cfg(feature = "log")]
+    let test_name = test.get_name();
+    log::push_unique!(&test_name);
+    log::plain!(&[":START"], &test.get_formatted_input());
+    let parser = &test.parser;
     let input = &test.input;
     let expected = &test.expected;
-
-    log::push!(&test.get_name());
-    log::plain!(&["START"], &test.get_formatted_input());
 
     let result = parser.parse(&input);
     let comparison = _validate_outcome(&expected, &result);
@@ -578,11 +720,11 @@ fn _run_unit_test(test: Test) -> Outcome {
     match &result {
         Outcome::Pass(_test) => {
             log::log!(
-                &["END"],
+                &[":END"],
                 &format!(
                     "{}{} \n => {}",
-                    "✔".color(log::Color::Green),
-                    " PASS".color(log::Color::Green),
+                    "✔".color(Color::Green),
+                    " PASS".color(Color::Green),
                     match _test.expected {
                         Parsed::Pass(ref token) => token.name(),
                         Parsed::Fail(ref error) => match error {
@@ -595,12 +737,12 @@ fn _run_unit_test(test: Test) -> Outcome {
         }
         Outcome::Fail(_test, _result, _message) => {
             log::error!(
-                &["END"],
+                &[":END"],
                 &format!(
                     "{}\n{}{} \t=> {}\n\n{}\n{}\n{}",
                     &_format_input(&_test.input, Some(InputDecoration::XMark)),
-                    "✘".color(log::Color::Red),
-                    " FAIL".color(log::Color::Red),
+                    "✘".color(Color::Red),
+                    " FAIL".color(Color::Red),
                     match _result {
                         Parsed::Pass(ref token) => token.name.clone(),
                         Parsed::Fail(ref error) => match error {
@@ -610,7 +752,7 @@ fn _run_unit_test(test: Test) -> Outcome {
                     },
                     &format!("\t- Reason:\n{}", _message)
                         .indent(2)
-                        .color(log::Color::Yellow),
+                        .color(Color::Yellow),
                     &format!(
                         "\t- Expected:\n{}",
                         match _test.expected {
@@ -622,7 +764,7 @@ fn _run_unit_test(test: Test) -> Outcome {
                         }
                     )
                     .indent(2)
-                    .color(log::Color::Green),
+                    .color(Color::Green),
                     &format!(
                         "\t- Actual:\n{}",
                         match _result {
@@ -634,20 +776,31 @@ fn _run_unit_test(test: Test) -> Outcome {
                         }
                     )
                     .indent(2)
-                    .color(log::Color::Red),
+                    .color(Color::Red),
                 )
             );
         }
     }
 
-    log::pop!();
+    log::pop_unique!(&test_name);
 
     return result;
 }
 
 fn _run_tests_for_pattern(base: Test, parsers: ParserMap, settings: &Settings) -> Vec<Outcome> {
-    let combos = base.get_all_combinations(parsers);
+    let combos = base.get_all_combinations(parsers, &vec![]);
     let mut outcomes: Vec<Outcome> = Vec::new();
+
+    log::push!(&base.get_name());
+    log::vv!(
+        &["PATTERN"],
+        &format!(
+            "Running {} tests for pattern: {}",
+            combos.len(),
+            base.format_input(None)
+        )
+    );
+
     for combo in combos {
         let outcome = _run_unit_test(combo);
 
@@ -655,6 +808,8 @@ fn _run_tests_for_pattern(base: Test, parsers: ParserMap, settings: &Settings) -
 
         outcomes.push(outcome);
     }
+
+    log::pop!();
 
     return outcomes;
 }
@@ -697,6 +852,18 @@ fn _validate_outcome(expected: &Parsed, result: &Parsed) -> Comparison {
 }
 
 fn _compare_tokens(expected: &Token, result: &Token) -> Comparison {
+    if expected.tag(_SUB_TAG) {
+        if result.name() == expected.name() || result.tag(&expected.name) {
+            return Comparison::Pass;
+        } else {
+            return Comparison::Fail(format!(
+                "Expected sub token of type: {}, but found: {}.",
+                expected.name(),
+                result.name()
+            ));
+        }
+    }
+
     match _compare_name(&expected.name, &result.name, &expected.tags) {
         Comparison::Pass => match _compare_sizes(expected, result, &expected.tags) {
             Comparison::Pass => match _compare_tags(&expected.tags, &result.tags) {
@@ -727,7 +894,33 @@ fn _compare_tokens(expected: &Token, result: &Token) -> Comparison {
                         &expected.tags,
                     ) {
                         Comparison::Pass => {
-                            match _compare_props(&expected.keys, &result.keys, &expected.tags) {
+                            match _compare_props(
+                                &expected.keys,
+                                &result.keys,
+                                if expected.children.len() == 0 {
+                                    None
+                                } else {
+                                    Some(
+                                        expected
+                                            .children
+                                            .iter()
+                                            .map(|c| Parsed::Pass(c.clone()))
+                                            .collect(),
+                                    )
+                                },
+                                if result.children.len() == 0 {
+                                    None
+                                } else {
+                                    Some(
+                                        result
+                                            .children
+                                            .iter()
+                                            .map(|c| Parsed::Pass(c.clone()))
+                                            .collect(),
+                                    )
+                                },
+                                &expected.tags,
+                            ) {
                                 Comparison::Pass => Comparison::Pass,
                                 Comparison::Fail(message) => Comparison::Fail(message),
                             }
@@ -763,7 +956,21 @@ fn _compare_errors(expected: Option<Error>, result: Option<Error>) -> Comparison
                             &expected.tags,
                         ) {
                             Comparison::Pass => {
-                                match _compare_props(&expected.keys, &result.keys, &expected.tags) {
+                                match _compare_props(
+                                    &expected.keys,
+                                    &result.keys,
+                                    if &expected.children.len() == &0 {
+                                        None
+                                    } else {
+                                        Some(expected.children.clone())
+                                    },
+                                    if result.children.len() == 0 {
+                                        None
+                                    } else {
+                                        Some(result.children.clone())
+                                    },
+                                    &expected.tags,
+                                ) {
                                     Comparison::Pass => Comparison::Pass,
                                     Comparison::Fail(message) => Comparison::Fail(message),
                                 }
@@ -845,12 +1052,17 @@ fn _compare_tags(
     if let Some(expected) = expected {
         if let Some(result) = result {
             if expected.contains(_PARTIAL_TAG) {
-                if expected.is_subset(result) {
+                let expected_without_mock_tags = expected
+                    .iter()
+                    .filter(|t| !t.starts_with("_!__") && !t.ends_with("__!_"))
+                    .map(|t| t.to_string())
+                    .collect::<HashSet<String>>();
+                if expected_without_mock_tags.is_subset(result) {
                     return Comparison::Pass;
                 } else {
                     return Comparison::Fail(format!(
                         "Expected tags to be subset of: {:?}, but found: {:?}.",
-                        expected, result
+                        expected_without_mock_tags, result
                     ));
                 }
             } else {
@@ -864,12 +1076,24 @@ fn _compare_tags(
                 }
             }
         } else {
-            if expected.contains(_PARTIAL_TAG) && expected.len() == 0 {
-                return Comparison::Pass;
+            let expected_without_mock_tags = expected
+                .iter()
+                .filter(|t| !t.starts_with("_!__") && !t.ends_with("__!_"))
+                .map(|t| t.to_string())
+                .collect::<HashSet<String>>();
+            if expected.contains(_PARTIAL_TAG) {
+                if expected_without_mock_tags.len() == 0 {
+                    return Comparison::Pass;
+                } else {
+                    return Comparison::Fail(format!(
+                        "Expected tags to be subset of: {:?}, but found None.",
+                        expected_without_mock_tags
+                    ));
+                }
             } else {
                 return Comparison::Fail(format!(
-                    "Expected tags to be exactly: {:?}, but found: None.",
-                    result
+                    "Expected tags to be exactly: {:?}, but found None.",
+                    expected_without_mock_tags
                 ));
             }
         }
@@ -985,6 +1209,8 @@ fn _compare_children(
 fn _compare_props(
     expected_keys: &Option<HashMap<String, usize>>,
     result_keys: &Option<HashMap<String, usize>>,
+    expected_children: Option<Vec<Parsed>>,
+    result_children: Option<Vec<Parsed>>,
     tags: &Option<HashSet<String>>,
 ) -> Comparison {
     if let Some(tags) = tags
@@ -997,9 +1223,65 @@ fn _compare_props(
                         if expected_value == result_value {
                             continue;
                         } else {
+                            let expected_child =
+                                expected_children.unwrap()[*expected_value].clone();
+                            let expected_child = match expected_child {
+                                Parsed::Pass(ref token) => token,
+                                Parsed::Fail(ref error) => match error {
+                                    Some(error) => {
+                                        return Comparison::Fail(format!(
+                                            "Expected prop: {} to be at {} or of type: {}, but found: {} of type {}.",
+                                            key, expected_value,
+                                            error.name,
+                                            result_value,
+                                            result_children.unwrap()[*result_value].get_name(),
+                                        ))
+                                    },
+                                    None => {
+                                        return Comparison::Fail(format!(
+                                            "Expected prop: {} to be at {} or of type: {}, but found: None.",
+                                            key, expected_value, match error {
+                                                Some(error) => error.name(),
+                                                None => "None",
+                                            }
+                                        ))
+                                    }
+                                },
+                            };
+                            let result_child = result_children.unwrap()[*result_value].clone();
+                            let result_child = match result_child {
+                                Parsed::Pass(ref token) => token,
+                                Parsed::Fail(ref error) => match error {
+                                    Some(error) => {
+                                        return Comparison::Fail(format!(
+                                            "Expected prop: {} to be at {} or of type: {}, but found: {} of type {}.",
+                                            key, expected_value,
+                                            expected_child.name(),
+                                            error.name,
+                                            result_child.get_name()
+                                        ))
+                                    },
+                                    None => {
+                                        return Comparison::Fail(format!(
+                                            "Expected prop: {} to be at {} or of type: {}, but found: None.",
+                                            key, expected_value, expected_child.name(),
+                                        ))
+                                    }
+                                },
+                            };
+
+                            if let Comparison::Pass =
+                                _compare_tokens(&expected_child, &result_child)
+                            {
+                                return Comparison::Pass;
+                            }
+
                             return Comparison::Fail(format!(
-                                "Expected prop: {} to be: {}, but found: {}.",
-                                key, expected_value, result_value
+                                "Expected prop: {} to be at {} or of type: {}, but found: {} of type {}.",
+                                key, expected_value,
+                                expected_child.name(),
+                                 result_value,
+                                result_child.name(),
                             ));
                         }
                     } else {
@@ -1078,8 +1360,8 @@ fn _format_input(input: &str, decorator: Option<InputDecoration>) -> String {
     format!(
         "\n{}┏{}\n\t┖",
         match decorator {
-            Some(InputDecoration::CheckMark) => "✔\t".color(log::Color::Green),
-            Some(InputDecoration::XMark) => "✘\t".color(log::Color::Red),
+            Some(InputDecoration::CheckMark) => "✔\t".color(Color::Green),
+            Some(InputDecoration::XMark) => "✘\t".color(Color::Red),
             None => "\t".to_string(),
         },
         format!("\n{}", input).replace("\n", "\n\t┣ "),
