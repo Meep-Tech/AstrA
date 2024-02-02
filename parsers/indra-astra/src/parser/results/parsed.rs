@@ -1,4 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Display};
+
+use crate::utils::{
+    ansi::{Color, ColorLoop, Styleable},
+    sexp::SExpressable,
+};
 
 use super::{
     error::Error,
@@ -7,7 +13,7 @@ use super::{
     token::Token,
 };
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub enum Parsed {
     Pass(Token),
     Fail(Option<Error>),
@@ -50,6 +56,22 @@ impl Parsed {
             Parsed::Fail(error) => match error {
                 Some(error) => error.end(),
                 None => 0,
+            },
+        }
+    }
+
+    pub fn to_sexp_str(&self, depth: usize, colors: &mut Option<ColorLoop>) -> String {
+        match self {
+            Parsed::Pass(node) => node.to_sexp_str(depth, colors),
+            Parsed::Fail(error) => match error {
+                Some(error) => error.to_sexp_str(depth, colors),
+                None => {
+                    if colors.is_some() {
+                        "<None>".color(Color::Magenta)
+                    } else {
+                        "<None>".to_string()
+                    }
+                }
             },
         }
     }

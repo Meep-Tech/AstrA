@@ -148,10 +148,23 @@ impl ColorLoop {
         return ColorLoop { index: 0, colors };
     }
 
+    pub fn curr(&self) -> Color {
+        return self.colors[self.index];
+    }
+
     pub fn next(&mut self) -> Color {
         let color = self.colors[self.index];
         self.index = (self.index + 1) % self.colors.len();
         return color;
+    }
+
+    pub fn prev(&mut self) -> Color {
+        if self.index == 0 {
+            self.index = self.colors.len() - 1;
+        } else {
+            self.index -= 1;
+        }
+        return self.colors[self.index];
     }
 }
 

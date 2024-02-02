@@ -13,13 +13,14 @@ use std::collections::{HashMap, HashSet};
 use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 
 use super::span::Span;
+use serde::{Deserialize, Serialize};
 
 pub struct ChildOrError {
     pub child: Option<Token>,
     pub err: Option<Error>,
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct Error {
     pub name: String,
     pub text: Option<String>,
@@ -209,7 +210,7 @@ impl SExpressable<Parsed> for Error {
     fn name_color() -> Color {
         Color::BrightRed
     }
-    fn node_to_sexp_str(node: &Parsed, depth: usize, colors: &Option<Color::Loop>) -> String {
+    fn node_to_sexp_str(node: &Parsed, depth: usize, colors: &mut Option<Color::Loop>) -> String {
         match node {
             Parsed::Pass(token) => token.to_sexp_str(depth, colors),
             Parsed::Fail(err) => match err {

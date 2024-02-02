@@ -1,12 +1,19 @@
-use astra::{tests::parser::tokens::tests, utils::log};
-use clap::{Parser, Subcommand, ValueEnum};
+use astra::{
+    parser::Parser,
+    tests::parser::tokens::tests,
+    utils::{
+        ansi::{Color, ColorLoop},
+        log,
+    },
+};
+use clap::{Parser as Arguments, Subcommand, ValueEnum};
 
 pub const AUTHOR: &'static str = "Meep.Tech";
 const VERSION: &'static str = "0.0.1";
 const TEST_DESCRIPTION: &'static str = "Astra Tests";
 const TEST_LONG_DESCRIPTION: &'static str = "TEST-MODE:: Used to run tests for the Astra Language";
 
-#[derive(Parser, Debug)]
+#[derive(Arguments, Debug)]
 #[command(
     author = AUTHOR,
     version = VERSION,
@@ -27,7 +34,7 @@ struct TestArgs {
     panic_on_fail: bool,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Arguments, Debug)]
 #[command(
     author = AUTHOR,
     version = VERSION,
@@ -101,6 +108,52 @@ fn main() {
             println!("Computed args from input: {:?}", &args);
         }
 
-        //println!("Not Yet Implemented; Try running with the 'test' feature enabled for now");
+        match args.cmd {
+            Commands::Parse {
+                input,
+                to,
+                file,
+                out,
+            } => {
+                let input: String = match input {
+                    None => {
+                        if let Some(file) = file {
+                            std::fs::read_to_string(file)
+                                .unwrap()
+                                .lines()
+                                .map(|s| s.to_string())
+                                .collect()
+                        } else {
+                            panic!("No input provided and no file path provided.")
+                        }
+                    }
+                    Some(input) => input.join(" "),
+                };
+
+                let output = astra::parser::tokens::source::Parser::Parse(&input);
+
+                match to {
+                    None | Some(Outputs::Debug) => {
+                        println!("{:#?}", output);
+                    }
+                    Some(Outputs::Json) => {
+                        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                    }
+                    Some(Outputs::SExp) => {
+                        println!(
+                            "{}",
+                            output.to_sexp_str(
+                                0,
+                                &mut Some(ColorLoop::New(vec![
+                                    Color::BrightMagenta,
+                                    Color::BrightYellow,
+                                    Color::BrightBlue,
+                                ]))
+                            )
+                        );
+                    }
+                }
+            }
+        }
     }
 }

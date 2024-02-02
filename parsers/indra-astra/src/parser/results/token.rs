@@ -2,12 +2,13 @@ use crate::{
     parser::{self, results::token_builder::TokenBuilder},
     utils::{ansi::Color, sexp::SExpressable},
 };
+use serde::{Deserialize, Serialize};
 
 use super::{end::End, span::Span};
 use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use std::collections::{HashMap, HashSet};
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct Token {
     pub name: String,
     pub tags: Option<HashSet<String>>,
@@ -103,7 +104,7 @@ impl SExpressable<Token> for Token {
         return crate::utils::ansi::Color::Green;
     }
 
-    fn node_to_sexp_str(node: &Token, depth: usize, colors: &Option<Color::Loop>) -> String {
+    fn node_to_sexp_str(node: &Token, depth: usize, colors: &mut Option<Color::Loop>) -> String {
         node.to_sexp_str(depth, colors)
     }
 }

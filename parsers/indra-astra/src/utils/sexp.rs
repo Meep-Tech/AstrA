@@ -7,9 +7,9 @@ pub trait SExpressable<TNode> {
     fn get_children(&self) -> Vec<&TNode>;
     fn get_tags(&self) -> &HashSet<String>;
     fn name_color() -> Color;
-    fn node_to_sexp_str(node: &TNode, depth: usize, colors: &Option<Color::Loop>) -> String;
+    fn node_to_sexp_str(node: &TNode, depth: usize, colors: &mut Option<Color::Loop>) -> String;
 
-    fn to_sexp_str(&self, depth: usize, colors: &Option<ColorLoop>) -> String {
+    fn to_sexp_str(&self, depth: usize, colors: &mut Option<ColorLoop>) -> String {
         let depth = depth + 1;
         let mut result = String::new();
 
@@ -22,7 +22,15 @@ pub trait SExpressable<TNode> {
             };
         }
 
-        result.push_str("(");
+        match colors {
+            Some(colors) => {
+                colors.next();
+                result.push_str("(".color(colors.curr()).as_str());
+            }
+            None => {
+                result.push_str("(");
+            }
+        }
         if colors.is_some() {
             result.push_str(self.get_name().color(Self::name_color()).as_str());
         } else {
@@ -40,7 +48,16 @@ pub trait SExpressable<TNode> {
         }
 
         if self.get_children().is_empty() && self.get_keys().is_empty() {
-            result.push_str(")");
+            match colors {
+                Some(colors) => {
+                    result.push_str(")".color(colors.curr()).as_str());
+                    colors.prev();
+                }
+                None => {
+                    result.push_str(")");
+                }
+            }
+
             return result;
         } else {
             nl!();
@@ -66,7 +83,16 @@ pub trait SExpressable<TNode> {
             nl!();
         }
 
-        result.push_str(")");
+        match colors {
+            Some(colors) => {
+                result.push_str(")".color(colors.curr()).as_str());
+                colors.prev();
+            }
+            None => {
+                result.push_str(")");
+            }
+        }
+
         return result;
     }
 }
