@@ -1,5 +1,14 @@
-use crate::parser::tokens::token;
+use crate::parser::tokens::{
+    attribute::{self, attribute_group},
+    expression::{
+        assignment::{self, entry, func, var},
+        literal::primitive::{self, number},
+        prefixed_expression,
+    },
+    splay_mods, token,
+};
 
+pub mod astra;
 pub mod data;
 pub mod markup;
 pub mod mote;
@@ -25,16 +34,10 @@ token! {
                 }
             }
             // ...
-            _ => End::Splay(
-                &KEY,
-                cursor,
-                &[
-                    &r#trait::Parser::Get(),
-                    &data::Parser::Get(),
-                    &markup::Parser::Get(),
-                    &mote::Parser::Get(),
-                ],
-            ),
+            fs::Type::AstrA | fs::Type::Unknown => {
+                End::As::<astra::Parser>(&KEY, cursor)
+            }
         }
-    }
+    },
+    subs: [data, markup, mote, prox, r#trait, astra]
 }

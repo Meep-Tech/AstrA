@@ -28,6 +28,7 @@ impl File {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Type {
     Unknown,
     AstrA,
@@ -37,12 +38,14 @@ pub enum Type {
     Markup(Markup),
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Data {
     Data,
     Value,
     StruX(Struct),
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Struct {
     StruX,
     Group,
@@ -54,6 +57,7 @@ pub enum Struct {
     Dex,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Trait {
     Trait,
     ProX,
@@ -62,6 +66,7 @@ pub enum Trait {
     Enum,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Markup {
     Markup,
     BloX,

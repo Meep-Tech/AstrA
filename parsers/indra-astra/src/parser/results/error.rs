@@ -4,8 +4,8 @@ use crate::{
         token_builder::TokenBuilder,
     },
     utils::{
-        ansi::{Color, Styleable},
-        sexp::SExpressable,
+        ansi::{Color, Effect, Styleable},
+        sexp::{SExpressable, SFormat},
     },
 };
 use std::collections::{HashMap, HashSet};
@@ -124,6 +124,29 @@ impl Error {
         return End::Fail(parent_err);
     }
 
+    #[allow(non_snake_case)]
+    pub fn Missing_Choice(
+        parent: &str,
+        options: Vec<&str>,
+        failures: Vec<Option<Error>>,
+    ) -> ErrorBuilder {
+        let mut error = Error::New(format!("missing_choice_in_{}", parent).as_str());
+        error.set_text(&format!(
+            "Required one of the following choices in '{}': \n{}",
+            parent,
+            options
+                .iter()
+                .map(|option| format!("\t- {}", option))
+                .collect::<Vec<String>>()
+                .join("\n")
+        ));
+        for failure in failures {
+            error.add_child(Parsed::Fail(failure));
+        }
+
+        return error;
+    }
+
     pub fn to_builder(self) -> ErrorBuilder {
         return ErrorBuilder {
             name: self.name,
@@ -201,8 +224,8 @@ impl SExpressable<Parsed> for Error {
     fn get_keys(&self) -> &HashMap<String, usize> {
         self.keys()
     }
-    fn get_name(&self) -> &str {
-        self.name()
+    fn get_name(&self) -> String {
+        format!("err::{}", self.name())
     }
     fn get_tags(&self) -> &HashSet<String> {
         self.tags()
@@ -210,13 +233,31 @@ impl SExpressable<Parsed> for Error {
     fn name_color() -> Color {
         Color::BrightRed
     }
-    fn node_to_sexp_str(node: &Parsed, depth: usize, colors: &mut Option<Color::Loop>) -> String {
+    fn extra_subs(&self, config: &mut SFormat) -> Vec<String> {
+        if !self.get_message().is_empty() {
+            vec![format!(
+                "{}: {}",
+                "ERROR".bg(Color::Red).color(Color::White),
+                if config.colors.is_some() {
+                    self.get_message()
+                        .color(Color::Red)
+                        .indent(1)
+                        .effect(Effect::Bold)
+                } else {
+                    format!("{}: {}", "ERROR", self.get_message().indent(1))
+                }
+            )]
+        } else {
+            vec![]
+        }
+    }
+    fn node_to_sexp_str(node: &Parsed, config: &mut SFormat) -> String {
         match node {
-            Parsed::Pass(token) => token.to_sexp_str(depth, colors),
+            Parsed::Pass(token) => token.to_sexp_str(Some(config.clone())),
             Parsed::Fail(err) => match err {
-                Some(err) => err.to_sexp_str(depth, colors),
+                Some(err) => err.to_sexp_str(Some(config.clone())),
                 None => {
-                    if colors.is_some() {
+                    if config.colors.is_some() {
                         "<None>".color(Color::Magenta)
                     } else {
                         "<None>".to_string()

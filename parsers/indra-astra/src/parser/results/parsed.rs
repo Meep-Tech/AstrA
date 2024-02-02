@@ -3,7 +3,7 @@ use std::{collections::HashSet, fmt::Display};
 
 use crate::utils::{
     ansi::{Color, ColorLoop, Styleable},
-    sexp::SExpressable,
+    sexp::{SExpressable, SFormat},
 };
 
 use super::{
@@ -60,13 +60,13 @@ impl Parsed {
         }
     }
 
-    pub fn to_sexp_str(&self, depth: usize, colors: &mut Option<ColorLoop>) -> String {
+    pub fn to_sexp_str(&self, config: SFormat) -> String {
         match self {
-            Parsed::Pass(node) => node.to_sexp_str(depth, colors),
+            Parsed::Pass(node) => node.to_sexp_str(Some(config.clone())),
             Parsed::Fail(error) => match error {
-                Some(error) => error.to_sexp_str(depth, colors),
+                Some(error) => error.to_sexp_str(Some(config.clone())),
                 None => {
-                    if colors.is_some() {
+                    if config.colors.is_some() {
                         "<None>".color(Color::Magenta)
                     } else {
                         "<None>".to_string()

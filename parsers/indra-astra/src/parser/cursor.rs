@@ -11,10 +11,10 @@ use crate::{
 use crate::utils::ansi::Color;
 
 pub struct Cursor {
-    pub src: Vec<char>,
-    pub indents: Indents,
-    pub pos: usize,
-    pub ctx: Context,
+    src: Vec<char>,
+    indents: Indents,
+    pos: usize,
+    ctx: Context,
     state: Vec<State>,
 }
 
@@ -61,6 +61,18 @@ impl Cursor {
         }
     }
 
+    pub fn curr_indent(&self) -> usize {
+        return self.indents.curr;
+    }
+
+    pub fn indent(&self) -> &Indents {
+        return &self.indents;
+    }
+
+    pub fn context(&self) -> &Context {
+        return &self.ctx;
+    }
+
     pub fn save(&mut self) -> usize {
         if (self.state.last().is_none()) || (self.state.last().unwrap().pos == self.pos) {
             log::vv!(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
@@ -95,13 +107,19 @@ impl Cursor {
     }
 
     pub fn read(&mut self) -> char {
+        #[cfg(feature = "v")]
+        let next = if self.pos >= self.src.len() - 2 {
+            '\0'
+        } else {
+            self.next()
+        };
         log::info!(
             &["CURSOR", "READ"],
             &format!(
                 "{}({}) => {}({}).",
                 Cursor::char_to_string(self.curr()),
                 self.pos,
-                Cursor::char_to_string(self.next()),
+                Cursor::char_to_string(next),
                 self.pos + 1
             ),
         );
@@ -111,6 +129,7 @@ impl Cursor {
 
         if self.is_eof() {
             log::info!(&["CURSOR", ":EOF"], "Reached end of file.");
+            return '\0';
         }
 
         self.curr()
@@ -347,7 +366,7 @@ impl Cursor {
     }
 
     pub fn eof_at(&self, pos: usize) -> bool {
-        return pos == self.src.len() - 2;
+        return pos >= self.src.len() - 1;
     }
 
     pub fn char_to_string(c: char) -> String {

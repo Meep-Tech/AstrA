@@ -4,13 +4,13 @@ token! {
     decrease_indent => |cursor: &mut Cursor| {
         cursor.skip_ws();
 
-        if cursor.indents.curr < cursor.indents.prev() {
+        if cursor.indent().curr < cursor.indent().prev() {
             return End::Token();
         } else {
             return End::Missing(
                 "level",
-                &format!("indent level to be below :{}", cursor.indents.prev()),
-                &format!("indent level :{}", cursor.indents.curr),
+                &format!("indent level to be below :{}", cursor.indent().prev()),
+                &format!("indent level :{}", cursor.indent().curr),
             );
         }
     }

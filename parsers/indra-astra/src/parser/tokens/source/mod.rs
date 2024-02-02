@@ -1,17 +1,7 @@
 use crate::parser::tokens::token;
 
-pub mod command;
-pub mod file;
+use super::splay_mods;
 
-token! {
-  source => |cursor: &mut Cursor| {
-    End::Splay(
-      &KEY,
-      cursor,
-      &[
-        &command::Parser::Get(),
-        &file::Parser::Get(),
-      ]
-    )
-  }
-}
+splay_mods!(
+  source: [command, file]
+);

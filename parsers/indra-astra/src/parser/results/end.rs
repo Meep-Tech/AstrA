@@ -176,8 +176,16 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn TODO() -> End {
+    pub fn Not_Implemented() -> End {
         Error::New("not_implemented_{}").tag("TODO").end()
+    }
+
+    #[allow(non_snake_case)]
+    pub fn ToDo(message: &str) -> End {
+        Error::New("not_implemented_{}")
+            .text(&format!("todo: {}", message))
+            .tag("TODO")
+            .end()
     }
 
     #[allow(non_snake_case)]
@@ -196,27 +204,22 @@ impl End {
     }
 
     #[allow(non_snake_case)]
+    pub fn Indent_Mismatch(key: &str, expected: usize, found: usize) -> End {
+        Error::Mismatch(
+            &format!("size-of-{}-indent", key),
+            &format!("{}", expected),
+            &format!("{}", found),
+        )
+    }
+
+    #[allow(non_snake_case)]
     pub fn Mismatch(key: &str, expected: &str, found: &str) -> End {
         Error::Mismatch(key, expected, found)
     }
 
     #[allow(non_snake_case)]
     pub fn Missing_Choice(parent: &str, options: Vec<&str>, failures: Vec<Option<Error>>) -> End {
-        let mut error = Error::New(format!("missing_choice_in_{}", parent).as_str());
-        error.set_text(&format!(
-            "Required one of the following choices in '{}': \n{}",
-            parent,
-            options
-                .iter()
-                .map(|option| format!("\t- {}", option))
-                .collect::<Vec<String>>()
-                .join("\n")
-        ));
-        for failure in failures {
-            error.add_child(Parsed::Fail(failure));
-        }
-
-        return End::Fail(error);
+        return End::Fail(Error::Missing_Choice(parent, options, failures));
     }
 
     #[allow(non_snake_case)]

@@ -20,13 +20,13 @@ pub enum Indents {
 token! {
     indent => |cursor: &mut Cursor| {
         cursor.skip_ws();
-        if !cursor.indents.is_reading {
+        if !cursor.indent().is_reading {
             return End::None;
         }
 
-        if cursor.indents.curr > cursor.indents.prev() {
+        if cursor.indent().curr > cursor.indent().prev() {
             End::New_Variant::<increase::Parser>(&KEY)
-        } else if cursor.indents.curr < cursor.indents.prev() {
+        } else if cursor.indent().curr < cursor.indent().prev() {
             End::New_Variant::<decrease::Parser>(&KEY)
         } else {
             End::New_Variant::<current::Parser>(&KEY)

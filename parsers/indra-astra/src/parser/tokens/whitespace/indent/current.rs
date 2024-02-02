@@ -3,13 +3,13 @@ use crate::parser::tokens::token;
 token! {
     current_indent => |cursor: &mut Cursor| {
         cursor.skip_ws();
-        if cursor.indents.curr == cursor.indents.prev() {
+        if cursor.indent().curr == cursor.indent().prev() {
             return End::Token();
         } else {
             return End::Missing(
                 "level",
-                &format!("indent level :{}", cursor.indents.curr),
-                &format!("indent level :{}", cursor.indents.prev()),
+                &format!("indent level :{}", cursor.indent().curr),
+                &format!("indent level :{}", cursor.indent().prev()),
             );
         }
     }

@@ -1,10 +1,10 @@
 use crate::{
-    parser::{self, results::token_builder::TokenBuilder},
-    utils::{ansi::Color, sexp::SExpressable},
+    parser::{self, cursor::Cursor, results::token_builder::TokenBuilder},
+    utils::sexp::{SExpressable, SFormat},
 };
 use serde::{Deserialize, Serialize};
 
-use super::{end::End, span::Span};
+use super::{builder::Builder, end::End, error::Error, parsed::Parsed, span::Span};
 use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 use std::collections::{HashMap, HashSet};
 
@@ -51,6 +51,33 @@ impl Token {
         return End::Match(Token::New());
     }
 
+    #[allow(non_snake_case)]
+    pub fn Choice(source: &str, cursor: &mut Cursor, options: &[&dyn parser::Parser]) -> Parsed {
+        let mut errors = Vec::new();
+        for option in options {
+            match option.parse_opt_at(cursor) {
+                Parsed::Pass(token) => return Parsed::Pass(token),
+                Parsed::Fail(err) => match err {
+                    Some(err) => errors.push(err),
+                    None => (),
+                },
+            }
+        }
+
+        if errors.is_empty() {
+            return Parsed::Fail(None);
+        } else {
+            return Parsed::Fail(
+                Error::Missing_Choice(
+                    source,
+                    options.iter().map(|option| option.name()).collect(),
+                    errors.into_iter().map(|err| Some(err)).collect(),
+                )
+                .build_to(cursor.curr_pos()),
+            );
+        }
+    }
+
     pub fn to_builder(self) -> TokenBuilder {
         return TokenBuilder {
             name: Some(self.name),
@@ -93,8 +120,8 @@ impl SExpressable<Token> for Token {
     fn get_keys(&self) -> &HashMap<String, usize> {
         self.keys()
     }
-    fn get_name(&self) -> &str {
-        self.name()
+    fn get_name(&self) -> String {
+        self.name().to_string()
     }
     fn get_tags(&self) -> &HashSet<String> {
         self.tags()
@@ -104,8 +131,8 @@ impl SExpressable<Token> for Token {
         return crate::utils::ansi::Color::Green;
     }
 
-    fn node_to_sexp_str(node: &Token, depth: usize, colors: &mut Option<Color::Loop>) -> String {
-        node.to_sexp_str(depth, colors)
+    fn node_to_sexp_str(node: &Token, config: &mut SFormat) -> String {
+        node.to_sexp_str(Some(config.clone()))
     }
 }
 

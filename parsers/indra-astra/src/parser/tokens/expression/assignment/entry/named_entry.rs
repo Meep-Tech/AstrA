@@ -15,13 +15,13 @@ token! {
         let mut result = Token::New();
 
         // pre-key attributes
-        let mut base_indent = cursor.indents.curr;
+        let mut base_indent = cursor.indent().curr;
         if let Some(_) = check_for_attrs(&mut result, cursor) {
-            if !cursor.indents.curr == base_indent {
-                return End::Mismatch(
-                    "size-for-key-indent",
-                    &format!("{}", base_indent),
-                    &format!("{}", cursor.indents.curr),
+            if !cursor.indent().curr == base_indent {
+                return End::Indent_Mismatch(
+                    "key",
+                    base_indent,
+                    cursor.indent().curr
                 );
             }
         } else {
@@ -104,13 +104,13 @@ token! {
                         }
 
                         // post-operator attributes
-                        base_indent = cursor.indents.curr;
+                        base_indent = cursor.indent().curr;
                         if let Some(attrs) = check_for_attrs(&mut result, cursor) {
-                            if !cursor.indents.curr < base_indent {
-                                return End::Mismatch(
-                                    "size-for-value-indent",
-                                    &format!("{}", base_indent),
-                                    &format!("{}", cursor.indents.curr),
+                            if !cursor.indent().curr < base_indent {
+                                return End::Indent_Mismatch(
+                                    "value",
+                                    base_indent,
+                                    cursor.indent().curr
                                 );
                             }
 
@@ -238,7 +238,7 @@ fn check_for_attrs(result: &mut TokenBuilder, cursor: &mut Cursor) -> Option<boo
             tokens::{attribute, expression, indent, mutable_field_assigner, token},
         },
     };
-    let base_indent = cursor.indents.curr;
+    let base_indent = cursor.indent().curr;
     let mut found = false;
 
     while let Parsed::Pass(attribute) = attribute::Parser::Parse_Opt_At(cursor) {
@@ -254,7 +254,7 @@ fn check_for_attrs(result: &mut TokenBuilder, cursor: &mut Cursor) -> Option<boo
                 result.add_child(token);
             }
             Indents::Decrease(_) => {
-                if cursor.indents.curr < base_indent {
+                if cursor.indent().curr < base_indent {
                     return None;
                 }
             }

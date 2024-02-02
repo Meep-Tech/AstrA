@@ -9,7 +9,6 @@ token! {
 
     loop {
       if cursor.is_eof() {
-        cursor.read();
         break;
       }
 

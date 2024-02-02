@@ -137,6 +137,7 @@ impl Effect {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ColorLoop {
     index: usize,
     colors: Vec<Color>,

@@ -5,16 +5,24 @@ token! {
         match cursor.file_type() {
             fs::Type::Markup(file_type) => match file_type {
                 fs::Markup::Markup => {
-                    End::TODO()
+                    End::ToDo("read as markup file")
                 },
                 fs::Markup::Component => {
-                    End::TODO()
+                    End::ToDo("read as component file")
                 },
                 fs::Markup::BloX => {
-                    End::TODO()
+                    End::ToDo("read as blox file")
                 },
             },
-            _ => End::TODO()
+            fs::Type::Unknown => {
+                End::ToDo("try to read as markup file")
+            },
+            _ => {
+                End::Mismatch("file-type",
+                    &format!("{:?}", fs::Markup::Markup),
+                    &format!("{:?}", cursor.file_type())
+                )
+            },
         }
     }
 }

@@ -12,7 +12,7 @@ pub trait Node<TNode>: SExpressable<TNode> {
 
     fn tags(&self) -> &HashSet<String>;
     fn tag(&self, tag: &str) -> bool {
-        return self.tags().contains(tag);
+        return self.tags().contains(tag) || self.name() == tag;
     }
 
     fn children(&self) -> Vec<&TNode>;

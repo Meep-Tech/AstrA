@@ -12,6 +12,10 @@ token! {
     let mut start = cursor.curr_pos();
     let mut only_ws = false;
     loop {
+      if cursor.is_eof() {
+        break;
+      }
+
       if cursor.curr_is_ws() {
         cursor.skip_ws();
         if only_ws {

@@ -4,6 +4,7 @@ use astra::{
     utils::{
         ansi::{Color, ColorLoop},
         log,
+        sexp::SFormat,
     },
 };
 use clap::{Parser as Arguments, Subcommand, ValueEnum};
@@ -71,7 +72,7 @@ enum Commands {
 enum Outputs {
     Debug,
     Json,
-    SExp,
+    Sexp,
 }
 
 fn main() {
@@ -113,7 +114,7 @@ fn main() {
                 input,
                 to,
                 file,
-                out,
+                out: _,
             } => {
                 let input: String = match input {
                     None => {
@@ -139,17 +140,19 @@ fn main() {
                     Some(Outputs::Json) => {
                         println!("{}", serde_json::to_string_pretty(&output).unwrap());
                     }
-                    Some(Outputs::SExp) => {
+                    Some(Outputs::Sexp) => {
                         println!(
                             "{}",
-                            output.to_sexp_str(
-                                0,
-                                &mut Some(ColorLoop::New(vec![
+                            output.to_sexp_str(SFormat {
+                                colors: Some(ColorLoop::New(vec![
                                     Color::BrightMagenta,
                                     Color::BrightYellow,
                                     Color::BrightBlue,
-                                ]))
-                            )
+                                ])),
+                                include_token_length: true,
+                                text_source: Some(&input),
+                                current_depth: 0,
+                            })
                         );
                     }
                 }

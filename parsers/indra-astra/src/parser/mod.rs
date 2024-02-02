@@ -293,9 +293,13 @@ pub trait Parser: Sync + Send {
         log::push_unique!("PARSE");
         log::push!(self.name());
         log::push_div!(":", Color::Green);
-        log::info!(&[":START"], &format!("@ {}", cursor.pos));
+        log::info!(&[":START"], &format!("@ {}", cursor.curr_pos()));
 
-        let start = if optional { cursor.save() } else { cursor.pos };
+        let start = if optional {
+            cursor.save()
+        } else {
+            cursor.curr_pos()
+        };
 
         let result = match self.rule(cursor) {
             End::Match(token) => {

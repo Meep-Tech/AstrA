@@ -18,7 +18,13 @@ pub mod whitespace;
 pub type Type = dyn super::Parser;
 
 macro_rules! token {
-    ($key:ident $(#$tags:ident)* => $rule:expr $(,tests: $($tests:expr)*)? $(,subs: $($subs:ident $(,)?)*)?) => {
+    ($key:ident
+    $(#$tags:ident)*
+    =>
+    $rule:expr
+    $(,tests: $($tests:expr)*)?
+    $(,subs: [$($subs:ident $(,)?)*])?
+) => {
         pub const KEY: &str = stringify!($key);
 
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -115,7 +121,7 @@ macro_rules! splay {
                     ]
                 )
             },
-            subs: $($subs,)*
+            subs: [$($subs,)*]
         }
     };
 }

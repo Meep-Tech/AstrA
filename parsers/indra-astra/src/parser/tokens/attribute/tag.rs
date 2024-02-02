@@ -8,9 +8,9 @@ token! {
         End::Child::<tokens::expression::attribute_expression::Parser>(&KEY, cursor)
       },
       '>' => match cursor.next() {
-        '#' => End::TODO(),
+        '#' => End::ToDo("read as input-tag"),
         '>' => match cursor.next() {
-          '#' => End::TODO(),
+          '#' => End::ToDo("read as output-tag"),
           _ => End::Missing(&KEY, "#", &cursor.next_str())
         },
         _ => End::Missing(&KEY, "#", &cursor.next_str())

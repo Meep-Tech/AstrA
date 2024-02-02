@@ -23,7 +23,7 @@ pub fn is_allowed_in_middle_with_repeating(c: char) -> bool {
 
 token! {
     name => |cursor: &mut Cursor| {
-        let start = cursor.pos;
+        let start = cursor.curr_pos();
         let mut is_pure_numeric: bool;
         let mut curr: char = cursor.curr();
 
@@ -44,7 +44,6 @@ token! {
         let mut last_lone_char: Option<char> = None;
         loop {
             if cursor.is_eof() {
-                cursor.read();
                 return _check_end_is_valid(is_pure_numeric, cursor, start);
             }
 
@@ -62,7 +61,7 @@ token! {
                     if last == curr {
                         return End::Unexpected(
                           "repeat_lone_symbol",
-                            &cursor.slice(cursor.pos - 1, cursor.pos),
+                            &cursor.slice(cursor.curr_pos() - 1, cursor.curr_pos()),
                         );
                     }
                 }
@@ -90,10 +89,13 @@ fn _check_end_is_valid(is_pure_numeric: bool, cursor: &mut Cursor, start: usize)
         if is_allowed_in_middle_with_repeating(cursor.prev())
             || is_allowed_in_middle_without_repeating(cursor.prev())
         {
-            return End::Unexpected("last_letter", &cursor.slice(cursor.pos - 1, cursor.pos));
+            return End::Unexpected(
+                "last_letter",
+                &cursor.slice(cursor.curr_pos() - 1, cursor.curr_pos()),
+            );
         }
         return End::Token();
     } else {
-        return End::Unexpected("pure_numeric_key", &cursor.slice(start, cursor.pos));
+        return End::Unexpected("pure_numeric_key", &cursor.slice(start, cursor.curr_pos()));
     }
 }
