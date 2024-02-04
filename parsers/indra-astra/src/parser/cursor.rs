@@ -20,6 +20,11 @@ pub struct Cursor {
     pub(crate) _src: String,
 }
 
+pub enum Branch {
+    Continue,
+    Revert,
+}
+
 pub struct State {
     pub pos: usize,
     pub indents: Indents,
@@ -77,36 +82,6 @@ impl Cursor {
         return &self.ctx;
     }
 
-    pub fn save(&mut self) -> usize {
-        if (self.state.last().is_none()) || (self.state.last().unwrap().pos == self.pos) {
-            log::vv!(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
-        }
-
-        let state = self.state();
-        self.state.push(state);
-
-        self.pos
-    }
-
-    pub fn restore(&mut self) -> usize {
-        let state = self.state.pop().unwrap();
-        if self.pos != state.pos {
-            log::vv!(
-                &["CURSOR", "RESTORE"],
-                &format!("{} ~> {}", self.pos, state.pos),
-            );
-
-            self.pos = state.pos;
-            self.indents = state.indents;
-        }
-
-        self.pos
-    }
-
-    pub fn clean(&mut self) {
-        self.state.clear();
-    }
-
     pub fn state(&self) -> State {
         State {
             pos: self.pos,
@@ -114,8 +89,63 @@ impl Cursor {
         }
     }
 
-    pub fn pop(&mut self) {
+    pub fn split<BranchFn>(&mut self, branch: BranchFn) -> bool
+    where
+        BranchFn: Fn(&mut Cursor) -> Branch,
+    {
+        let start = self.save();
+        match branch(self) {
+            Branch::Continue => {
+                self.pop();
+                return true;
+            }
+            Branch::Revert => {
+                self.restore();
+                if !self.pos == start {
+                    panic!(
+                        "Cursor split did not revert to the same position: {} != {}",
+                        self.pos, start
+                    );
+                }
+                return false;
+            }
+        }
+    }
+
+    pub(crate) fn save(&mut self) -> usize {
+        log::info!(&["CURSOR", "SAVE"], &format!("@ {}", self.pos));
+
+        let state = self.state();
+        self.state.push(state);
+
+        self.pos
+    }
+
+    pub(crate) fn restore(&mut self) -> usize {
+        let state = self.state.pop().unwrap();
+        log::info!(
+            &["CURSOR", "RESTORE"],
+            &format!("{} ~> {}", self.pos, state.pos),
+        );
+
+        self.pos = state.pos;
+        self.indents = state.indents;
+
+        self.pos
+    }
+
+    pub(crate) fn pop(&mut self) {
+        #[cfg(feature = "v")]
+        let initial = self.pos;
         self.state.pop();
+        log::info!(
+            &["CURSOR", "POP"],
+            &format!("({} ~~~ {})", initial, self.pos)
+        );
+    }
+
+    pub fn is_at(&self, pos: usize) -> bool {
+        return self.pos == pos;
     }
 
     pub fn read(&mut self) -> char {

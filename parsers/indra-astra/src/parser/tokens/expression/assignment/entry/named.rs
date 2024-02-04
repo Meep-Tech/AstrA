@@ -32,6 +32,7 @@ token! {
                 cursor.save();
                 match indent::Parse_Opt_Or_Skip_At(cursor) {
                     Indents::Increase(token) => {
+                        cursor.pop();
                         result.add_child(token);
                         indent_increased = true;
                     }
@@ -44,10 +45,10 @@ token! {
                         return result.end(cursor.prev_non_ws_pos()).to_end();
                     }
                     _ => {
+                        cursor.pop();
                         cursor.skip_ws();
                     }
                 }
-                cursor.pop();
 
                 // post-key attributes
                 if cursor.prev_is_ws() {
@@ -79,7 +80,7 @@ token! {
                 }
 
                 // operator
-                let operator = assigner::Parser::Parse_At(cursor);
+                let operator = assigner::Parser::Parse_Opt_At(cursor);
                 match operator {
                     Parsed::Pass(operator) => {
                         result.set_prop("operator", operator);
@@ -124,7 +125,7 @@ token! {
                                 result.set_prop("value", value);
 
                                 // post-value attributes
-                                if cursor.curr_is_ws() {
+                                if cursor.prev_is_ws() {
                                     if let Some(trailing_attributes) = attribute::trailing::Parser::Try_Parse_At(cursor) {
                                         result.add_child(trailing_attributes);
                                     }

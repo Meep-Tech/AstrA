@@ -11,6 +11,7 @@ use crate::{
     parser::tokens::{source, statement, symbol, whitespace},
     utils::log::{self},
 };
+use core::panic;
 use cursor::Cursor;
 use results::{builder::Builder, end::End, parsed::Parsed, token::Token};
 use std::sync::LazyLock;
@@ -318,6 +319,10 @@ pub trait Parser: Sync + Send {
 
                 let token = token.build_with_defaults(start, end);
 
+                if optional {
+                    cursor.pop();
+                }
+
                 log::info!(
                     &[":END", "MATCH"],
                     &format!(
@@ -347,6 +352,14 @@ pub trait Parser: Sync + Send {
 
                 if optional {
                     cursor.restore();
+                    if start != cursor.curr_pos() {
+                        panic!(
+                            "Optional parser '{}' did not revert to the previous state. {} != {}",
+                            self.name(),
+                            start,
+                            cursor.curr_pos()
+                        );
+                    }
                 }
 
                 if ignored {
@@ -409,6 +422,14 @@ pub trait Parser: Sync + Send {
             End::None => {
                 if optional {
                     cursor.restore();
+                    if start != cursor.curr_pos() {
+                        panic!(
+                            "Optional parser '{}' did not revert to the previous state. {} != {}",
+                            self.name(),
+                            start,
+                            cursor.curr_pos()
+                        );
+                    }
                 }
 
                 #[cfg(feature = "log")]

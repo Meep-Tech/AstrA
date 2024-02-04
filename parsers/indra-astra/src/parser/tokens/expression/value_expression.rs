@@ -1,18 +1,24 @@
-use crate::parser::{
-    cursor::Cursor,
-    results::token::Token,
-    tokens::{
-        expression::{
-            assignment, attribute_expression, invocation,
-            literal::{
-                markup::{paragraph, sentence, word},
-                primitive,
+use crate::{
+    parser::{
+        cursor::Cursor,
+        results::token::Token,
+        tokens::{
+            expression::{
+                assignment, attribute_expression, invocation,
+                literal::{
+                    markup::{paragraph, sentence, word},
+                    primitive,
+                },
             },
+            token,
+            whitespace::indent,
         },
-        token,
-        whitespace::indent,
+        Parser as _,
     },
-    Parser as _,
+    utils::{
+        ansi::{Color, Effect, Styleable},
+        log,
+    },
 };
 
 token! {
@@ -21,8 +27,10 @@ token! {
         cursor.save();
         if let Some(assignment) = assignment::Parser::Try_Parse_At(cursor) {
             if assignment.prop("operator").is_some() {
+                log::info!(&["SUB-ASSIGNMENT"], &format!("{:?}",assignment.tags()));
                 return End::As_Variant(KEY, Parsed::Pass(assignment));
             } else {
+                log::info!(&["IGNORED".effect(Effect::Strikethrough).color(Color::BrightBlack).as_str()], &format!("@ {}", cursor.curr_pos()));
                 cursor.restore();
             }
         } else {
