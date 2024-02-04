@@ -31,7 +31,10 @@ pub fn get_random_color(message: &str) -> Color {
 
 // #region Styles
 
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{
+    fmt::Display,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Color {
@@ -173,13 +176,16 @@ impl ColorLoop {
 
 // #region Styleable String Implementations
 
-pub trait Styleable {
+pub trait Styleable: Display {
     fn color(&self, color: Color) -> String;
     fn bg(&self, color: Color) -> String;
     fn indent(&self, indent: usize) -> String;
     fn effect(&self, effect: Effect) -> String;
     fn style(&self, color: Color, bg: Color, effect: Effect) -> String {
         return self.color(color).bg(bg).effect(effect);
+    }
+    fn own_color(&self) -> String {
+        return self.color(get_random_color(self.to_string().as_str()));
     }
 }
 

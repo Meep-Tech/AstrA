@@ -1,7 +1,8 @@
 use super::splay_mods;
 
-pub mod attribute_group;
+pub mod group;
+pub mod trailing;
 
 splay_mods! {
-    attribute: [tag]
+    attribute: [tag, alias, input]
 }

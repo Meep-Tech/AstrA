@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Display};
 
 use crate::utils::{
-    ansi::{Color, ColorLoop, Styleable},
+    ansi::{Color, Styleable},
     sexp::{SExpressable, SFormat},
 };
 
@@ -60,11 +60,15 @@ impl Parsed {
         }
     }
 
-    pub fn to_sexp_str(&self, config: SFormat) -> String {
+    pub fn to_sexp_str(&self, src: &str) -> String {
+        self.to_sexp_str_with(SFormat::Basic(src))
+    }
+
+    pub fn to_sexp_str_with(&self, config: SFormat) -> String {
         match self {
-            Parsed::Pass(node) => node.to_sexp_str(Some(config.clone())),
+            Parsed::Pass(node) => node.to_sexp_str_with(Some(config.clone())),
             Parsed::Fail(error) => match error {
-                Some(error) => error.to_sexp_str(Some(config.clone())),
+                Some(error) => error.to_sexp_str_with(Some(config.clone())),
                 None => {
                     if config.colors.is_some() {
                         "<None>".color(Color::Magenta)

@@ -6,14 +6,13 @@ use crate::parser::tokens::{
 
 token! {
     tree => |cursor: &mut Cursor| {
+        let initial_indent = cursor.curr_indent();
         let mut result = Token::New();
         match indent::Parse_At(cursor) {
             Indents::Increase(token) => {
                 result.add_child(token);
             }
-            Indents::Current(token) => {
-                result.add_child(token);
-            }
+            Indents::Current(_) => {}
             Indents::Decrease(_) => {
                 return End::Unexpected("initial-indent-decrease", &cursor.curr_str())
             }
@@ -28,16 +27,45 @@ token! {
                         Indents::Current(token) => {
                             result.add_child(token);
                         }
+                        Indents::Decrease(token) => {
+                            if cursor.curr_indent() < initial_indent {
+                                break;
+                            } else {
+                                result.add_child(token);
+                            }
+                        }
                         _ => {
-                            return result.end();
+                            break;
                         }
                     };
                 }
                 Parsed::Fail(error) => match error {
-                    Some(error) => return End::Error_In_Child_Of(result, error),
-                    None => return result.end(),
+                    Some(error) => return End::Error_In_Child_Of(result, Some(error)),
+                    None => {
+                        break;
+                    },
                 },
             }
+
+            if cursor.is_eof() {
+                break;
+            }
         }
+
+        match &result.children {
+            Some(children) => {
+                if children.is_empty() {
+                    return End::None;
+                } else if children.len() == 1 && children[0].tag(whitespace::indent::KEY) {
+                    return End::None;
+                }
+
+                return End::Match(result.end_at(cursor.prev_non_ws_pos()));
+            }
+            None => {
+                return End::None;
+            }
+        }
+
     }
 }

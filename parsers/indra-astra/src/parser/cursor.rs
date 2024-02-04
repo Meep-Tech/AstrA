@@ -16,6 +16,8 @@ pub struct Cursor {
     pos: usize,
     ctx: Context,
     state: Vec<State>,
+    #[cfg(feature = "log")]
+    pub(crate) _src: String,
 }
 
 pub struct State {
@@ -58,6 +60,8 @@ impl Cursor {
                 curr: 0,
             },
             state: Vec::new(),
+            #[cfg(feature = "log")]
+            _src: source.to_string(),
         }
     }
 
@@ -99,11 +103,19 @@ impl Cursor {
         self.pos
     }
 
+    pub fn clean(&mut self) {
+        self.state.clear();
+    }
+
     pub fn state(&self) -> State {
         State {
             pos: self.pos,
             indents: self.indents.clone(),
         }
+    }
+
+    pub fn pop(&mut self) {
+        self.state.pop();
     }
 
     pub fn read(&mut self) -> char {
@@ -347,6 +359,16 @@ impl Cursor {
 
     pub fn prev_is_ws(&self) -> bool {
         self.prev_is(' ') || self.prev_is('\t') || self.prev_is('\n')
+    }
+
+    pub fn prev_non_ws_pos(&self) -> usize {
+        let mut pos = self.pos - 1;
+        let mut at = self.at(pos);
+        while at.is_whitespace() {
+            pos -= 1;
+            at = self.at(pos);
+        }
+        return pos;
     }
 
     pub fn ahead(&self, offset: usize) -> char {

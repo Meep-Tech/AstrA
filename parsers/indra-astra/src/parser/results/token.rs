@@ -78,7 +78,7 @@ impl Token {
         }
     }
 
-    pub fn to_builder(self) -> TokenBuilder {
+    pub fn as_builder(self) -> TokenBuilder {
         return TokenBuilder {
             name: Some(self.name),
             tags: self.tags,
@@ -89,6 +89,22 @@ impl Token {
             },
             keys: self.keys,
             start: Some(self.start),
+            end: Some(self.end),
+        };
+    }
+
+    pub fn to_builder(&self) -> TokenBuilder {
+        return TokenBuilder {
+            name: Some(self.name.clone()),
+            tags: self.tags.clone(),
+            children: if !self.children.is_empty() {
+                Some(self.children.clone())
+            } else {
+                None
+            },
+            keys: self.keys.clone(),
+            start: Some(self.start),
+            end: Some(self.end),
         };
     }
 }
@@ -132,7 +148,7 @@ impl SExpressable<Token> for Token {
     }
 
     fn node_to_sexp_str(node: &Token, config: &mut SFormat) -> String {
-        node.to_sexp_str(Some(config.clone()))
+        node.to_sexp_str_with(Some(config.clone()))
     }
 }
 

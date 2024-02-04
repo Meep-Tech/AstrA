@@ -19,8 +19,13 @@ pub enum Indents {
 
 token! {
     indent => |cursor: &mut Cursor| {
+        let start = cursor.curr_pos();
+        if cursor.is_eof() {
+            return End::None;
+        }
+
         cursor.skip_ws();
-        if !cursor.indent().is_reading {
+        if start == cursor.curr_pos() || !cursor.indent().is_reading {
             return End::None;
         }
 

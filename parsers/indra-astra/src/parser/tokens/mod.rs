@@ -6,7 +6,7 @@ use crate::utils::ansi::{self, Styleable};
 #[cfg(feature = "log")]
 use crate::utils::ansi::Color;
 
-use self::{symbol::operator::assigner::mutable_field_assigner, whitespace::indent};
+use self::whitespace::indent;
 
 pub mod attribute;
 pub mod expression;
@@ -18,13 +18,14 @@ pub mod whitespace;
 pub type Type = dyn super::Parser;
 
 macro_rules! token {
-    ($key:ident
-    $(#$tags:ident)*
-    =>
-    $rule:expr
-    $(,tests: $($tests:expr)*)?
-    $(,subs: [$($subs:ident $(,)?)*])?
-) => {
+    (
+        $key:ident
+        $(#$tags:ident)*
+        =>
+        $rule:expr
+        $(,tests: $($tests:expr)*)?
+        $(,subs: [$($subs:ident $(,)?)*])?
+    ) => {
         pub const KEY: &str = stringify!($key);
 
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

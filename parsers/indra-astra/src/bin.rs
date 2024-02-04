@@ -141,19 +141,7 @@ fn main() {
                         println!("{}", serde_json::to_string_pretty(&output).unwrap());
                     }
                     Some(Outputs::Sexp) => {
-                        println!(
-                            "{}",
-                            output.to_sexp_str(SFormat {
-                                colors: Some(ColorLoop::New(vec![
-                                    Color::BrightMagenta,
-                                    Color::BrightYellow,
-                                    Color::BrightBlue,
-                                ])),
-                                include_token_length: true,
-                                text_source: Some(&input),
-                                current_depth: 0,
-                            })
-                        );
+                        println!("{}", output.to_sexp_str(&input));
                     }
                 }
             }

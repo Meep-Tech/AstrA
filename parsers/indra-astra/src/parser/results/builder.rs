@@ -7,4 +7,8 @@ pub trait Builder<TResult> {
     fn end(self) -> End;
     /// build the token using the provided end and already set start value.
     fn build_to(self, end: usize) -> TResult;
+    /// build the token using the provided start and already set end value.
+    fn build_from(self, start: usize) -> TResult;
+    /// uild using the existing start and end values, or defaults if not set.
+    fn build_with_defaults(self, start: usize, end: usize) -> TResult;
 }

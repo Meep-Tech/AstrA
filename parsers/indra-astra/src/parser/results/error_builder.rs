@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub struct ErrorBuilder {
     pub name: String,
     pub start: Option<usize>,
+    pub end: Option<usize>,
     pub text: Option<String>,
     pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Parsed>>,
@@ -20,6 +21,7 @@ impl ErrorBuilder {
             name: name.to_string(),
             start: None,
             text: None,
+            end: None,
             tags: None,
             children: None,
             keys: None,
@@ -35,6 +37,18 @@ impl ErrorBuilder {
     pub fn set_start(&mut self, start: usize) -> &mut ErrorBuilder {
         log::vv!(&["ERROR", "-", "START"], &start.to_string());
         self.start = Some(start);
+        self
+    }
+
+    pub fn end_at(mut self, end: usize) -> ErrorBuilder {
+        log::vv!(&["ERROR", "-", "END"], &end.to_string());
+        self.end = Some(end);
+        self
+    }
+
+    pub fn set_end(&mut self, end: usize) -> &mut ErrorBuilder {
+        log::vv!(&["ERROR", "-", "END"], &end.to_string());
+        self.end = Some(end);
         self
     }
 
@@ -244,6 +258,10 @@ impl ErrorBuilder {
 
 impl Builder<Option<Error>> for ErrorBuilder {
     fn build(self, start: usize, end: usize) -> Option<Error> {
+        if end < start {
+            panic!("error builder called with end < start: {} < {}", end, start);
+        }
+
         log::vvv!(
             &["ERROR", ":BUILD"],
             &format!("{} : ({}, {})", self.name, start, end)
@@ -265,6 +283,36 @@ impl Builder<Option<Error>> for ErrorBuilder {
             panic!("build_to called with start not set");
         });
         self.build(start, end)
+    }
+
+    fn build_from(self, start: usize) -> Option<Error> {
+        let end = self.end.unwrap_or_else(|| {
+            panic!("build_from called with end not set");
+        });
+        self.build(start, end)
+    }
+
+    fn build_with_defaults(self, start: usize, end: usize) -> Option<Error> {
+        let start = self.start.unwrap_or(start);
+        let end = self.end.unwrap_or(end);
+        if end < start {
+            panic!("error builder called with end < start: {} < {}", end, start);
+        }
+
+        log::vvv!(
+            &["ERROR", ":BUILD"],
+            &format!("{} : ({}, {})", self.name, start, end)
+        );
+
+        return Some(Error {
+            name: self.name,
+            text: self.text,
+            tags: self.tags,
+            children: self.children.unwrap_or(Vec::new()),
+            keys: self.keys,
+            start,
+            end,
+        });
     }
 
     fn end(self) -> End {

@@ -6,9 +6,10 @@ use std::collections::{HashMap, HashSet};
 
 pub struct TokenBuilder {
     pub name: Option<String>,
+    pub start: Option<usize>,
+    pub end: Option<usize>,
     pub tags: Option<HashSet<String>>,
     pub children: Option<Vec<Token>>,
-    pub start: Option<usize>,
     pub keys: Option<HashMap<String, usize>>,
 }
 
@@ -19,6 +20,7 @@ impl TokenBuilder {
             name: None,
             tags: None,
             start: None,
+            end: None,
             children: None,
             keys: None,
         }
@@ -52,6 +54,18 @@ impl TokenBuilder {
     pub fn set_start(&mut self, start: usize) -> &mut TokenBuilder {
         log::vvv!(&["TOKEN", "-", "START"], &start.to_string());
         self.start = Some(start);
+        self
+    }
+
+    pub fn end_at(mut self, end: usize) -> TokenBuilder {
+        log::vvv!(&["TOKEN", "-", "END"], &end.to_string());
+        self.end = Some(end);
+        self
+    }
+
+    pub fn set_end(&mut self, end: usize) -> &mut TokenBuilder {
+        log::vvv!(&["TOKEN", "-", "END"], &end.to_string());
+        self.end = Some(end);
         self
     }
 
@@ -98,15 +112,32 @@ impl TokenBuilder {
         self
     }
 
-    pub fn child(mut self, child: Token) -> TokenBuilder {
-        log::vvv!(
-            &["TOKEN", "-", "CHILD"],
-            &format!(
-                "{} : {}",
-                self.name.as_ref().unwrap_or(&"^".to_string()),
-                child.name
-            )
+    pub fn prepend_child(&mut self, child: Token) -> &TokenBuilder {
+        log::info!(
+            &["TOKEN", "-", "PREPEND-CHILD"],
+            &format!(" <+ : {}", child.name)
         );
+
+        match self.children {
+            Some(ref mut children) => {
+                children.insert(0, child);
+            }
+            None => {
+                self.children = Some(vec![child]);
+            }
+        }
+
+        if let Some(keys) = &mut self.keys {
+            for (_, index) in keys.iter_mut() {
+                *index += 1;
+            }
+        }
+
+        self
+    }
+
+    pub fn child(mut self, child: Token) -> TokenBuilder {
+        log::info!(&["TOKEN", "-", "CHILD"], &format!("++ {}", child.name));
 
         match self.children {
             Some(mut children) => {
@@ -121,14 +152,7 @@ impl TokenBuilder {
     }
 
     pub fn add_child(&mut self, child: Token) -> &mut TokenBuilder {
-        log::vvv!(
-            &["TOKEN", "-", "CHILD"],
-            &format!(
-                "{} : {}",
-                self.name.as_ref().unwrap_or(&"^".to_string()),
-                child.name
-            )
-        );
+        log::info!(&["TOKEN", "-", "CHILD"], &format!(" ++ {}", child.name));
 
         match self.children {
             Some(ref mut children) => {
@@ -142,13 +166,9 @@ impl TokenBuilder {
     }
 
     pub fn prop(mut self, key: &str, value: Token) -> TokenBuilder {
-        log::vvv!(
+        log::info!(
             &["TOKEN", "-", "PROP"],
-            &format!(
-                "{} : {}",
-                self.name.as_ref().unwrap_or(&"^".to_string()),
-                key
-            )
+            &format!("{} : {}", key, value.name)
         );
 
         self.add_child(value);
@@ -169,13 +189,9 @@ impl TokenBuilder {
     }
 
     pub fn set_prop(&mut self, key: &str, value: Token) -> &mut TokenBuilder {
-        log::vvv!(
+        log::info!(
             &["TOKEN", "-", "PROP"],
-            &format!(
-                "{} : {}",
-                self.name.as_ref().unwrap_or(&"^".to_string()),
-                key
-            )
+            &format!("{} : {}", key, value.name)
         );
 
         self.add_child(value);
@@ -197,6 +213,13 @@ impl TokenBuilder {
 
 impl Builder<Token> for TokenBuilder {
     fn build(self, start: usize, end: usize) -> Token {
+        if end < start {
+            panic!(
+                "TokenBuilder::build called with end < start: {} < {}",
+                end, start
+            );
+        }
+
         log::vvv!(
             &["TOKEN", ":BUILD"],
             &format!(
@@ -217,11 +240,45 @@ impl Builder<Token> for TokenBuilder {
         };
     }
 
+    fn build_from(self, start: usize) -> Token {
+        let end = self
+            .end
+            .unwrap_or_else(|| panic!("Builder::build_from called without end being set!"));
+        self.build(start, end)
+    }
+
     fn build_to(self, end: usize) -> Token {
         let start = self
             .start
             .unwrap_or_else(|| panic!("Builder::build_to called without start being set!"));
         self.build(start, end)
+    }
+
+    fn build_with_defaults(self, start: usize, end: usize) -> Token {
+        let start = self.start.unwrap_or(start);
+        let end = self.end.unwrap_or(end);
+        if end < start {
+            panic!("token builder called with end < start: {} < {}", end, start);
+        }
+
+        log::vvv!(
+            &["TOKEN", ":BUILD"],
+            &format!(
+                "{} : ({}, {})",
+                self.name.as_ref().unwrap_or(&"^".to_string()),
+                start,
+                end
+            )
+        );
+
+        return Token {
+            name: self.name.unwrap(),
+            tags: self.tags,
+            children: self.children.unwrap_or(Vec::new()),
+            keys: self.keys,
+            start,
+            end,
+        };
     }
 
     fn end(self) -> End {

@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::parser::results::node::{Node, _EMPTY_KEYS, _EMPTY_TAGS};
 
-use super::span::Span;
+use super::{builder::Builder, span::Span};
 use serde::{Deserialize, Serialize};
 
 pub struct ChildOrError {
@@ -47,9 +47,18 @@ impl Error {
     }
 
     #[allow(non_snake_case)]
-    pub fn Unexpected(key: &str, value: &str) -> End {
+    pub fn Invalid(key: &str, message: &str) -> End {
+        Error::New(&format!("invalid-{}", key))
+            .text(message)
+            .tag("invalid")
+            .tag("unexpected")
+            .end()
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Unexpected(key: &str, found: &str) -> End {
         let mut err = Error::New(&["unexpected_", key, "_in_{}"].concat());
-        err.set_text(&format!("Unexpected: `{}`.", value))
+        err.set_text(&format!("Unexpected: `{}`.", found))
             .add_tag("unexpected");
         End::Fail(err)
     }
@@ -61,6 +70,7 @@ impl Error {
             "Expected: `{}`, but found: `{}`.",
             expected, found
         ))
+        .add_tag("unexpected")
         .add_tag("missing");
         End::Fail(err)
     }
@@ -72,7 +82,8 @@ impl Error {
             "Expected: `{}`, but found: `{}`.",
             expected, found
         ))
-        .add_tag("missing");
+        .add_tag("missing")
+        .add_tag("unexpected");
         End::Fail(err)
     }
 
@@ -83,6 +94,7 @@ impl Error {
             text: None,
             tags: parent.tags,
             start: parent.start,
+            end: parent.end,
             children: Some(
                 parent
                     .children
@@ -107,6 +119,7 @@ impl Error {
             text: None,
             tags: parent.tags,
             start: parent.start,
+            end: parent.end,
             children: Some(
                 parent
                     .children
@@ -147,12 +160,45 @@ impl Error {
         return error;
     }
 
+    #[allow(non_snake_case)]
+    pub fn Missing_Choice_In(
+        parent: TokenBuilder,
+        options: Vec<&str>,
+        failures: Vec<Option<Error>>,
+    ) -> End {
+        let mut parent_error =
+            Error::New(format!("missing_choice_in_{}", parent.name.clone().unwrap()).as_str());
+        parent_error.set_text(&format!(
+            "Required one of the following choices in '{}': \n{}",
+            parent.name.unwrap(),
+            options
+                .iter()
+                .enumerate()
+                .map(|(i, option)| format!(
+                    "\t- {}: ERROR: {}",
+                    option,
+                    match &failures[i] {
+                        Some(f) => f.get_message(),
+                        None => "MISSING".to_string(),
+                    }
+                ))
+                .collect::<Vec<String>>()
+                .join("\n")
+        ));
+        for failure in failures {
+            parent_error.add_child(Parsed::Fail(failure));
+        }
+
+        return End::Fail(parent_error);
+    }
+
     pub fn to_builder(self) -> ErrorBuilder {
         return ErrorBuilder {
             name: self.name,
             tags: self.tags,
             text: self.text,
             start: Some(self.start),
+            end: Some(self.end),
             children: if !self.children.is_empty() {
                 Some(self.children)
             } else {
@@ -253,9 +299,9 @@ impl SExpressable<Parsed> for Error {
     }
     fn node_to_sexp_str(node: &Parsed, config: &mut SFormat) -> String {
         match node {
-            Parsed::Pass(token) => token.to_sexp_str(Some(config.clone())),
+            Parsed::Pass(token) => token.to_sexp_str_with(Some(config.clone())),
             Parsed::Fail(err) => match err {
-                Some(err) => err.to_sexp_str(Some(config.clone())),
+                Some(err) => err.to_sexp_str_with(Some(config.clone())),
                 None => {
                     if config.colors.is_some() {
                         "<None>".color(Color::Magenta)

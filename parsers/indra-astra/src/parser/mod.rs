@@ -23,6 +23,8 @@ use crate::utils::ansi::Color;
 use crate::utils::ansi::Effect;
 #[cfg(feature = "log")]
 use crate::utils::ansi::Styleable;
+#[cfg(feature = "log")]
+use crate::utils::sexp::SExpressable;
 
 // #region All
 /// A hashmap of all parsers.
@@ -291,7 +293,7 @@ pub trait Parser: Sync + Send {
     fn parse_with_options_at(&self, cursor: &mut Cursor, optional: bool, ignored: bool) -> Parsed {
         log::color!("PARSE", Color::Green);
         log::push_unique!("PARSE");
-        log::push!(self.name());
+        log::push!(self.name().own_color().as_str());
         log::push_div!(":", Color::Green);
         log::info!(&[":START"], &format!("@ {}", cursor.curr_pos()));
 
@@ -303,20 +305,41 @@ pub trait Parser: Sync + Send {
 
         let result = match self.rule(cursor) {
             End::Match(token) => {
+                let end = if start >= cursor.curr_pos() {
+                    start
+                } else {
+                    cursor.prev_pos()
+                };
+
                 let token = token
                     .assure_name(self.name())
-                    .build(start, cursor.prev_pos());
+                    .build_with_defaults(start, end);
                 log::info!(
                     &[":END", "MATCH"],
-                    &format!("@ {} => {:#?}", cursor.prev_pos(), token).color(Color::Green),
+                    &format!(
+                        "@ {} => {}{}",
+                        cursor.prev_pos(),
+                        if log::IS_VV { "\n" } else { "" },
+                        if log::IS_VV {
+                            token.to_sexp_str(&cursor._src)
+                        } else {
+                            token.name.clone()
+                        }
+                    )
+                    .color(Color::Green),
                 );
                 Parsed::Pass(token)
             }
             End::Fail(error) => {
+                let end = if start >= cursor.curr_pos() {
+                    start
+                } else {
+                    cursor.prev_pos()
+                };
                 let error = error
                     .tag(self.name())
                     .assure_name(self.name())
-                    .build(start, cursor.prev_pos());
+                    .build_with_defaults(start, end);
 
                 if optional {
                     cursor.restore();
@@ -331,9 +354,16 @@ pub trait Parser: Sync + Send {
                                     .effect(Effect::Strikethrough)
                                     .color(Color::BrightBlack)
                             ],
-                            &format!("@ {} => {:#?}", cursor.prev_pos(), error)
-                                .effect(Effect::Strikethrough)
-                                .color(Color::BrightBlack),
+                            &format!(
+                                "@ {} => \n{}",
+                                cursor.prev_pos(),
+                                match error {
+                                    Some(ref e) => e.to_sexp_str(&cursor._src),
+                                    None => "<None>".to_string(),
+                                }
+                            )
+                            .effect(Effect::Strikethrough)
+                            .color(Color::BrightBlack),
                         );
                     } else {
                         log::info!(
@@ -349,9 +379,24 @@ pub trait Parser: Sync + Send {
                 } else {
                     log::info!(
                         &[":END", "FAIL"],
-                        &format!("@ {} => {:#?}", cursor.prev_pos(), error)
-                            .color(Color::Red)
-                            .effect(Effect::Underline),
+                        &format!(
+                            "@ {} => {}{}",
+                            cursor.prev_pos(),
+                            if log::IS_VV { "\n" } else { "" },
+                            if log::IS_VV {
+                                match error {
+                                    Some(ref e) => e.to_sexp_str(&cursor._src),
+                                    None => "<None>".to_string(),
+                                }
+                            } else {
+                                match error {
+                                    Some(ref e) => e.name.clone(),
+                                    None => "<None>".to_string(),
+                                }
+                            }
+                        )
+                        .color(Color::Red)
+                        .effect(Effect::Underline),
                     );
                 }
 

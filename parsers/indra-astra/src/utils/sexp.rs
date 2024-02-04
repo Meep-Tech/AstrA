@@ -1,4 +1,4 @@
-use crate::parser::results::span::Span;
+use crate::{parser::results::span::Span, utils::ansi::Effect};
 
 use super::ansi::{Color, ColorLoop, Styleable};
 use std::collections::{HashMap, HashSet};
@@ -9,6 +9,22 @@ pub struct SFormat<'s> {
     pub include_token_length: bool,
     pub text_source: Option<&'s str>,
     pub current_depth: usize,
+}
+
+impl<'s> SFormat<'s> {
+    #[allow(non_snake_case)]
+    pub fn Basic(src: &'s str) -> SFormat<'s> {
+        SFormat {
+            colors: Some(ColorLoop::New(vec![
+                Color::BrightMagenta,
+                Color::BrightYellow,
+                Color::BrightBlue,
+            ])),
+            include_token_length: true,
+            text_source: Some(src),
+            current_depth: 0,
+        }
+    }
 }
 
 pub trait SExpressable<TNode>: Span {
@@ -22,7 +38,11 @@ pub trait SExpressable<TNode>: Span {
         vec![]
     }
 
-    fn to_sexp_str(&self, config: Option<SFormat>) -> String {
+    fn to_sexp_str(&self, src: &str) -> String {
+        self.to_sexp_str_with(Some(SFormat::Basic(src)))
+    }
+
+    fn to_sexp_str_with(&self, config: Option<SFormat>) -> String {
         let mut result = String::new();
         let mut config = match config {
             Some(config) => config,
@@ -86,10 +106,23 @@ pub trait SExpressable<TNode>: Span {
         }
 
         if let Some(src) = config.text_source {
-            nl!();
-            let text = format!("`{}`", src[self.start()..=self.end()].to_string());
+            let mut text = format!("{}", src[self.start()..=self.end()].to_string());
+            if text.contains("\n") {
+                nl!();
+                text = format!(
+                    "┇{}",
+                    text.replace("\n", "\n┇").indent(config.current_depth)
+                );
+            } else {
+                text = format!(" `{}`", text);
+            }
+
             if config.colors.is_some() {
-                result.push_str(text.color(Color::BrightWhite).as_str());
+                result.push_str(
+                    text.effect(Effect::Italic)
+                        .color(Color::BrightWhite)
+                        .as_str(),
+                );
             } else {
                 result.push_str(text.as_str());
             }

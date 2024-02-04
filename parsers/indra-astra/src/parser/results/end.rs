@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use crate::parser::{self, cursor::Cursor};
+use crate::{
+    parser::{self, cursor::Cursor},
+    utils::ansi::{Color, Styleable},
+};
 
 use super::{
     builder::Builder, error::Error, error_builder::ErrorBuilder, parsed::Parsed, token::Token,
@@ -65,7 +68,7 @@ impl End {
         let mut errors = Vec::new();
         for option in variants {
             match option.parse_opt_at(cursor) {
-                Parsed::Pass(token) => return token.to_builder().tag(parent).end(),
+                Parsed::Pass(token) => return token.as_builder().tag(parent).end(),
                 Parsed::Fail(err) => {
                     errors.push(err);
                 }
@@ -142,7 +145,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Token_Variant(parent: &str, token: Token) -> End {
-        let mut variant = token.to_builder();
+        let mut variant = token.as_builder();
         variant.add_tag(&parent);
 
         return End::Match(variant);
@@ -183,7 +186,11 @@ impl End {
     #[allow(non_snake_case)]
     pub fn ToDo(message: &str) -> End {
         Error::New("not_implemented_{}")
-            .text(&format!("todo: {}", message))
+            .text(&format!(
+                "{}: {}",
+                "TODO".bg(Color::Yellow).color(Color::Black),
+                message
+            ))
             .tag("TODO")
             .end()
     }
@@ -191,6 +198,11 @@ impl End {
     #[allow(non_snake_case)]
     pub fn Error(key: &str) -> End {
         End::Fail(Error::New(key))
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Invalid(key: &str, message: &str) -> End {
+        Error::Invalid(key, message)
     }
 
     #[allow(non_snake_case)]
@@ -252,8 +264,8 @@ impl End {
     }
 
     #[allow(non_snake_case)]
-    pub fn Error_In_Child_Of(parent: TokenBuilder, err: Error) -> End {
-        Error::In_Child(parent, Some(err))
+    pub fn Error_In_Child_Of(parent: TokenBuilder, err: Option<Error>) -> End {
+        Error::In_Child(parent, err)
     }
 
     #[allow(non_snake_case)]

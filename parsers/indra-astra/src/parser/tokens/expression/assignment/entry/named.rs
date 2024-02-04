@@ -2,9 +2,10 @@ use crate::parser::{
     cursor::Cursor,
     results::{token::Token, token_builder::TokenBuilder},
     tokens::{
-        attribute, expression,
+        attribute,
         expression::identifier::key::name,
-        symbol::operator::assigner::mutable_field_assigner,
+        expression::{self, identifier::key},
+        symbol::operator::assigner,
         token,
         whitespace::indent::{self, Indents},
     },
@@ -16,96 +17,100 @@ token! {
 
         // pre-key attributes
         let mut base_indent = cursor.indent().curr;
-        if let Some(_) = check_for_attrs(&mut result, cursor) {
-            if !cursor.indent().curr == base_indent {
-                return End::Indent_Mismatch(
-                    "key",
-                    base_indent,
-                    cursor.indent().curr
-                );
-            }
-        } else {
-            return result.end();
+        if let Some(preceeding_attributes) = attribute::group::Parser::Try_Parse_At(cursor) {
+            result.add_child(preceeding_attributes);
         }
 
         // key
-        let key = name::Parser::Parse_At(cursor);
+        let key = key::Parser::Parse_At(cursor);
         let mut indent_increased = false;
         match key {
             Parsed::Pass(key) => {
                 result.set_prop("key", key);
 
                 // post-key indent
+                cursor.save();
                 match indent::Parse_Opt_Or_Skip_At(cursor) {
                     Indents::Increase(token) => {
                         result.add_child(token);
                         indent_increased = true;
                     }
                     Indents::Decrease(_) => {
+                        cursor.restore();
                         return result.end();
                     }
                     Indents::Current(_) => {
+                        cursor.restore();
                         return result.end();
                     }
                     _ => {
                         cursor.skip_ws();
                     }
                 }
+                cursor.pop();
 
                 // post-key attributes
                 if cursor.prev_is_ws() {
-                    if let Some(attrs) = check_for_attrs(&mut result, cursor) {
-                        if attrs {
-                            // post-key attributes indent
-                            match indent::Parse_Opt_Or_Skip_At(cursor) {
-                                Indents::Increase(token) => {
-                                    result.add_child(token);
-                                    indent_increased = true;
-                                }
-                                Indents::Decrease(_) => {
-                                    return result.end();
-                                }
-                                Indents::Current(_) => {
-                                    return result.end();
-                                }
-                                _ => {
-                                    cursor.skip_ws();
-                                }
+                    if let Some(attrs) = attribute::trailing::Parser::Try_Parse_At(cursor) {
+                        result.add_child(attrs);
+
+                        // post-key attributes indent
+                        cursor.save();
+                        match indent::Parse_Opt_Or_Skip_At(cursor) {
+                            Indents::Increase(token) => {
+                                result.add_child(token);
+                                indent_increased = true;
+                            }
+                            Indents::Decrease(_) => {
+                                cursor.restore();
+                                return result.end();
+
+                            }
+                            Indents::Current(_) => {
+                                cursor.restore();
+                                return result.end();
+                            }
+                            _ => {
+                                cursor.skip_ws();
                             }
                         }
-                    } else {
-                        return result.end();
+                        cursor.pop();
                     }
                 }
 
-
                 // operator
-                let operator = mutable_field_assigner::Parser::Parse_At(cursor);
+                let operator = assigner::Parser::Parse_At(cursor);
                 match operator {
                     Parsed::Pass(operator) => {
                         result.set_prop("operator", operator);
 
                         // post-operator indent
+                        cursor.save();
                         match indent::Parse_Opt_Or_Skip_At(cursor) {
                             Indents::Increase(token) => {
                                 result.add_child(token);
                             }
                             Indents::Current(token) => {
                                 if !indent_increased {
+                                    cursor.restore();
                                     return result.end();
                                 } else {
                                     result.add_child(token);
                                 }
                             }
                             Indents::Decrease(_) => {
+                                cursor.restore();
                                 return result.end();
                             }
                             _ => {}
                         }
+                        cursor.pop();
 
                         // post-operator attributes
                         base_indent = cursor.indent().curr;
-                        if let Some(attrs) = check_for_attrs(&mut result, cursor) {
+                        if let Some(attrs) = attribute::trailing::Parser::Try_Parse_At(cursor) {
+                            result.add_child(attrs);
+
                             if !cursor.indent().curr < base_indent {
                                 return End::Indent_Mismatch(
                                     "value",
@@ -114,27 +119,27 @@ token! {
                                 );
                             }
 
-                            if attrs {
-                                // post-operator attributes indent
-                                match indent::Parse_Opt_Or_Skip_At(cursor) {
-                                    Indents::Increase(token) => {
+                            // post-operator attributes indent
+                            cursor.save();
+                            match indent::Parse_Opt_Or_Skip_At(cursor) {
+                                Indents::Increase(token) => {
+                                    result.add_child(token);
+                                }
+                                Indents::Current(token) => {
+                                    if !indent_increased {
+                                        cursor.restore();
+                                        return result.end();
+                                    } else {
                                         result.add_child(token);
                                     }
-                                    Indents::Current(token) => {
-                                        if !indent_increased {
-                                            return result.end();
-                                        } else {
-                                            result.add_child(token);
-                                        }
-                                    }
-                                    Indents::Decrease(_) => {
-                                        return result.end();
-                                    }
-                                    _ => {}
                                 }
+                                Indents::Decrease(_) => {
+                                    cursor.restore();
+                                    return result.end();
+                                }
+                                _ => {}
                             }
-                        } else {
-                            return result.end();
+                            cursor.pop();
                         }
 
                         // value
@@ -145,8 +150,9 @@ token! {
 
                                 // post-value attributes
                                 if cursor.curr_is_ws() {
-                                    cursor.skip_ws();
-                                    check_for_attrs(&mut result, cursor);
+                                    if let Some(trailing_attributes) = attribute::trailing::Parser::Try_Parse_At(cursor) {
+                                        result.add_child(trailing_attributes);
+                                    }
                                 }
 
                                 return result.end();
@@ -167,7 +173,7 @@ token! {
                 .name(&KEY)
                 .partial()
                 .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["One Line" & "Attribute Before Key"]
             : "{attribute} {name}{assigner}{expression}"
@@ -175,7 +181,7 @@ token! {
                 .name(&KEY)
                 .child(Mock::Sub::<attribute::Parser>())
                 .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["One Line" & "Attribute After Key"]
             : "{name} {attribute} {assigner}{expression}"
@@ -183,14 +189,14 @@ token! {
                 .name(&KEY)
                 .prop("key", Mock::Sub::<name::Parser>())
                 .child(Mock::Sub::<attribute::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["One Line" & "Attribute Before Value"]
             : "{name}{assigner}{attribute} {expression}"
             => Token::New()
                 .name(&KEY)
                 .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .child(Mock::Sub::<attribute::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["Two Lines" & "Attribute After Key"]
@@ -199,14 +205,14 @@ token! {
                 .name(&KEY)
                 .prop("key", Mock::Sub::<name::Parser>())
                 .child(Mock::Sub::<attribute::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["Two Lines" & "Indent Increased After Assigner"]
             : "{name}{assigner}{increase_indent}{expression}"
             => Token::New()
                 .name(&KEY)
                 .prop("key", Mock::Sub::<name::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .child(Mock::Sub::<indent::increase::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["Three Lines" & "Indent Increased Before Assigner"]
@@ -215,7 +221,7 @@ token! {
                 .name(&KEY)
                 .prop("key", Mock::Sub::<name::Parser>())
                 .child(Mock::Sub::<indent::increase::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .child(Mock::Sub::<indent::current::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
         pattern!(["Three Lines" & "Indent Increased Before Assigner" & "Indent Increased After Assigner"]
@@ -224,50 +230,50 @@ token! {
                 .name(&KEY)
                 .prop("key", Mock::Sub::<name::Parser>())
                 .child(Mock::Sub::<indent::increase::Parser>())
-                .prop("operator", Mock::Sub::<mutable_field_assigner::Parser>())
+                .prop("operator", Mock::Sub::<assigner::field::Parser>())
                 .child(Mock::Sub::<indent::increase::Parser>())
                 .prop("value", Mock::Sub::<expression::Parser>()))
 
 }
 
-fn check_for_attrs(result: &mut TokenBuilder, cursor: &mut Cursor) -> Option<bool> {
-    use crate::{
-        parser::{cursor::Cursor, results::token::Token, tokens::indent::Indents, Parser},
-        parser::{
-            results::{builder::Builder, node::Node, parsed::Parsed},
-            tokens::{attribute, expression, indent, mutable_field_assigner, token},
-        },
-    };
-    let base_indent = cursor.indent().curr;
-    let mut found = false;
+// fn check_for_attrs(result: &mut TokenBuilder, cursor: &mut Cursor) -> Option<bool> {
+//     use crate::{
+//         parser::{cursor::Cursor, results::token::Token, tokens::indent::Indents, Parser},
+//         parser::{
+//             results::{builder::Builder, node::Node, parsed::Parsed},
+//             tokens::{attribute, expression, indent, token},
+//         },
+//     };
+//     let base_indent = cursor.indent().curr;
+//     let mut found = false;
 
-    while let Parsed::Pass(attribute) = attribute::Parser::Parse_Opt_At(cursor) {
-        found = true;
-        result.add_child(attribute);
+//     while let Parsed::Pass(attribute) = attribute::Parser::Parse_Opt_At(cursor) {
+//         found = true;
+//         result.add_child(attribute);
 
-        let indent = indent::Parse_Opt_At(cursor);
-        match indent {
-            Indents::Increase(token) => {
-                result.add_child(token);
-            }
-            Indents::Current(token) => {
-                result.add_child(token);
-            }
-            Indents::Decrease(_) => {
-                if cursor.indent().curr < base_indent {
-                    return None;
-                }
-            }
-            _ => {
-                if !(cursor.curr_is_ws() || cursor.curr_is(',')) {
-                    break;
-                } else {
-                    cursor.skip();
-                    cursor.skip_ws();
-                }
-            }
-        }
-    }
+//         let indent = indent::Parse_Opt_At(cursor);
+//         match indent {
+//             Indents::Increase(token) => {
+//                 result.add_child(token);
+//             }
+//             Indents::Current(token) => {
+//                 result.add_child(token);
+//             }
+//             Indents::Decrease(_) => {
+//                 if cursor.indent().curr < base_indent {
+//                     return None;
+//                 }
+//             }
+//             _ => {
+//                 if !(cursor.curr_is_ws() || cursor.curr_is(',')) {
+//                     break;
+//                 } else {
+//                     cursor.skip();
+//                     cursor.skip_ws();
+//                 }
+//             }
+//         }
+//     }
 
-    return Some(found);
-}
+//     return Some(found);
+// }

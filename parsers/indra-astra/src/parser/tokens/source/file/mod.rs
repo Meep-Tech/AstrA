@@ -1,5 +1,5 @@
 use crate::parser::tokens::{
-    attribute::{self, attribute_group},
+    attribute::{self, group},
     expression::{
         assignment::{self, entry, func, var},
         literal::primitive::{self, number},
