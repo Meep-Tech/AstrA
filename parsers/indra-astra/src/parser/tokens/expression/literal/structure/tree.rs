@@ -8,36 +8,42 @@ token! {
     tree => |cursor: &mut Cursor| {
         let initial_indent = cursor.curr_indent();
         let mut result = Token::New();
+        cursor.save();
         match indent::Parse_At(cursor) {
             Indents::Increase(token) => {
                 result.add_child(token);
             }
-            Indents::Current(_) => {}
             Indents::Decrease(_) => {
-                return End::Unexpected("initial-indent-decrease", &cursor.curr_str())
+                cursor.restore();
+                return End::None;
             }
             _ => {}
         };
+        cursor.pop();
 
         loop {
             match branch::Parser::Parse_At(cursor) {
                 Parsed::Pass(token) => {
                     result.add_child(token);
+                    cursor.save();
                     match indent::Parse_Opt_At(cursor) {
                         Indents::Current(token) => {
                             result.add_child(token);
                         }
                         Indents::Decrease(token) => {
                             if cursor.curr_indent() < initial_indent {
+                                cursor.restore();
                                 break;
                             } else {
                                 result.add_child(token);
                             }
                         }
                         _ => {
+                            cursor.pop();
                             break;
                         }
                     };
+                    cursor.pop();
                 }
                 Parsed::Fail(error) => match error {
                     Some(error) => return End::Error_In_Child_Of(result, Some(error)),

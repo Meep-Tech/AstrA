@@ -107,6 +107,10 @@ pub trait SExpressable<TNode>: Span {
 
         if let Some(src) = config.text_source {
             let mut text = format!("{}", src[self.start()..=self.end()].to_string());
+            if !text.chars().any(|c| !c.is_whitespace()) {
+                text = text.replace("\t", "\\t").replace("\n", "\\n");
+            }
+
             if text.contains("\n") {
                 nl!();
                 text = format!(

@@ -407,9 +407,16 @@ pub trait Parser: Sync + Send {
                     cursor.restore();
                 }
 
+                #[cfg(feature = "log")]
+                let end = if start >= cursor.curr_pos() {
+                    start
+                } else {
+                    cursor.prev_pos()
+                };
+
                 log::info!(
                     &[":END", &"NONE".color(Color::BrightBlack)],
-                    &format!("@ {}", cursor.prev_pos())
+                    &format!("@ {}", end)
                 );
                 Parsed::Fail(None)
             }
