@@ -1,7 +1,7 @@
 use crate::parser::tokens::token;
 
 token! {
-    prefixed_expression => |cursor: &mut Cursor| {
+    prefixed_invokation => |cursor: &mut Cursor| {
         End::Not_Implemented()
     }
 }

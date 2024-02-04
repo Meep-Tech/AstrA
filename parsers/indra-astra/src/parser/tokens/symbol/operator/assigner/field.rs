@@ -8,13 +8,13 @@ token! {
         if cursor.try_read(':') {
           if cursor.try_read(':') {
             if cursor.curr().is_whitespace() {
-              return End::New().tag(CONST_TAG).end();
+              return End::New().tag(CONST_TAG).to_end();
             } else {
               return End::Missing("trailing_whitespace", "\\s", &cursor.curr_str());
             }
           } else {
             if cursor.curr().is_whitespace() {
-              return End::New().tag(MUT_TAG).end();
+              return End::New().tag(MUT_TAG).to_end();
             } else {
               return End::Missing("trailing_whitespace", "\\s", &cursor.curr_str());
             }
@@ -29,17 +29,17 @@ token! {
             => Parsed::Pass(Token::New()
                 .name(&KEY)
                 .tag(MUT_TAG)
-                .build(0, 0)))
+                .build_from(0, 0)))
         unit!(["Mutable" & "Tab After"]
             : ":\t"
             => Parsed::Pass(Token::New()
                 .name(&KEY)
                 .tag(MUT_TAG)
-                .build(0, 0)))
+                .build_from(0, 0)))
         unit!(["Mutable" & "Newline After" & "Tab After"]
             : ":\n\t"
             => Parsed::Pass(Token::New()
                 .name(&KEY)
                 .tag(MUT_TAG)
-                .build(0, 0)))
+                .build_from(0, 0)))
 }

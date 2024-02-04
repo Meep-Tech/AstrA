@@ -78,7 +78,7 @@ token! {
           return End::None;
         } else {
           let prev_non_ws_pos = cursor.prev_non_ws_pos();
-          return End::Match(result.end_at(prev_non_ws_pos));
+          return End::Match(result.end(prev_non_ws_pos));
         }
     }
 }

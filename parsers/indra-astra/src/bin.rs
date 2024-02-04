@@ -1,12 +1,4 @@
-use astra::{
-    parser::Parser,
-    tests::parser::tokens::tests,
-    utils::{
-        ansi::{Color, ColorLoop},
-        log,
-        sexp::SFormat,
-    },
-};
+use astra::{parser::Parser, tests::parser::tokens::tests, utils::log};
 use clap::{Parser as Arguments, Subcommand, ValueEnum};
 
 pub const AUTHOR: &'static str = "Meep.Tech";

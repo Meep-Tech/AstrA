@@ -19,8 +19,8 @@ pub type Type = dyn super::Parser;
 
 macro_rules! token {
     (
-        $key:ident
         $(#$tags:ident)*
+        $key:ident
         =>
         $rule:expr
         $(,tests: $($tests:expr)*)?
@@ -100,17 +100,24 @@ macro_rules! splay_mods {
 pub(crate) use splay_mods;
 
 macro_rules! splay {
-    ($key:ident: [$($parsers:ident $(,)?)*]) => {
+    (
+        $(#$tags:ident)*
+        $key:ident:
+        [$($parsers:ident $(,)?)*]
+    ) => {
         crate::parser::tokens::splay!(
+            $(#$tags)*
             $key: [$($parsers,)*]
             subs: [$($parsers,)*]
         );
     };
     (
+        $(#$tags:ident)*
         $key:ident: [$($parsers:ident $(,)?)*]
         subs: [$($subs:ident $(,)?)*]
     ) => {
         crate::parser::tokens::token! {
+            $(#$tags)*
             $key => |cursor: &mut Cursor| {
                 End::Splay(
                     &KEY,

@@ -22,6 +22,6 @@ token! {
         .child(Token::New()
           .name(name::KEY)
           .partial()
-          .build(1, 5)
-        ).build(0, 5)))
+          .build_from(1, 5)
+        ).build_from(0, 5)))
 }

@@ -25,7 +25,7 @@ token! {
         if result.children.is_none() || result.children.as_ref().unwrap().is_empty() {
           return End::None;
         } else {
-          return result.end_at(cursor.prev_non_ws_pos()).end();
+          return result.end(cursor.prev_non_ws_pos()).to_end();
         }
     }
 }

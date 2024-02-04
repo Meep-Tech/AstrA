@@ -1,3 +1,5 @@
+use std::f32::consts::E;
+
 use crate::parser::tokens::{
     expression::{
         invocation::lookup::{dot_lookup, slash_lookup},
@@ -56,6 +58,10 @@ token! {
             }
         }
 
-        return result.end();
+        if result.children.is_none() {
+            return End::None;
+        } else {
+            return result.to_end();
+        }
     }
 }

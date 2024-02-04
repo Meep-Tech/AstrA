@@ -15,6 +15,7 @@ pub trait Node<TNode>: SExpressable<TNode> {
         return self.tags().contains(tag) || self.name() == tag;
     }
 
+    fn len(&self) -> usize;
     fn children(&self) -> Vec<&TNode>;
     fn child(&self, index: usize) -> Option<&TNode> {
         return match self.children().get(index) {

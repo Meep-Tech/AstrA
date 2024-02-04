@@ -57,7 +57,7 @@ impl TokenBuilder {
         self
     }
 
-    pub fn end_at(mut self, end: usize) -> TokenBuilder {
+    pub fn end(mut self, end: usize) -> TokenBuilder {
         log::vvv!(&["TOKEN", "-", "END"], &end.to_string());
         self.end = Some(end);
         self
@@ -92,7 +92,7 @@ impl TokenBuilder {
     }
 
     pub fn add_tag(&mut self, tag: &str) -> &mut TokenBuilder {
-        log::vvv!(
+        log::info!(
             &["TOKEN", "-", "TAG"],
             &format!(
                 "{} : {}",
@@ -212,7 +212,24 @@ impl TokenBuilder {
 }
 
 impl Builder<Token> for TokenBuilder {
-    fn build(self, start: usize, end: usize) -> Token {
+    fn len(&self) -> usize {
+        match &self.children {
+            Some(els) => els.len(),
+            None => 0,
+        }
+    }
+
+    fn build(self) -> Token {
+        let start = self.start.unwrap_or_else(|| {
+            panic!("build called with start not set");
+        });
+        let end = self.end.unwrap_or_else(|| {
+            panic!("build called with end not set");
+        });
+        self.build_from(start, end)
+    }
+
+    fn build_from(self, start: usize, end: usize) -> Token {
         if end < start {
             panic!(
                 "TokenBuilder::build called with end < start: {} < {}",
@@ -240,18 +257,18 @@ impl Builder<Token> for TokenBuilder {
         };
     }
 
-    fn build_from(self, start: usize) -> Token {
+    fn build_at(self, start: usize) -> Token {
         let end = self
             .end
             .unwrap_or_else(|| panic!("Builder::build_from called without end being set!"));
-        self.build(start, end)
+        self.build_from(start, end)
     }
 
     fn build_to(self, end: usize) -> Token {
         let start = self
             .start
             .unwrap_or_else(|| panic!("Builder::build_to called without start being set!"));
-        self.build(start, end)
+        self.build_from(start, end)
     }
 
     fn build_with_defaults(self, start: usize, end: usize) -> Token {
@@ -281,7 +298,7 @@ impl Builder<Token> for TokenBuilder {
         };
     }
 
-    fn end(self) -> End {
+    fn to_end(self) -> End {
         return End::Match(self);
     }
 }

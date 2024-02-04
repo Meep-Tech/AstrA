@@ -532,7 +532,7 @@ impl Mockable<TokenBuilder, Token> for TokenBuilder {
     }
 
     fn mock(self) -> Token {
-        self.partial().tag(_MOCK_TAG).partial().build(0, 0)
+        self.partial().tag(_MOCK_TAG).partial().build_from(0, 0)
     }
 
     fn sub(self) -> Token {
@@ -554,7 +554,7 @@ impl Mockable<ErrorBuilder, Option<Error>> for ErrorBuilder {
     }
 
     fn mock(self) -> Option<Error> {
-        self.partial().tag(_MOCK_TAG).partial().build(0, 0)
+        self.partial().tag(_MOCK_TAG).partial().build_from(0, 0)
     }
 
     fn sub(self) -> Option<Error> {
@@ -576,12 +576,12 @@ impl Mock {
     where
         T: parser::Parser + 'static,
     {
-        Token::Of_Type::<T>().partial().build(start, end)
+        Token::Of_Type::<T>().partial().build_from(start, end)
     }
 
     #[allow(non_snake_case)]
     pub fn Error(name: &str, start: usize, end: usize) -> Option<Error> {
-        Error::New(name).partial().build(start, end)
+        Error::New(name).partial().build_from(start, end)
     }
 
     // TODO: Check subs by tag instead of by type/name!

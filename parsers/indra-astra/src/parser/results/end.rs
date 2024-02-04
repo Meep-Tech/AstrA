@@ -68,7 +68,7 @@ impl End {
         let mut errors = Vec::new();
         for option in variants {
             match option.parse_opt_at(cursor) {
-                Parsed::Pass(token) => return token.as_builder().tag(parent).end(),
+                Parsed::Pass(token) => return token.as_builder().tag(parent).to_end(),
                 Parsed::Fail(err) => {
                     errors.push(err);
                 }
@@ -91,7 +91,7 @@ impl End {
         let mut errors = Vec::new();
         for option in options {
             match option.parse_opt_at(cursor) {
-                Parsed::Pass(token) => return Token::New().name(parent).child(token).end(),
+                Parsed::Pass(token) => return Token::New().name(parent).child(token).to_end(),
                 Parsed::Fail(err) => {
                     errors.push(err);
                 }
@@ -119,7 +119,7 @@ impl End {
         TChild: parser::Parser + 'static,
     {
         match TChild::Parse_At(cursor) {
-            Parsed::Pass(token) => parent.child(token).end(),
+            Parsed::Pass(token) => parent.child(token).to_end(),
             Parsed::Fail(error) => End::Unexpected_Child_Of(parent, error),
         }
     }
@@ -138,7 +138,7 @@ impl End {
         TProp: parser::Parser + 'static,
     {
         match TProp::Parse_At(cursor) {
-            Parsed::Pass(token) => parent.prop(key, token).end(),
+            Parsed::Pass(token) => parent.prop(key, token).to_end(),
             Parsed::Fail(error) => End::Error_In_Prop_Of(parent, key, error),
         }
     }
@@ -180,7 +180,7 @@ impl End {
 
     #[allow(non_snake_case)]
     pub fn Not_Implemented() -> End {
-        Error::New("not_implemented_{}").tag("TODO").end()
+        Error::New("not_implemented_{}").tag("TODO").to_end()
     }
 
     #[allow(non_snake_case)]
@@ -192,7 +192,7 @@ impl End {
                 message
             ))
             .tag("TODO")
-            .end()
+            .to_end()
     }
 
     #[allow(non_snake_case)]

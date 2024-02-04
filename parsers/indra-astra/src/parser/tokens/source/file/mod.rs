@@ -3,7 +3,6 @@ use crate::parser::tokens::{
     expression::{
         assignment::{self, entry, func, var},
         literal::primitive::{self, number},
-        prefixed_expression,
     },
     splay_mods, token,
 };

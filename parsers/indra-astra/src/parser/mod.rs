@@ -311,9 +311,13 @@ pub trait Parser: Sync + Send {
                     cursor.prev_pos()
                 };
 
-                let token = token
-                    .assure_name(self.name())
-                    .build_with_defaults(start, end);
+                let mut token = token.assure_name(self.name());
+                for tag in self.tags() {
+                    token.add_tag(tag);
+                }
+
+                let token = token.build_with_defaults(start, end);
+
                 log::info!(
                     &[":END", "MATCH"],
                     &format!(
@@ -442,3 +446,52 @@ pub trait Parser: Sync + Send {
     // #endregion
 }
 // #endregion
+
+// #region Macros
+
+macro_rules! req_child {
+    ([$cursor:ident] $parser:ident::$parser2:ident => $parent:ident) => {
+        match $parser::$parser2::Parser::Parse_At($cursor) {
+            Parsed::Pass(token) => {
+                $parent.add_child(token);
+            }
+            Parsed::Fail(err) => {
+                return End::Error_In_Child_Of($parent, err);
+            }
+        }
+    };
+    ([$cursor:ident] $parser:ident => $parent:ident) => {
+        match $parser::Parser::Parse_At($cursor) {
+            Parsed::Pass(token) => {
+                $parent.add_child(token);
+            }
+            Parsed::Fail(err) => {
+                return End::Error_In_Child_Of($parent, err);
+            }
+        }
+    };
+}
+
+pub(crate) use req_child;
+
+macro_rules! opt_child {
+    (
+        [$cursor:ident]
+        $parser:ident$(::$parser2:ident)? => $parent:ident
+        $(?: $ifdo:expr;)?
+        $(!: $else:expr;)?
+    ) => {{
+        let result = $parser$(::$parser2)?::Parser::Try_Parse_At($cursor);
+        match result {
+            Some(token) => {
+                $parent.add_child(token);
+                $( $ifdo; )?
+            },
+            None => {
+                $( $else; )?
+            }
+        }
+    }};
+}
+
+pub(crate) use opt_child;

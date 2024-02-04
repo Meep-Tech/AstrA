@@ -96,7 +96,7 @@ pub fn Match(result: Parsed) -> Indents {
             current::KEY => Indents::Current(token).into(),
             increase::KEY => Indents::Increase(token).into(),
             decrease::KEY => Indents::Decrease(token).into(),
-            _ => Indents::Error(Error::New("unknown_indent_type").build(0, 0).unwrap()),
+            _ => Indents::Error(Error::New("unknown_indent_type").build_from(0, 0).unwrap()),
         },
         Parsed::Fail(error) => match error {
             Some(error) => Indents::Error(error),

@@ -52,7 +52,7 @@ impl Error {
             .text(message)
             .tag("invalid")
             .tag("unexpected")
-            .end()
+            .to_end()
     }
 
     #[allow(non_snake_case)]
@@ -246,6 +246,10 @@ impl Error {
 impl Node<Parsed> for Error {
     fn name(&self) -> &str {
         return &self.name;
+    }
+
+    fn len(&self) -> usize {
+        return self.children.len();
     }
 
     fn tags(&self) -> &HashSet<String> {

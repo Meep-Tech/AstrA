@@ -212,14 +212,6 @@ macro_rules! style {
 #[allow(unused_imports)]
 pub(crate) use style;
 
-macro_rules! random_style {
-    ($($rest:tt)*) => {
-        #[cfg(feature = "log")]
-        log::set_random_style($($rest)*);
-    }
-}
-pub(crate) use random_style;
-
 // #endregion
 
 pub fn add_bg(text: &str, bg: Color) {

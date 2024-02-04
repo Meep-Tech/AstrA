@@ -7,5 +7,6 @@ use crate::parser::tokens::{
 };
 
 splay! {
+    #expression
     tailing_expression: [invocation, identifier]
 }

@@ -5,7 +5,8 @@ use crate::parser::tokens::{
 
 token! {
   word => |cursor: &mut Cursor| {
-    let mut result = Token::Of_Type::<word::Parser>();
+    let mut result = Token::Of_Type::<word::Parser>()
+      .start(cursor.curr_pos());
 
     loop {
       if cursor.is_eof() {
@@ -39,6 +40,9 @@ token! {
               }
             }
           }
+          '\\' => {
+            todo!("escape")
+          }
           '{' => {
             todo!("metadata")
           }
@@ -57,6 +61,10 @@ token! {
 
     }
 
-    result.end()
+    if result.start.unwrap() == cursor.curr_pos() {
+      return End::None;
+    } else {
+      return result.to_end();
+    }
   }
 }

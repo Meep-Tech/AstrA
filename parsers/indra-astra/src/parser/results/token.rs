@@ -110,6 +110,10 @@ impl Token {
 }
 
 impl Node<Token> for Token {
+    fn len(&self) -> usize {
+        return self.children.len();
+    }
+
     fn name(&self) -> &str {
         return &self.name;
     }

@@ -3,7 +3,7 @@ use crate::parser::{
     results::{token::Token, token_builder::TokenBuilder},
     tokens::{
         attribute,
-        expression::{self, identifier::key},
+        expression::{self, identifier::key, value_expression},
         expression::{identifier::key::name, literal::structure::tree},
         statement::branch,
         symbol::operator::assigner,
@@ -37,11 +37,11 @@ token! {
                     }
                     Indents::Decrease(_) => {
                         cursor.restore();
-                        return result.end_at(cursor.prev_non_ws_pos()).end();
+                        return result.end(cursor.prev_non_ws_pos()).to_end();
                     }
                     Indents::Current(_) => {
                         cursor.restore();
-                        return result.end_at(cursor.prev_non_ws_pos()).end();
+                        return result.end(cursor.prev_non_ws_pos()).to_end();
                     }
                     _ => {
                         cursor.skip_ws();
@@ -63,12 +63,12 @@ token! {
                             }
                             Indents::Decrease(_) => {
                                 cursor.restore();
-                                return result.end_at(cursor.prev_non_ws_pos()).end();
+                                return result.end(cursor.prev_non_ws_pos()).to_end();
 
                             }
                             Indents::Current(_) => {
                                 cursor.restore();
-                                return result.end_at(cursor.prev_non_ws_pos()).end();
+                                return result.end(cursor.prev_non_ws_pos()).to_end();
                             }
                             _ => {
                                 cursor.skip_ws();
@@ -99,59 +99,24 @@ token! {
                             Indents::Current(token) => {
                                 if !indent_increased {
                                     cursor.restore();
-                                    return result.end_at(cursor.prev_non_ws_pos()).end();
+                                    return result.end(cursor.prev_non_ws_pos()).to_end();
                                 } else {
                                     result.add_child(token);
                                 }
                             }
                             Indents::Decrease(_) => {
                                 cursor.restore();
-                                return result.end_at(cursor.prev_non_ws_pos()).end();
+                                return result.end(cursor.prev_non_ws_pos()).to_end();
                             }
                             _ => {}
                         }
                         cursor.pop();
 
-                        // // post-operator indent attributes
-                        // if let Some(attrs) = attribute::trailing::Parser::Try_Parse_At(cursor) {
-                        //     result.add_child(attrs);
-
-                        //     if !cursor.indent().curr < base_indent {
-                        //         return End::Indent_Mismatch(
-                        //             "value",
-                        //             base_indent,
-                        //             cursor.indent().curr
-                        //         );
-                        //     }
-
-                        //     // post-operator attributes indent
-                        //     cursor.save();
-                        //     match indent::Parse_Opt_Or_Skip_At(cursor) {
-                        //         Indents::Increase(token) => {
-                        //             result.add_child(token);
-                        //         }
-                        //         Indents::Current(token) => {
-                        //             if !indent_increased {
-                        //                 cursor.restore();
-                        //                 return result.end_at(cursor.prev_non_ws_pos()).end();
-                        //             } else {
-                        //                 result.add_child(token);
-                        //             }
-                        //         }
-                        //         Indents::Decrease(_) => {
-                        //             cursor.restore();
-                        //             return result.end_at(cursor.prev_non_ws_pos()).end();
-                        //         }
-                        //         _ => {}
-                        //     }
-                        //     cursor.pop();
-                        // }
-
                         // value
                         let value = if cursor.curr_indent() > base_indent {
                             tree::Parser::Parse_Opt_At(cursor)
                         } else {
-                            branch::Parser::Parse_Opt_At(cursor)
+                            value_expression::Parser::Parse_Opt_At(cursor)
                         };
 
                         match value {
@@ -165,7 +130,7 @@ token! {
                                     }
                                 }
 
-                                return result.end_at(cursor.prev_non_ws_pos()).end();
+                                return result.end(cursor.prev_non_ws_pos()).to_end();
                             }
                             Parsed::Fail(error) => return End::Error_In_Prop_Of(result, "value", error),
                         }

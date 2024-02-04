@@ -7,5 +7,6 @@ use crate::parser::tokens::{
 };
 
 splay! {
+    #expression
     attribute_expression: [invocation, identifier, primitive, closure, markup]
 }

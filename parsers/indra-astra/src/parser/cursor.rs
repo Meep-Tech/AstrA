@@ -245,44 +245,68 @@ impl Cursor {
 
     // TODO: return a ws token with is_ignored = true
     pub fn skip_ws(&mut self) {
-        log::vv!(&["CURSOR", "SKIP-WS"], &format!("{}..", self.pos));
+        log::vv!(&["CURSOR", "SKIP-WS", "START"], &format!("{}..", self.pos));
         self.skip_while(|c| c.is_whitespace());
-        log::vv!(&["CURSOR", "SKIP-WS"], &format!("..{}", self.pos));
+        log::vv!(&["CURSOR", "SKIP-WS", "END"], &format!("..{}", self.pos));
+    }
+
+    pub fn skip_spacing(&mut self) {
+        log::vv!(
+            &["CURSOR", "SKIP-SPACING", "START"],
+            &format!("{}..", self.pos)
+        );
+        self.skip_while(|c| c == ' ' || c == '\t');
+        log::vv!(
+            &["CURSOR", "SKIP-SPACING", "END"],
+            &format!("..{}", self.pos)
+        );
     }
 
     pub fn skip_while(&mut self, f: fn(char) -> bool) {
-        log::vvv!(&["CURSOR", "SKIP-WHILE"], &format!("{}..", self.pos));
+        log::vvv!(
+            &["CURSOR", "SKIP-WHILE", "START"],
+            &format!("{}..", self.pos)
+        );
         while f(self.curr()) {
             self.skip();
         }
-        log::vvv!(&["CURSOR", "SKIP-WHILE"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "SKIP-WHILE", "END"], &format!("..{}", self.pos));
     }
 
     pub fn skip_until(&mut self, f: fn(char) -> bool) {
-        log::vvv!(&["CURSOR", "SKIP-UNTIL"], &format!("{}..", self.pos));
+        log::vvv!(
+            &["CURSOR", "SKIP-UNTIL", "START"],
+            &format!("{}..", self.pos)
+        );
         while !f(self.curr()) {
             self.skip();
         }
-        log::vvv!(&["CURSOR", "SKIP-UNTIL"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "SKIP-UNTIL", "END"], &format!("..{}", self.pos));
     }
 
     pub fn read_while(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        log::vvv!(&["CURSOR", "READ-WHILE"], &format!("{}..", self.pos));
+        log::vvv!(
+            &["CURSOR", "READ-WHILE", "START"],
+            &format!("{}..", self.pos)
+        );
         let mut result = Vec::new();
         while f(self.curr()) {
             result.push(self.read());
         }
-        log::vvv!(&["CURSOR", "READ-WHILE"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "READ-WHILE", "END"], &format!("..{}", self.pos));
         return result;
     }
 
     pub fn read_until(&mut self, f: fn(char) -> bool) -> Vec<char> {
-        log::vvv!(&["CURSOR", "READ-UNTIL"], &format!("{}..", self.pos));
+        log::vvv!(
+            &["CURSOR", "READ-UNTIL", "START"],
+            &format!("{}..", self.pos)
+        );
         let mut result = Vec::new();
         while !f(self.curr()) {
             result.push(self.read());
         }
-        log::vvv!(&["CURSOR", "READ-UNTIL"], &format!("..{}", self.pos));
+        log::vvv!(&["CURSOR", "READ-UNTIL", "END"], &format!("..{}", self.pos));
         return result;
     }
 

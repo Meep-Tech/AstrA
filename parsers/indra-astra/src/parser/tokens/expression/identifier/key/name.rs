@@ -81,7 +81,7 @@ token! {
     tests:
         unit!(["Alphabetic"]
             : "abc"
-            => Parsed::Pass(Token::Of_Type::<Self>().partial().build(0, 2)))
+            => Parsed::Pass(Token::Of_Type::<Self>().partial().build_from(0, 2)))
 }
 
 fn _check_end_is_valid(is_pure_numeric: bool, cursor: &mut Cursor, start: usize) -> End {

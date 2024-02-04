@@ -66,7 +66,7 @@ token! {
                     return End::None;
                 }
 
-                return End::Match(result.end_at(cursor.prev_non_ws_pos()));
+                return End::Match(result.end(cursor.prev_non_ws_pos()));
             }
             None => {
                 return End::None;

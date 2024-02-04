@@ -40,7 +40,7 @@ impl ErrorBuilder {
         self
     }
 
-    pub fn end_at(mut self, end: usize) -> ErrorBuilder {
+    pub fn end(mut self, end: usize) -> ErrorBuilder {
         log::vv!(&["ERROR", "-", "END"], &end.to_string());
         self.end = Some(end);
         self
@@ -257,7 +257,14 @@ impl ErrorBuilder {
 }
 
 impl Builder<Option<Error>> for ErrorBuilder {
-    fn build(self, start: usize, end: usize) -> Option<Error> {
+    fn len(&self) -> usize {
+        match &self.children {
+            Some(els) => els.len(),
+            None => 0,
+        }
+    }
+
+    fn build_from(self, start: usize, end: usize) -> Option<Error> {
         if end < start {
             panic!("error builder called with end < start: {} < {}", end, start);
         }
@@ -282,14 +289,14 @@ impl Builder<Option<Error>> for ErrorBuilder {
         let start = self.start.unwrap_or_else(|| {
             panic!("build_to called with start not set");
         });
-        self.build(start, end)
+        self.build_from(start, end)
     }
 
-    fn build_from(self, start: usize) -> Option<Error> {
+    fn build_at(self, start: usize) -> Option<Error> {
         let end = self.end.unwrap_or_else(|| {
             panic!("build_from called with end not set");
         });
-        self.build(start, end)
+        self.build_from(start, end)
     }
 
     fn build_with_defaults(self, start: usize, end: usize) -> Option<Error> {
@@ -315,7 +322,17 @@ impl Builder<Option<Error>> for ErrorBuilder {
         });
     }
 
-    fn end(self) -> End {
+    fn build(self) -> Option<Error> {
+        let start = self.start.unwrap_or_else(|| {
+            panic!("build called with start not set");
+        });
+        let end = self.end.unwrap_or_else(|| {
+            panic!("build called with end not set");
+        });
+        self.build_from(start, end)
+    }
+
+    fn to_end(self) -> End {
         return End::Fail(self);
     }
 }

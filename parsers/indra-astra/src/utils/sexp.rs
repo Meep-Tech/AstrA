@@ -106,9 +106,14 @@ pub trait SExpressable<TNode>: Span {
         }
 
         if let Some(src) = config.text_source {
-            let mut text = format!("{}", src[self.start()..=self.end()].to_string());
-            if !text.chars().any(|c| !c.is_whitespace()) {
-                text = text.replace("\t", "\\t").replace("\n", "\\n");
+            let mut text = format!(
+                "{}",
+                &format!("{}\0", src)[self.start()..=self.end()].to_string()
+            );
+            if !&text[..1].chars().any(|c| !c.is_whitespace()) {
+                text = text
+                    .replace("\t", "\\t".color(Color::BrightBlack).as_str())
+                    .replace("\n", "\\n".color(Color::BrightBlack).as_str());
             }
 
             if text.contains("\n") {
@@ -120,6 +125,10 @@ pub trait SExpressable<TNode>: Span {
             } else {
                 text = format!(" `{}`", text);
             }
+
+            text = text
+                .replace("\0", "\\0")
+                .replace("\r", "\\r".color(Color::BrightBlack).as_str());
 
             if config.colors.is_some() {
                 result.push_str(
