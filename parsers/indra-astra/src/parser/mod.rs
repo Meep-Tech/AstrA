@@ -295,6 +295,7 @@ pub trait Parser: Sync + Send {
         log::color!("PARSE", Color::Green);
         log::push_unique!("PARSE");
         log::push!(self.name().own_color().as_str());
+        #[cfg(feature = "vv")]
         log::push_div!(":", Color::Green);
         log::info!(&[":START"], &format!("@ {}", cursor.curr_pos()));
 
@@ -448,6 +449,7 @@ pub trait Parser: Sync + Send {
         };
 
         log::pop!();
+        #[cfg(feature = "vv")]
         log::pop!();
         log::pop_unique!("PARSE");
 

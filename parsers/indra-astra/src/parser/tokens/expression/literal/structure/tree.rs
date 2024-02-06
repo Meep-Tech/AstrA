@@ -11,15 +11,17 @@ token! {
         cursor.save();
         match indent::Parse_At(cursor) {
             Indents::Increase(token) => {
+                 cursor.pop();
                 result.add_child(token);
             }
             Indents::Decrease(_) => {
                 cursor.restore();
                 return End::None;
             }
-            _ => {}
+            _ => {
+                cursor.pop();
+            }
         };
-        cursor.pop();
 
         loop {
             match branch::Parser::Parse_At(cursor) {
@@ -28,6 +30,7 @@ token! {
                     cursor.save();
                     match indent::Parse_Opt_At(cursor) {
                         Indents::Current(token) => {
+                            cursor.pop();
                             result.add_child(token);
                         }
                         Indents::Decrease(token) => {
@@ -38,12 +41,18 @@ token! {
                                 result.add_child(token);
                             }
                         }
+                        Indents::Increase(_) => {
+                            panic!("Unexpected increase in indentation after branch");
+                        }
+                        Indents::Error(err) => {
+                            cursor.pop();
+                            return End::Error_In_Child_Of(result, Some(err));
+                        },
                         _ => {
                             cursor.pop();
                             break;
                         }
                     };
-                    cursor.pop();
                 }
                 Parsed::Fail(error) => match error {
                     Some(error) => return End::Error_In_Child_Of(result, Some(error)),

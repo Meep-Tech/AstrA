@@ -1,4 +1,8 @@
-use astra::{parser::Parser, tests::parser::tokens::tests, utils::log};
+use astra::{
+    parser::Parser,
+    tests::parser::tokens::tests,
+    utils::{log, sexp::SFormat},
+};
 use clap::{Parser as Arguments, Subcommand, ValueEnum};
 
 pub const AUTHOR: &'static str = "Meep.Tech";
@@ -57,7 +61,18 @@ enum Commands {
         /// The file to write output to
         #[arg(short, long)]
         out: Option<String>,
+
+        /// The data to include in the output
+        #[arg(short, long)]
+        data: Option<Data>,
     },
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Data {
+    Less,
+    Default,
+    Full,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -105,6 +120,7 @@ fn main() {
             Commands::Parse {
                 input,
                 to,
+                data,
                 file,
                 out: _,
             } => {
@@ -133,7 +149,14 @@ fn main() {
                         println!("{}", serde_json::to_string_pretty(&output).unwrap());
                     }
                     Some(Outputs::Sexp) => {
-                        println!("{}", output.to_sexp_str(&input));
+                        println!(
+                            "{}",
+                            output.to_sexp_str_with(match data {
+                                Some(Data::Less) => SFormat::Less(),
+                                Some(Data::Default) | None => SFormat::Default(),
+                                Some(Data::Full) => SFormat::Full(&input),
+                            })
+                        );
                     }
                 }
             }

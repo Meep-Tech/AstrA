@@ -61,7 +61,7 @@ impl Parsed {
     }
 
     pub fn to_sexp_str(&self, src: &str) -> String {
-        self.to_sexp_str_with(SFormat::Basic(src))
+        self.to_sexp_str_with(SFormat::Full(src))
     }
 
     pub fn to_sexp_str_with(&self, config: SFormat) -> String {

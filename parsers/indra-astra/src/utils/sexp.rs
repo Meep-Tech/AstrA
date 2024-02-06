@@ -6,20 +6,56 @@ use std::collections::{HashMap, HashSet};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SFormat<'s> {
     pub colors: Option<ColorLoop>,
+    pub include_token_span: bool,
     pub include_token_length: bool,
+    pub include_token_tags: bool,
     pub text_source: Option<&'s str>,
     pub current_depth: usize,
 }
 
 impl<'s> SFormat<'s> {
     #[allow(non_snake_case)]
-    pub fn Basic(src: &'s str) -> SFormat<'s> {
+    pub fn Less() -> SFormat<'s> {
         SFormat {
             colors: Some(ColorLoop::New(vec![
                 Color::BrightMagenta,
                 Color::BrightYellow,
                 Color::BrightBlue,
             ])),
+            include_token_tags: false,
+            include_token_span: false,
+            include_token_length: false,
+            text_source: None,
+            current_depth: 0,
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Default() -> SFormat<'s> {
+        SFormat {
+            colors: Some(ColorLoop::New(vec![
+                Color::BrightMagenta,
+                Color::BrightYellow,
+                Color::BrightBlue,
+            ])),
+            include_token_tags: true,
+            include_token_span: true,
+            include_token_length: false,
+            text_source: None,
+            current_depth: 0,
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn Full(src: &'s str) -> SFormat<'s> {
+        SFormat {
+            colors: Some(ColorLoop::New(vec![
+                Color::BrightMagenta,
+                Color::BrightYellow,
+                Color::BrightBlue,
+            ])),
+            include_token_tags: true,
+            include_token_span: true,
             include_token_length: true,
             text_source: Some(src),
             current_depth: 0,
@@ -39,7 +75,7 @@ pub trait SExpressable<TNode>: Span {
     }
 
     fn to_sexp_str(&self, src: &str) -> String {
-        self.to_sexp_str_with(Some(SFormat::Basic(src)))
+        self.to_sexp_str_with(Some(SFormat::Full(src)))
     }
 
     fn to_sexp_str_with(&self, config: Option<SFormat>) -> String {
@@ -51,6 +87,8 @@ pub trait SExpressable<TNode>: Span {
                 include_token_length: false,
                 text_source: None,
                 current_depth: 0,
+                include_token_span: false,
+                include_token_tags: false,
             },
         };
         config.current_depth += 1;
@@ -79,11 +117,13 @@ pub trait SExpressable<TNode>: Span {
             result.push_str(self.get_name().as_str());
         }
 
-        let mut span_text = format!(" [{}..{}]", self.start(), self.end());
-        if config.colors.is_some() {
-            span_text = span_text.color(Color::BrightBlack);
+        if config.include_token_span {
+            let mut span_text = format!(" [{}..{}]", self.start(), self.end());
+            if config.colors.is_some() {
+                span_text = span_text.color(Color::BrightBlack);
+            }
+            result.push_str(span_text.as_str());
         }
-        result.push_str(span_text.as_str());
 
         if config.include_token_length {
             let length = self.end() - self.start() + 1;
@@ -95,13 +135,15 @@ pub trait SExpressable<TNode>: Span {
             }
         }
 
-        for tag in self.get_tags().iter() {
-            if config.colors.is_some() {
-                result.push_str(" #".color(Color::Yellow).as_str());
-                result.push_str(tag.color(Color::Yellow).as_str());
-            } else {
-                result.push_str(" #");
-                result.push_str(tag);
+        if config.include_token_tags {
+            for tag in self.get_tags().iter() {
+                if config.colors.is_some() {
+                    result.push_str(" #".color(Color::Yellow).as_str());
+                    result.push_str(tag.color(Color::Yellow).as_str());
+                } else {
+                    result.push_str(" #");
+                    result.push_str(tag);
+                }
             }
         }
 
